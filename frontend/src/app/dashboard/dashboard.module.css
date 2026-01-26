@@ -1,0 +1,349 @@
+.main {
+  min-height: calc(100vh - 80px);
+  background: #f5f5f5;
+  padding: 24px;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 32px;
+}
+
+.profileSection {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.cardTitle {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #667eea;
+}
+
+.profileGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.profileItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.label {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.value {
+  font-size: 16px;
+  color: #333;
+  font-weight: 600;
+}
+
+.readinessContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.readinessCircle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.readinessPercentage {
+  font-size: 48px;
+  font-weight: 700;
+}
+
+.readinessStatus {
+  font-size: 18px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.readinessMessage {
+  text-align: center;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.quickStartSection {
+  margin-bottom: 32px;
+}
+
+.sectionTitle {
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 16px;
+}
+
+.quickStartButtons {
+  display: flex;
+  gap: 16px;
+}
+
+.quickStartButton {
+  flex: 1;
+  padding: 16px 24px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.quickStartButton:hover {
+  background: #5568d3;
+}
+
+.scheduleSection {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.todaySchedule {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.scheduleItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: #f9f9f9;
+  border-radius: 6px;
+}
+
+.scheduleLabel {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.scheduleValue {
+  font-size: 16px;
+  color: #333;
+  font-weight: 600;
+}
+
+.sevenDaySchedule {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.scheduleDay {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: #f9f9f9;
+  border-radius: 6px;
+}
+
+.dayDate {
+  font-size: 14px;
+  color: #333;
+  font-weight: 600;
+}
+
+.dayDetails {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  font-size: 14px;
+  color: #666;
+}
+
+.dayStatus {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.statsSection {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.topicMasteryList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.topicItem {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.topicInfo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.topicName {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.topicSubject {
+  font-size: 12px;
+  color: #666;
+  background: #f0f0f0;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.topicProgress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.progressBar {
+  flex: 1;
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: #667eea;
+  transition: width 0.3s;
+}
+
+.masteryLevel {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  min-width: 45px;
+  text-align: right;
+}
+
+.sessionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sessionItem {
+  padding: 12px;
+  background: #f9f9f9;
+  border-radius: 6px;
+}
+
+.sessionInfo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.sessionType {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  text-transform: capitalize;
+}
+
+.sessionDate {
+  font-size: 12px;
+  color: #666;
+}
+
+.sessionStats {
+  display: flex;
+  gap: 16px;
+  font-size: 14px;
+  color: #666;
+}
+
+.sessionStatus {
+  margin-left: auto;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.loading, .error, .noSchedule, .noData {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.error {
+  color: #f44336;
+}
+
+.button {
+  padding: 12px 24px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 16px;
+}
+
+.button:hover {
+  background: #5568d3;
+}
+
+@media (max-width: 768px) {
+  .profileSection,
+  .scheduleSection,
+  .statsSection {
+    grid-template-columns: 1fr;
+  }
+
+  .quickStartButtons {
+    flex-direction: column;
+  }
+}
+

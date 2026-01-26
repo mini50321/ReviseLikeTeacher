@@ -116,15 +116,30 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
     const updates = req.body;
 
     const allowedFields = ['stem', 'type', 'subject', 'topic', 'subtopic', 
-                           'difficulty', 'importance', 'cognitive_focus', 'status'];
+                           'difficulty', 'importance', 'cognitive_focus', 
+                           'ideal_answer', 'key_points', 'previous_year_tags',
+                           'image_path', 'status'];
     const updateFields = Object.keys(updates).filter(key => allowedFields.includes(key));
 
     if (updateFields.length === 0) {
       return res.status(400).json({ error: 'No valid fields to update' });
     }
 
-    const setClause = updateFields.map((field, index) => `${field} = $${index + 2}`).join(', ');
-    const values = [id, ...updateFields.map(field => updates[field])];
+    const setParts = [];
+    const values = [id];
+    let paramCount = 2;
+
+    updateFields.forEach(field => {
+      if (field === 'key_points' || field === 'previous_year_tags') {
+        setParts.push(`${field} = $${paramCount++}`);
+        values.push(JSON.stringify(updates[field]));
+      } else {
+        setParts.push(`${field} = $${paramCount++}`);
+        values.push(updates[field]);
+      }
+    });
+
+    const setClause = setParts.join(', ');
 
     const result = await db.query(
       `UPDATE question SET ${setClause}, updated_at = CURRENT_TIMESTAMP 

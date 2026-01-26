@@ -1,0 +1,276 @@
+.main {
+  min-height: calc(100vh - 80px);
+  background: #f5f5f5;
+  padding: 24px;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #333;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+}
+
+.uploadButton {
+  padding: 12px 24px;
+  background: #667eea;
+  color: white;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: inline-block;
+}
+
+.uploadButton:hover {
+  background: #5568d3;
+}
+
+.error {
+  background: #fee;
+  color: #c33;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 24px;
+  border: 1px solid #fcc;
+}
+
+.content {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 24px;
+}
+
+.pdfList {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+}
+
+.sectionTitle {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 20px;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.pdfCards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pdfCard {
+  padding: 16px;
+  background: #f9f9f9;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pdfCard:hover {
+  border-color: #667eea;
+  background: #f0f0ff;
+}
+
+.pdfCard.selected {
+  border-color: #667eea;
+  background: #e8eaf6;
+}
+
+.pdfInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pdfName {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  word-break: break-word;
+}
+
+.pdfMeta {
+  font-size: 12px;
+  color: #666;
+}
+
+.status {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: capitalize;
+  display: inline-block;
+  width: fit-content;
+}
+
+.status.uploaded {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.status.processing {
+  background: #fff3e0;
+  color: #ef6c00;
+}
+
+.status.extracted {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status.failed {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.extractions {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.extractionsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.addButton {
+  padding: 10px 20px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.addButton:hover {
+  background: #45a049;
+}
+
+.extractionList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.extractionCard {
+  padding: 20px;
+  background: #f9f9f9;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.extractionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.extractionMeta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  padding: 4px 10px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #666;
+  text-transform: capitalize;
+}
+
+.extractionText {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #333;
+  margin-bottom: 12px;
+}
+
+.extractionActions {
+  display: flex;
+  gap: 8px;
+}
+
+.reviewButton {
+  padding: 8px 16px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.reviewButton:hover {
+  background: #5568d3;
+}
+
+.status.draft {
+  background: #fff3e0;
+  color: #ef6c00;
+}
+
+.status.accepted {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status.rejected {
+  background: #ffebee;
+  color: #c62828;
+}
+
+@media (max-width: 1024px) {
+  .content {
+    grid-template-columns: 1fr;
+  }
+}
+

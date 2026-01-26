@@ -1,0 +1,108 @@
+const express = require('express');
+const router = express.Router();
+const { authenticate } = require('../middleware/auth');
+const { db } = require('../db');
+
+router.get('/', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const profileResult = await db.query(
+      'SELECT * FROM userprofile WHERE user_id = $1',
+      [userId]
+    );
+
+    if (profileResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Profile not found. Please complete onboarding.' });
+    }
+
+    const profile = profileResult.rows[0];
+
+    const readinessResult = await db.query(
+      'SELECT * FROM examreadiness WHERE user_id = $1',
+      [userId]
+    );
+
+    const readiness = readinessResult.rows[0] || {
+      readiness_percentage: 0,
+      status: 'off_track',
+      forecast_data: {}
+    };
+
+    const today = new Date().toISOString().split('T')[0];
+    const todayScheduleResult = await db.query(
+      'SELECT * FROM revisionschedule WHERE user_id = $1 AND date = $2',
+      [userId, today]
+    );
+
+    const todaySchedule = todayScheduleResult.rows[0] || null;
+
+    const sevenDaysFromNow = new Date();
+    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+    const sevenDayScheduleResult = await db.query(
+      'SELECT * FROM revisionschedule WHERE user_id = $1 AND date >= $2 AND date <= $3 ORDER BY date ASC',
+      [userId, today, sevenDaysFromNow.toISOString().split('T')[0]]
+    );
+
+    const topicMasteryResult = await db.query(
+      'SELECT * FROM topicmastery WHERE user_id = $1 ORDER BY mastery_level DESC LIMIT 10',
+      [userId]
+    );
+
+    const recentSessionsResult = await db.query(
+      'SELECT * FROM session WHERE user_id = $1 ORDER BY started_at DESC LIMIT 5',
+      [userId]
+    );
+
+    res.json({
+      profile: {
+        target_exam: profile.target_exam,
+        exam_date: profile.exam_date,
+        target_score_band: profile.target_score_band,
+        daily_study_minutes: profile.daily_study_minutes,
+        weekly_question_target: profile.weekly_question_target,
+        selected_subjects: profile.selected_subjects,
+        intelligence_level: profile.intelligence_level
+      },
+      readiness: {
+        percentage: readiness.readiness_percentage,
+        status: readiness.status,
+        forecast: readiness.forecast_data
+      },
+      todaySchedule: todaySchedule ? {
+        date: todaySchedule.date,
+        planned_questions: todaySchedule.planned_questions,
+        planned_minutes: todaySchedule.planned_minutes,
+        subjects: todaySchedule.subjects,
+        topics: todaySchedule.topics,
+        status: todaySchedule.status
+      } : null,
+      sevenDaySchedule: sevenDayScheduleResult.rows.map(s => ({
+        date: s.date,
+        planned_questions: s.planned_questions,
+        subjects: s.subjects,
+        status: s.status
+      })),
+      topicMastery: topicMasteryResult.rows.map(t => ({
+        topic: t.topic,
+        subject: t.subject,
+        mastery_level: t.mastery_level,
+        next_revision_date: t.next_revision_date
+      })),
+      recentSessions: recentSessionsResult.rows.map(s => ({
+        id: s.id,
+        session_type: s.session_type,
+        total_questions: s.total_questions,
+        average_score: s.average_score,
+        started_at: s.started_at,
+        status: s.status
+      }))
+    });
+  } catch (error) {
+    console.error('Dashboard error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+module.exports = router;
+

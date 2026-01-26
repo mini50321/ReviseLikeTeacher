@@ -1,0 +1,201 @@
+.main {
+  min-height: calc(100vh - 80px);
+  background: #f5f5f5;
+  padding: 24px;
+}
+
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.progress {
+  margin-bottom: 24px;
+}
+
+.progressBar {
+  width: 100%;
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progressFill {
+  height: 100%;
+  background: #667eea;
+  transition: width 0.3s;
+}
+
+.progressText {
+  font-size: 14px;
+  color: #666;
+}
+
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.error {
+  background: #fee;
+  color: #c33;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 24px;
+  border: 1px solid #fcc;
+}
+
+.step {
+  margin-bottom: 32px;
+}
+
+.stepTitle {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 24px;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.option {
+  padding: 16px;
+  background: #f9f9f9;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.option:hover {
+  border-color: #667eea;
+  background: #f0f0ff;
+}
+
+.option.selected {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+.input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: border-color 0.2s;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.hint {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #666;
+}
+
+.subjectGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.subjectButton {
+  padding: 12px;
+  background: #f9f9f9;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.subjectButton:hover {
+  border-color: #667eea;
+  background: #f0f0ff;
+}
+
+.subjectButton.selected {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 32px;
+}
+
+.backButton {
+  padding: 12px 24px;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.backButton:hover {
+  background: #e0e0e0;
+}
+
+.nextButton,
+.submitButton {
+  flex: 1;
+  padding: 12px 24px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.nextButton:hover,
+.submitButton:hover:not(:disabled) {
+  background: #5568d3;
+}
+
+.submitButton:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .subjectGrid {
+    grid-template-columns: 1fr;
+  }
+}
+

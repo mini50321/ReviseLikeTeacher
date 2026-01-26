@@ -20,7 +20,7 @@ NEET PG (and similar exams) preparation platform that builds a personalized, dat
 │   ├── requirements/   # Requirements documents
 │   ├── flows/         # User flow diagrams
 │   └── ai-architecture/ # AI architecture docs
-├── frontend/           # React/Next.js frontend (to be created)
+├── frontend/           # React/Next.js frontend
 └── ai-service/         # Python FastAPI AI service (to be created)
 ```
 
@@ -71,13 +71,17 @@ AI_SERVICE_URL=http://localhost:8000
 PORT=3000
 ```
 
-### 4. Frontend Setup (Next Steps)
+### 4. Frontend Setup
 
 ```bash
 cd frontend
 npm install
+cp .env.local.example .env.local
+# Update NEXT_PUBLIC_API_URL in .env.local
 npm run dev
 ```
+
+Frontend will be available at `http://localhost:3001`
 
 ### 5. AI Service Setup (Next Steps)
 
@@ -114,7 +118,7 @@ View interactive docs by importing into Swagger UI or Postman.
 
 ## Features
 
-- ✅ User authentication (register, login, password reset)
+- ✅ User authentication (register, login, password reset) - Frontend implemented
 - ✅ Student onboarding
 - ✅ Question bank management
 - ✅ Practice sessions with voice/text answers
