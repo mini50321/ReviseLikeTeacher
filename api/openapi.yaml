@@ -1,0 +1,930 @@
+openapi: 3.0.0
+info:
+  title: ReviseLikeTeacher API
+  version: 1.0.0
+  description: API for NEET PG preparation platform
+servers:
+  - url: http://localhost:3000/api
+    description: Development server
+  - url: https://api.reviseliketeacher.com
+    description: Production server
+
+paths:
+  /auth/register:
+    post:
+      summary: Register new user
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Validation error
+        '409':
+          description: Email already exists
+
+  /auth/login:
+    post:
+      summary: Login user
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Invalid credentials
+
+  /auth/reset-password:
+    post:
+      summary: Request password reset
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+      responses:
+        '200':
+          description: Reset email sent
+
+  /users/profile:
+    get:
+      summary: Get user profile
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+    put:
+      summary: Update user profile
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserProfileUpdate'
+      responses:
+        '200':
+          description: Profile updated
+
+  /onboarding:
+    post:
+      summary: Complete onboarding
+      tags: [Onboarding]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OnboardingData'
+      responses:
+        '201':
+          description: Onboarding completed
+
+  /questions:
+    get:
+      summary: Get questions
+      tags: [Questions]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: subject
+          in: query
+          schema:
+            type: string
+        - name: topic
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: difficulty
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of questions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  questions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Question'
+                  total:
+                    type: integer
+
+  /questions/{id}:
+    get:
+      summary: Get question by ID
+      tags: [Questions]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Question details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Question'
+
+  /sessions:
+    post:
+      summary: Create practice session
+      tags: [Sessions]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionConfig'
+      responses:
+        '201':
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+
+  /sessions/{id}:
+    get:
+      summary: Get session details
+      tags: [Sessions]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Session details
+
+  /sessions/{id}/complete:
+    post:
+      summary: Complete session
+      tags: [Sessions]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Session completed
+
+  /attempts:
+    post:
+      summary: Submit answer attempt
+      tags: [Attempts]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttemptSubmit'
+      responses:
+        '201':
+          description: Attempt submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttemptResponse'
+
+  /attempts/{id}/feedback/rate:
+    post:
+      summary: Rate AI feedback
+      tags: [Attempts]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rating]
+              properties:
+                rating:
+                  type: string
+                  enum: [good, bad, worse]
+                feedback_text:
+                  type: string
+      responses:
+        '200':
+          description: Rating saved
+
+  /voice/transcribe:
+    post:
+      summary: Transcribe voice audio
+      tags: [Voice]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [audio, language]
+              properties:
+                audio:
+                  type: string
+                  format: binary
+                language:
+                  type: string
+                  enum: [english, hindi, hinglish]
+      responses:
+        '200':
+          description: Transcription result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transcription:
+                    type: string
+                  confidence:
+                    type: number
+                  language:
+                    type: string
+
+  /schedule:
+    get:
+      summary: Get revision schedule
+      tags: [Schedule]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Schedule data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  schedule:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RevisionSchedule'
+    post:
+      summary: Regenerate schedule
+      tags: [Schedule]
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tune_balance:
+                  type: object
+      responses:
+        '200':
+          description: Schedule regenerated
+
+  /schedule/{date}:
+    put:
+      summary: Update session status
+      tags: [Schedule]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [complete, partial, skipped]
+      responses:
+        '200':
+          description: Status updated
+
+  /mastery:
+    get:
+      summary: Get mastery data
+      tags: [Mastery]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: subject
+          in: query
+          schema:
+            type: string
+        - name: topic
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Mastery data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  topic_mastery:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TopicMastery'
+
+  /analytics/questions:
+    get:
+      summary: Per question analytics
+      tags: [Analytics]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: subject
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Question analytics
+
+  /analytics/topics:
+    get:
+      summary: Per topic analytics
+      tags: [Analytics]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Topic analytics
+
+  /analytics/subjects:
+    get:
+      summary: Per subject analytics
+      tags: [Analytics]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Subject analytics
+
+  /admin/questions:
+    get:
+      summary: Get all questions (admin)
+      tags: [Admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Questions list
+    post:
+      summary: Create question (admin)
+      tags: [Admin]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuestionCreate'
+      responses:
+        '201':
+          description: Question created
+
+  /admin/questions/{id}:
+    put:
+      summary: Update question (admin)
+      tags: [Admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuestionUpdate'
+      responses:
+        '200':
+          description: Question updated
+
+  /admin/pdf/upload:
+    post:
+      summary: Upload PDF (admin)
+      tags: [Admin]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: PDF uploaded
+
+  /admin/pdf/{id}/extractions:
+    get:
+      summary: Get extracted questions (admin)
+      tags: [Admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Extracted questions
+
+  /admin/extractions/{id}:
+    put:
+      summary: Review extraction (admin)
+      tags: [Admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  enum: [accept, reject, save_draft]
+                corrections:
+                  type: object
+      responses:
+        '200':
+          description: Review completed
+
+  /admin/analytics/cohort:
+    get:
+      summary: Cohort analytics (admin)
+      tags: [Admin]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Cohort data
+
+  /admin/tuning:
+    get:
+      summary: Get tuning parameters (admin)
+      tags: [Admin]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Tuning parameters
+    put:
+      summary: Update tuning parameters (admin)
+      tags: [Admin]
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                parameters:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      value:
+                        type: number
+      responses:
+        '200':
+          description: Parameters updated
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        role:
+          type: string
+        email_verified:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        target_exam:
+          type: string
+        exam_date:
+          type: string
+          format: date
+        target_score_band:
+          type: string
+        selected_subjects:
+          type: array
+          items:
+            type: string
+        daily_study_minutes:
+          type: integer
+        weekly_question_target:
+          type: integer
+        intelligence_level:
+          type: string
+        onboarding_completed:
+          type: boolean
+
+    UserProfileUpdate:
+      type: object
+      properties:
+        daily_study_minutes:
+          type: integer
+        weekly_question_target:
+          type: integer
+
+    OnboardingData:
+      type: object
+      required: [target_exam, exam_date, target_score_band, selected_subjects, daily_study_minutes, weekly_question_target]
+      properties:
+        target_exam:
+          type: string
+        exam_date:
+          type: string
+          format: date
+        target_score_band:
+          type: string
+        selected_subjects:
+          type: array
+          items:
+            type: string
+        daily_study_minutes:
+          type: integer
+        weekly_question_target:
+          type: integer
+
+    Question:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        stem:
+          type: string
+        type:
+          type: string
+        subject:
+          type: string
+        topic:
+          type: string
+        difficulty:
+          type: string
+        importance:
+          type: string
+        cognitive_focus:
+          type: string
+        image_path:
+          type: string
+
+    QuestionCreate:
+      type: object
+      required: [stem, type, subject, topic]
+      properties:
+        stem:
+          type: string
+        type:
+          type: string
+        subject:
+          type: string
+        topic:
+          type: string
+        subtopic:
+          type: string
+        difficulty:
+          type: string
+        importance:
+          type: string
+        cognitive_focus:
+          type: string
+        ideal_answer:
+          type: string
+        key_points:
+          type: array
+          items:
+            type: string
+        previous_year_tags:
+          type: array
+          items:
+            type: object
+        image_path:
+          type: string
+
+    QuestionUpdate:
+      type: object
+      properties:
+        stem:
+          type: string
+        type:
+          type: string
+        subject:
+          type: string
+        topic:
+          type: string
+        difficulty:
+          type: string
+        importance:
+          type: string
+        cognitive_focus:
+          type: string
+        status:
+          type: string
+
+    SessionConfig:
+      type: object
+      required: [number_of_questions, mode]
+      properties:
+        number_of_questions:
+          type: integer
+        mode:
+          type: string
+          enum: [balanced, clinical, rapid_fire, custom]
+        subjects:
+          type: array
+          items:
+            type: string
+        topics:
+          type: array
+          items:
+            type: string
+        difficulty_mix:
+          type: object
+        question_type_distribution:
+          type: object
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        session_type:
+          type: string
+        configuration:
+          type: object
+        total_questions:
+          type: integer
+        status:
+          type: string
+
+    AttemptSubmit:
+      type: object
+      required: [question_id, answer_text, answer_method]
+      properties:
+        question_id:
+          type: string
+          format: uuid
+        session_id:
+          type: string
+          format: uuid
+        answer_text:
+          type: string
+        answer_method:
+          type: string
+          enum: [voice, text]
+        language:
+          type: string
+          enum: [english, hindi, hinglish]
+        time_spent_seconds:
+          type: integer
+
+    AttemptResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        feedback:
+          type: object
+          properties:
+            strengths:
+              type: string
+            improvements:
+              type: string
+            model_explanation:
+              type: string
+        score:
+          type: integer
+        mastery_impact:
+          type: object
+
+    RevisionSchedule:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        planned_questions:
+          type: integer
+        planned_minutes:
+          type: integer
+        subjects:
+          type: array
+          items:
+            type: string
+        topics:
+          type: array
+          items:
+            type: object
+        status:
+          type: string
+
+    TopicMastery:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        topic:
+          type: string
+        subject:
+          type: string
+        mastery_level:
+          type: number
+        revision_count:
+          type: integer
+        required_revisions:
+          type: integer
+        next_revision_date:
+          type: string
+          format: date
+
