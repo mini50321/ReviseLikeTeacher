@@ -225,8 +225,8 @@ export default function DashboardPage() {
                 <h2 className={styles.cardTitle}>7-Day Schedule</h2>
                 {sevenDaySchedule && sevenDaySchedule.length > 0 ? (
                   <div className={styles.sevenDaySchedule}>
-                    {sevenDaySchedule.map((day, index) => (
-                      <div key={index} className={styles.scheduleDay}>
+                    {sevenDaySchedule.filter(day => day && day.date).map((day) => (
+                      <div key={day.date || `day-${day.date}`} className={styles.scheduleDay}>
                         <div className={styles.dayDate}>
                           {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                         </div>
@@ -253,8 +253,8 @@ export default function DashboardPage() {
                 <h2 className={styles.cardTitle}>Topic Mastery</h2>
                 {topicMastery && topicMastery.length > 0 ? (
                   <div className={styles.topicMasteryList}>
-                    {topicMastery.map((topic, index) => (
-                      <div key={index} className={styles.topicItem}>
+                    {topicMastery.filter(topic => topic && topic.topic).map((topic) => (
+                      <div key={`${topic.topic}-${topic.subject}` || `topic-${topic.topic}`} className={styles.topicItem}>
                         <div className={styles.topicInfo}>
                           <span className={styles.topicName}>{topic.topic}</span>
                           <span className={styles.topicSubject}>{topic.subject}</span>
@@ -280,8 +280,8 @@ export default function DashboardPage() {
                 <h2 className={styles.cardTitle}>Recent Sessions</h2>
                 {recentSessions && recentSessions.length > 0 ? (
                   <div className={styles.sessionsList}>
-                    {recentSessions.map((session) => (
-                      <div key={session.id} className={styles.sessionItem}>
+                    {recentSessions.filter(session => session && session.id).map((session) => (
+                      <div key={session.id || `session-${session.started_at}`} className={styles.sessionItem}>
                         <div className={styles.sessionInfo}>
                           <span className={styles.sessionType}>{session.session_type}</span>
                           <span className={styles.sessionDate}>

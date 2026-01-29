@@ -92,8 +92,8 @@ export default function MetricsLabPage() {
                   <h3 className={styles.cardTitle}>Topic Mastery</h3>
                   <div className={styles.masteryList}>
                     {analytics.topicMastery && analytics.topicMastery.length > 0 ? (
-                      analytics.topicMastery.slice(0, 5).map((topic, index) => (
-                        <div key={index} className={styles.masteryItem}>
+                      analytics.topicMastery.slice(0, 5).filter(topic => topic && topic.topic).map((topic) => (
+                        <div key={`${topic.topic}-${topic.subject}` || `topic-${topic.topic}`} className={styles.masteryItem}>
                           <div className={styles.masteryInfo}>
                             <span className={styles.topicName}>{topic.topic}</span>
                             <span className={styles.subjectName}>{topic.subject}</span>
@@ -119,8 +119,8 @@ export default function MetricsLabPage() {
                   <h3 className={styles.cardTitle}>Recent Sessions</h3>
                   <div className={styles.sessionsList}>
                     {analytics.recentSessions && analytics.recentSessions.length > 0 ? (
-                      analytics.recentSessions.map((session, index) => (
-                        <div key={index} className={styles.sessionItem}>
+                      analytics.recentSessions.filter(session => session && session.id).map((session) => (
+                        <div key={session.id || `session-${session.started_at}`} className={styles.sessionItem}>
                           <div className={styles.sessionType}>{session.session_type}</div>
                           <div className={styles.sessionStats}>
                             <span>Questions: {session.total_questions || 0}</span>

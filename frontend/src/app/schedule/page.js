@@ -103,9 +103,9 @@ export default function SchedulePage() {
               </div>
             ) : (
               <div className={styles.scheduleList}>
-                {schedule.map((item, index) => (
+                {schedule.filter(item => item && item.date).map((item) => (
                   <div 
-                    key={index} 
+                    key={item.date || `schedule-${item.date}`} 
                     className={`${styles.scheduleItem} ${isToday(item.date) ? styles.today : ''}`}
                   >
                     <div className={styles.dateSection}>
