@@ -48,6 +48,31 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+app.get('/health/db', async (req, res) => {
+  try {
+    const { db } = require('./db');
+    const result = await db.query('SELECT datetime("now") as time, "SQLite" as database');
+    res.json({ 
+      status: 'ok', 
+      database: result.rows[0].database,
+      time: result.rows[0].time,
+      message: 'Database connection successful'
+    });
+  } catch (error) {
+    console.error('Database health check failed:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      error: error.message || 'Connection failed',
+      details: 'Database connection failed. Please check:',
+      checklist: [
+        'Database file is accessible',
+        'Database schema is initialized',
+        'See README.md for setup instructions'
+      ]
+    });
+  }
+});
+
 app.use((err, req, res, next) => {
   console.error('Error:', err);
   res.status(500).json({ error: 'Internal server error' });

@@ -31,46 +31,33 @@ NEET PG (and similar exams) preparation platform that builds a personalized, dat
 ### Prerequisites
 
 - Node.js 18+ 
-- PostgreSQL 14+
-- Python 3.9+ (for AI service)
+- Python 3.9+ (for AI service, optional)
 - npm or yarn
 
-### 1. Database Setup
+**Note:** This project uses SQLite, so no separate database server installation is required!
 
-```bash
-# Create database
-createdb reviseliketeacher
-
-# Run schema
-psql -d reviseliketeacher -f backend/database/schema.sql
-
-# Seed initial data (optional)
-psql -d reviseliketeacher -f backend/database/seed_data.sql
-```
-
-### 2. Backend Setup
+### 1. Backend Setup
 
 ```bash
 cd backend
 npm install
-# Create .env file (see below)
+# Database will be created automatically on first run
 npm start
 ```
 
-### 3. Environment Variables
+### 2. Environment Variables
 
-Create `backend/.env`:
+Create `backend/.env` (optional - defaults work for development):
 
 ```env
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=reviseliketeacher
-DB_USER=postgres
-DB_PASSWORD=postgres
+DB_PATH=./database.sqlite
 JWT_SECRET=your_secret_key_here
 AI_SERVICE_URL=http://localhost:8000
 PORT=3000
+NODE_ENV=development
 ```
+
+The database file (`database.sqlite`) will be created automatically in the `backend/` directory when you first run the server.
 
 ### 4. Frontend Setup
 
@@ -114,13 +101,13 @@ cd frontend && npm run dev
 
 Frontend will be available at `http://localhost:3001`
 
-### Database Commands
+### Database
 
-```bash
-npm run db:migrate    # Run migrations
-npm run db:seed       # Seed data
-npm run db:reset      # Reset and reseed
-```
+The database is SQLite and is stored in `backend/database.sqlite`. It's created automatically on first run.
+
+To reset the database:
+1. Delete `backend/database.sqlite`
+2. Restart the server (it will recreate the database)
 
 ## API Documentation
 

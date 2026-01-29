@@ -22,18 +22,24 @@ router.post('/register', async (req, res) => {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
+    const userId = db.generateUUID();
 
-    const result = await db.query(
-      'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id, email, role, created_at',
-      [email, passwordHash]
+    await db.query(
+      'INSERT INTO users (id, email, password_hash) VALUES ($1, $2, $3)',
+      [userId, email, passwordHash]
     );
 
-    const user = result.rows[0];
+    const userResult = await db.query('SELECT id, email, role, created_at FROM users WHERE id = $1', [userId]);
+    const user = userResult.rows[0];
 
     res.status(201).json({ user });
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error details:', error.message, error.stack);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
