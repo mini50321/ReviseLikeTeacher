@@ -4,7 +4,8 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -13,142 +14,198 @@
 }
 
 .modal {
-  background: white;
-  border-radius: 12px;
-  padding: 32px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(40px);
+  border-radius: 24px;
+  padding: 40px;
   max-width: 600px;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  animation: fadeInUp 0.4s ease;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .title {
-  font-size: 24px;
-  font-weight: 700;
-  color: #333;
-  margin-bottom: 24px;
+  font-size: 28px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #ffffff 0%, #f0f0ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 32px;
+  letter-spacing: -0.5px;
 }
 
 .field {
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
 .field label {
   display: block;
   font-size: 14px;
-  font-weight: 500;
-  color: #666;
-  margin-bottom: 8px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 12px;
+  letter-spacing: 0.3px;
 }
 
 .field input {
   width: 100%;
-  padding: 12px;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
   font-size: 16px;
+  color: #ffffff;
+  transition: all 0.3s ease;
+}
+
+.field input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .field input:focus {
   outline: none;
-  border-color: #667eea;
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1);
 }
 
 .modeOptions {
   display: flex;
-  gap: 12px;
+  gap: 16px;
 }
 
 .modeButton {
   flex: 1;
-  padding: 12px;
-  background: #f9f9f9;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #333;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
 }
 
 .modeButton:hover {
-  border-color: #667eea;
-  background: #f0f0ff;
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
 }
 
 .modeButton.active {
-  background: #667eea;
-  color: white;
-  border-color: #667eea;
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
 .subjectGrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
+  gap: 12px;
   max-height: 200px;
   overflow-y: auto;
+  padding-right: 8px;
+}
+
+.subjectGrid::-webkit-scrollbar {
+  width: 6px;
+}
+
+.subjectGrid::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+.subjectGrid::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
 }
 
 .subjectButton {
-  padding: 8px 12px;
-  background: #f9f9f9;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  color: #333;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
 }
 
 .subjectButton:hover {
-  border-color: #667eea;
-  background: #f0f0ff;
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .subjectButton.selected {
-  background: #667eea;
-  color: white;
-  border-color: #667eea;
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 .actions {
   display: flex;
-  gap: 12px;
-  margin-top: 32px;
+  gap: 16px;
+  margin-top: 40px;
 }
 
 .cancelButton {
   flex: 1;
-  padding: 12px;
-  background: #f5f5f5;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
   font-size: 16px;
-  font-weight: 500;
-  color: #333;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
   cursor: pointer;
+  transition: all 0.3s ease;
 }
 
 .cancelButton:hover {
-  background: #e0e0e0;
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
 }
 
 .startButton {
   flex: 1;
-  padding: 12px;
-  background: #667eea;
-  color: white;
-  border: none;
-  border-radius: 8px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
+  color: #ffffff;
   cursor: pointer;
+  transition: all 0.3s ease;
+  letter-spacing: 0.5px;
 }
 
 .startButton:hover {
-  background: #5568d3;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
-
