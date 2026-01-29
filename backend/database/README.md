@@ -1,26 +1,14 @@
 # Database Schema
 
-## Setup
+## Overview
 
-1. Create PostgreSQL database:
-```bash
-createdb reviseliketeacher
-```
+This project uses **SQLite** as the database. The database is automatically created and initialized when you first start the backend server.
 
-2. Run initial schema:
-```bash
-psql -d reviseliketeacher -f schema.sql
-```
+## Database File
 
-3. Run migrations (if using migration system):
-```bash
-psql -d reviseliketeacher -f migrations/001_initial_schema.sql
-```
-
-4. Seed initial data (optional):
-```bash
-psql -d reviseliketeacher -f seed_data.sql
-```
+- **Location**: `backend/database.sqlite` (created automatically)
+- **Schema File**: `backend/database/schema.sqlite.sql`
+- **No setup required** - Database initializes on first run
 
 ## Tables
 
@@ -64,3 +52,9 @@ Automatic `updated_at` timestamp triggers on:
 - topicmastery
 - questionmastery
 
+## Resetting the Database
+
+To reset the database:
+1. Delete `backend/database.sqlite`
+2. Restart the backend server
+3. The database will be recreated with a fresh schema

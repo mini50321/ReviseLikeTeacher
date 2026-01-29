@@ -7,7 +7,7 @@ NEET PG (and similar exams) preparation platform that builds a personalized, dat
 - **Frontend:** React (Next.js)
 - **Backend:** Node.js (Express)
 - **AI Services:** Python (FastAPI)
-- **Database:** PostgreSQL
+- **Database:** SQLite
 - **Platforms:** Web + Android
 
 ## Project Structure

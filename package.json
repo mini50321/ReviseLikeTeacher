@@ -8,9 +8,7 @@
     "start:frontend": "cd frontend && npm run dev",
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": "cd frontend && npm run dev",
-    "db:migrate": "psql -d reviseliketeacher -f backend/database/schema.sql",
-    "db:seed": "psql -d reviseliketeacher -f backend/database/seed_data.sql",
-    "db:reset": "psql -d reviseliketeacher -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;' && npm run db:migrate && npm run db:seed"
+    "db:reset": "echo 'To reset database, delete backend/database.sqlite and restart the server'"
   },
   "keywords": [
     "education",

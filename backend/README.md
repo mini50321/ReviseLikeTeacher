@@ -9,18 +9,16 @@ Node.js/Express backend API server.
 npm install
 ```
 
-2. Create `.env` file with environment variables:
+2. Create `.env` file with environment variables (optional - defaults work for development):
 ```env
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=reviseliketeacher
-DB_USER=postgres
-DB_PASSWORD=postgres
+DB_PATH=./database.sqlite
 JWT_SECRET=your_secret_key
 AI_SERVICE_URL=http://localhost:8000
 PORT=3000
 NODE_ENV=development
 ```
+
+**Note:** The database file (`database.sqlite`) will be created automatically in the `backend/` directory when you first run the server. No separate database installation required!
 
 3. Run server:
 ```bash

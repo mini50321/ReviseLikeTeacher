@@ -20,5 +20,8 @@ coverage/
 temp/
 uploads/
 *.pdf
-!database/seed_data.sql
+*.sqlite
+*.sqlite3
+backend/database.sqlite
+backend/database.sqlite3
 
