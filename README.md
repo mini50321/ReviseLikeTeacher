@@ -14,13 +14,15 @@ NEET PG (and similar exams) preparation platform that builds a personalized, dat
 
 ```
 .
-├── api/                 # Node.js backend API
-├── database/            # Database schema and migrations
-├── docs/               # Documentation
-│   ├── requirements/   # Requirements documents
-│   ├── flows/         # User flow diagrams
-│   └── ai-architecture/ # AI architecture docs
+├── backend/             # Node.js backend API
+│   ├── database/       # Database schema and migrations
+│   ├── routes/         # API routes
+│   ├── middleware/     # Express middleware
+│   ├── services/       # Business logic services
+│   └── uploads/        # File uploads storage
 ├── frontend/           # React/Next.js frontend
+│   └── src/            # Source code
+├── docs/               # Documentation (if exists)
 └── ai-service/         # Python FastAPI AI service (to be created)
 ```
 
@@ -40,25 +42,24 @@ NEET PG (and similar exams) preparation platform that builds a personalized, dat
 createdb reviseliketeacher
 
 # Run schema
-psql -d reviseliketeacher -f database/schema.sql
+psql -d reviseliketeacher -f backend/database/schema.sql
 
 # Seed initial data (optional)
-psql -d reviseliketeacher -f database/seed_data.sql
+psql -d reviseliketeacher -f backend/database/seed_data.sql
 ```
 
 ### 2. Backend Setup
 
 ```bash
-cd api
+cd backend
 npm install
-cp .env.example .env
-# Edit .env with your database credentials
+# Create .env file (see below)
 npm start
 ```
 
 ### 3. Environment Variables
 
-Create `api/.env`:
+Create `backend/.env`:
 
 ```env
 DB_HOST=localhost
@@ -96,11 +97,22 @@ uvicorn main:app --reload
 ### Running Backend
 
 ```bash
-cd api
-npm run dev
+npm run start:backend
+# or
+cd backend && npm start
 ```
 
 API will be available at `http://localhost:3000`
+
+### Running Frontend
+
+```bash
+npm run start:frontend
+# or
+cd frontend && npm run dev
+```
+
+Frontend will be available at `http://localhost:3001`
 
 ### Database Commands
 
@@ -112,7 +124,7 @@ npm run db:reset      # Reset and reseed
 
 ## API Documentation
 
-OpenAPI specification: `api/openapi.yaml`
+OpenAPI specification: `backend/openapi.yaml`
 
 View interactive docs by importing into Swagger UI or Postman.
 

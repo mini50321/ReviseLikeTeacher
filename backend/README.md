@@ -1,4 +1,6 @@
-# ReviseLikeTeacher API
+# ReviseLikeTeacher Backend
+
+Node.js/Express backend API server.
 
 ## Setup
 
@@ -7,8 +9,8 @@
 npm install
 ```
 
-2. Set environment variables:
-```bash
+2. Create `.env` file with environment variables:
+```env
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=reviseliketeacher
@@ -16,6 +18,8 @@ DB_USER=postgres
 DB_PASSWORD=postgres
 JWT_SECRET=your_secret_key
 AI_SERVICE_URL=http://localhost:8000
+PORT=3000
+NODE_ENV=development
 ```
 
 3. Run server:
@@ -27,6 +31,8 @@ For development with auto-reload:
 ```bash
 npm run dev
 ```
+
+Server runs on `http://localhost:3000`
 
 ## API Documentation
 

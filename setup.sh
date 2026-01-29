@@ -6,26 +6,42 @@ echo "1. Creating database..."
 createdb reviseliketeacher 2>/dev/null || echo "Database may already exist"
 
 echo "2. Running database schema..."
-psql -d reviseliketeacher -f database/schema.sql
+psql -d reviseliketeacher -f backend/database/schema.sql
 
 echo "3. Seeding initial data..."
-psql -d reviseliketeacher -f database/seed_data.sql
+psql -d reviseliketeacher -f backend/database/seed_data.sql
 
 echo "4. Installing backend dependencies..."
-cd api
+cd backend
 npm install
 cd ..
 
-echo "5. Creating .env file..."
-if [ ! -f api/.env ]; then
-    cp api/.env.example api/.env
-    echo "Please edit api/.env with your database credentials"
+echo "5. Installing frontend dependencies..."
+cd frontend
+npm install
+cd ..
+
+echo "6. Creating .env file..."
+if [ ! -f backend/.env ]; then
+    cat > backend/.env << EOF
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=reviseliketeacher
+DB_USER=postgres
+DB_PASSWORD=postgres
+JWT_SECRET=your_secret_key_change_this_in_production
+AI_SERVICE_URL=http://localhost:8000
+PORT=3000
+NODE_ENV=development
+EOF
+    echo "Please edit backend/.env with your database credentials"
 else
     echo ".env file already exists"
 fi
 
 echo "Setup complete!"
 echo "Next steps:"
-echo "1. Edit api/.env with your configuration"
-echo "2. Run 'cd api && npm start' to start the server"
+echo "1. Edit backend/.env with your configuration"
+echo "2. Run 'npm run start:backend' to start the backend server"
+echo "3. Run 'npm run start:frontend' to start the frontend server"
 
