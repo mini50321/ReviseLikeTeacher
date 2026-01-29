@@ -32,7 +32,20 @@ router.post('/register', async (req, res) => {
     const userResult = await db.query('SELECT id, email, role, created_at FROM users WHERE id = $1', [userId]);
     const user = userResult.rows[0];
 
-    res.status(201).json({ user });
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.status(201).json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role
+      }
+    });
   } catch (error) {
     console.error('Registration error:', error);
     console.error('Error details:', error.message, error.stack);

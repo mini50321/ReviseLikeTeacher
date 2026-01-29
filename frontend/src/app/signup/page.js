@@ -34,7 +34,7 @@ export default function SignupPage() {
     const result = await register(email, password);
 
     if (result.success) {
-      router.push('/onboarding');
+      router.push('/dashboard');
     } else {
       setError(result.error);
       setLoading(false);

@@ -33,7 +33,9 @@ export default function DashboardPage() {
       <ProtectedRoute>
         <div>
           <Header />
-          <div className={styles.loading}>Loading dashboard...</div>
+          <main className={styles.main}>
+            <div className={styles.loading}>Loading dashboard...</div>
+          </main>
         </div>
       </ProtectedRoute>
     );
@@ -45,18 +47,20 @@ export default function DashboardPage() {
         <ProtectedRoute>
           <div>
             <Header />
-            <div className={styles.container}>
-              <div className={styles.card}>
-                <h2>Complete Onboarding</h2>
-                <p>Please complete your profile setup to access the dashboard.</p>
-                <button 
-                  className={styles.button}
-                  onClick={() => router.push('/onboarding')}
-                >
-                  Go to Onboarding
-                </button>
+            <main className={styles.main}>
+              <div className={styles.container}>
+                <div className={styles.card}>
+                  <h2>Complete Onboarding</h2>
+                  <p>Please complete your profile setup to access the dashboard.</p>
+                  <button 
+                    className={styles.button}
+                    onClick={() => router.push('/onboarding')}
+                  >
+                    Go to Onboarding
+                  </button>
+                </div>
               </div>
-            </div>
+            </main>
           </div>
         </ProtectedRoute>
       );
@@ -65,7 +69,9 @@ export default function DashboardPage() {
       <ProtectedRoute>
         <div>
           <Header />
-          <div className={styles.error}>{error}</div>
+          <main className={styles.main}>
+            <div className={styles.error}>{error}</div>
+          </main>
         </div>
       </ProtectedRoute>
     );
@@ -76,7 +82,9 @@ export default function DashboardPage() {
       <ProtectedRoute>
         <div>
           <Header />
-          <div className={styles.error}>No data available</div>
+          <main className={styles.main}>
+            <div className={styles.error}>No data available</div>
+          </main>
         </div>
       </ProtectedRoute>
     );
