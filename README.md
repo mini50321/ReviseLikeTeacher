@@ -36,18 +36,74 @@ NEET PG (and similar exams) preparation platform that builds a personalized, dat
 
 **Note:** This project uses SQLite, so no separate database server installation is required!
 
-### 1. Backend Setup
+### 1. Install Dependencies
 
+**Backend:**
 ```bash
 cd backend
 npm install
-# Database will be created automatically on first run
+```
+
+**Frontend:**
+```bash
+cd frontend
+npm install
+```
+
+### 2. Start Backend Server
+
+Open **Terminal 1**:
+```bash
+cd backend
 npm start
 ```
 
-### 2. Environment Variables
+You should see:
+```
+✅ Database loaded
+✅ Server running on port 3000
+```
 
-Create `backend/.env` (optional - defaults work for development):
+**Keep this terminal open!**
+
+### 3. Start Frontend Server
+
+Open **Terminal 2** (new terminal):
+```bash
+cd frontend
+npm run dev
+```
+
+You should see:
+```
+▲ Next.js 14.0.4
+- Local:        http://localhost:3001
+```
+
+**Keep this terminal open too!**
+
+### 4. Open the Application
+
+Open your browser and navigate to:
+```
+http://localhost:3001
+```
+
+### 5. Add Sample Questions (First Time Only)
+
+In the backend terminal (Terminal 1), stop the server (`Ctrl+C`) and run:
+```bash
+npm run seed-questions
+```
+
+Then start the server again:
+```bash
+npm start
+```
+
+### Environment Variables (Optional)
+
+Create `backend/.env` if you need custom settings (defaults work for development):
 
 ```env
 DB_PATH=./database.sqlite
@@ -58,18 +114,6 @@ NODE_ENV=development
 ```
 
 The database file (`database.sqlite`) will be created automatically in the `backend/` directory when you first run the server.
-
-### 4. Frontend Setup
-
-```bash
-cd frontend
-npm install
-cp .env.local.example .env.local
-# Update NEXT_PUBLIC_API_URL in .env.local
-npm run dev
-```
-
-Frontend will be available at `http://localhost:3001`
 
 ### 5. AI Service Setup (Next Steps)
 

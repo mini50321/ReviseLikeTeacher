@@ -34,21 +34,60 @@ router.post('/', authenticate, async (req, res) => {
 
     const currentMastery = masteryResult.rows[0]?.mastery_level || 0;
 
-    const evaluation = await evaluateAnswer({
-      question,
-      studentAnswer: answer_text,
-      currentMastery,
-      userId
-    });
+    let evaluation;
+    try {
+      evaluation = await evaluateAnswer({
+        question,
+        studentAnswer: answer_text,
+        currentMastery,
+        userId
+      });
+    } catch (error) {
+      console.error('Error evaluating answer, using fallback:', error);
+      const fallbackScore = 50;
+      evaluation = {
+        score: fallbackScore,
+        feedback: {
+          strengths: "Thank you for your answer.",
+          improvements: "Keep practicing to improve.",
+          model_explanation: question.ideal_answer || "Review the topic for a complete answer."
+        },
+        mastery_impact: {
+          delta: 0
+        }
+      };
+    }
 
-    const attemptResult = await db.query(
+    if (!evaluation || evaluation.score === undefined || !evaluation.feedback) {
+      console.error('Invalid evaluation object:', evaluation);
+      const fallbackScore = 50;
+      evaluation = {
+        score: fallbackScore,
+        feedback: {
+          strengths: "Thank you for your answer.",
+          improvements: "Keep practicing to improve.",
+          model_explanation: question.ideal_answer || "Review the topic for a complete answer."
+        },
+        mastery_impact: {
+          delta: 0
+        }
+      };
+    }
+
+    const attemptId = db.generateUUID();
+
+    await db.query(
       `INSERT INTO attempt 
-       (user_id, question_id, session_id, answer_text, answer_method, language, 
+       (id, user_id, question_id, session_id, answer_text, answer_method, language, 
         ai_feedback, ai_score, time_spent_seconds) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
-       RETURNING *`,
-      [userId, question_id, session_id, answer_text, answer_method, language,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [attemptId, userId, question_id, session_id || null, answer_text, answer_method, language || null,
        JSON.stringify(evaluation.feedback), evaluation.score, time_spent_seconds]
+    );
+
+    const insertedAttempt = await db.query(
+      'SELECT * FROM attempt WHERE id = $1',
+      [attemptId]
     );
 
     const newMastery = currentMastery + evaluation.mastery_impact.delta;
@@ -77,14 +116,14 @@ router.post('/', authenticate, async (req, res) => {
     );
 
     res.status(201).json({
-      id: attemptResult.rows[0].id,
+      id: insertedAttempt.rows[0]?.id || null,
       feedback: evaluation.feedback,
       score: evaluation.score,
       mastery_impact: {
         topic: question.topic,
         previous_mastery: currentMastery,
         new_mastery: masteryUpdate,
-        delta: evaluation.mastery_impact.delta
+        delta: evaluation.mastery_impact?.delta || 0
       }
     });
   } catch (error) {

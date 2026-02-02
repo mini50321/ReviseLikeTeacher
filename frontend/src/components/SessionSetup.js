@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import styles from './SessionSetup.module.css';
 
-export default function SessionSetup({ onStart, onCancel, defaultMode }) {
+export default function SessionSetup({ onStart, onCancel, defaultMode, loading = false }) {
   const [numberOfQuestions, setNumberOfQuestions] = useState(10);
   const [mode, setMode] = useState(defaultMode || 'balanced');
   const [subjects, setSubjects] = useState([]);
@@ -114,8 +114,9 @@ export default function SessionSetup({ onStart, onCancel, defaultMode }) {
             type="button"
             className={styles.startButton}
             onClick={handleStart}
+            disabled={loading}
           >
-            Start Session
+            {loading ? 'Starting...' : 'Start Session'}
           </button>
         </div>
       </div>

@@ -22,9 +22,14 @@ async function evaluateAnswer({ question, studentAnswer, currentMastery, userId 
       timeout: 3000
     });
 
-    return response.data;
+    if (response.data && response.data.score !== undefined && response.data.feedback) {
+      return response.data;
+    }
+    
+    throw new Error('Invalid response from AI service');
   } catch (error) {
-    console.error('AI evaluation error:', error);
+    console.error('AI evaluation error:', error.message || error);
+    console.log('Using fallback evaluation (AI service unavailable)');
     
     const fallbackScore = calculateFallbackScore(studentAnswer, question);
     

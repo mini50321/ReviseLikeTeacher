@@ -11,13 +11,26 @@ router.post('/', authenticate, async (req, res) => {
       configuration
     } = req.body;
 
-    const result = await db.query(
-      `INSERT INTO session (user_id, session_type, configuration, status) 
-       VALUES ($1, $2, $3, 'in_progress') 
-       RETURNING *`,
-      [userId, session_type, JSON.stringify(configuration || {})]
+    const sessionId = db.generateUUID();
+    console.log('Creating session with ID:', sessionId);
+
+    await db.query(
+      `INSERT INTO session (id, user_id, session_type, configuration, status) 
+       VALUES ($1, $2, $3, $4, 'in_progress')`,
+      [sessionId, userId, session_type, JSON.stringify(configuration || {})]
     );
 
+    const result = await db.query(
+      'SELECT * FROM session WHERE id = $1',
+      [sessionId]
+    );
+
+    if (result.rows.length === 0) {
+      console.error('Failed to retrieve created session');
+      return res.status(500).json({ error: 'Failed to create session' });
+    }
+
+    console.log('Session created:', result.rows[0]);
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('Create session error:', error);
