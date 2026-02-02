@@ -48,24 +48,17 @@ const saveDatabase = () => {
 
 const convertQuery = (text) => {
   let converted = text;
-  const paramMatches = text.match(/\$(\d+)/g);
   
-  if (paramMatches) {
-    const uniqueParams = [...new Set(paramMatches)].sort((a, b) => {
-      const numA = parseInt(a.substring(1));
-      const numB = parseInt(b.substring(1));
-      return numA - numB;
-    });
-    
-    uniqueParams.forEach((param, index) => {
-      converted = converted.replace(new RegExp('\\' + param, 'g'), '?');
-    });
-  }
+  converted = converted.replace(/\$(\d+)/g, '?');
   
   converted = converted.replace(/RETURNING \*/gi, '');
   converted = converted.replace(/RETURNING [a-z_,\s]+/gi, '');
   
   return converted;
+};
+
+const normalizeParams = (params) => {
+  return params.map(param => param === undefined ? null : param);
 };
 
 const query = async (text, params = []) => {
@@ -84,7 +77,7 @@ const query = async (text, params = []) => {
     
     if (isSelect) {
       const stmt = db.prepare(convertedQuery);
-      stmt.bind(params);
+      stmt.bind(normalizeParams(params));
       const rows = [];
       while (stmt.step()) {
         rows.push(stmt.getAsObject());
@@ -93,7 +86,7 @@ const query = async (text, params = []) => {
       return { rows };
     } else {
       const stmt = db.prepare(convertedQuery);
-      stmt.bind(params);
+      stmt.bind(normalizeParams(params));
       stmt.step();
       const lastInsertRowid = db.exec("SELECT last_insert_rowid() as id")[0]?.values[0]?.[0];
       stmt.free();
@@ -141,7 +134,7 @@ const queryOne = async (text, params = []) => {
     
     const convertedQuery = convertQuery(text);
     const stmt = db.prepare(convertedQuery);
-    stmt.bind(params);
+    stmt.bind(normalizeParams(params));
     let row = null;
     if (stmt.step()) {
       row = stmt.getAsObject();

@@ -153,7 +153,7 @@ export default function DashboardPage() {
                       className={styles.readinessPercentage}
                       style={{ color: getStatusColor(readiness.status) }}
                     >
-                      {readiness.percentage.toFixed(0)}%
+                      {(readiness.percentage || 0).toFixed(0)}%
                     </div>
                     <div 
                       className={styles.readinessStatus}
@@ -211,7 +211,20 @@ export default function DashboardPage() {
                     <div className={styles.scheduleItem}>
                       <span className={styles.scheduleLabel}>Subjects:</span>
                       <span className={styles.scheduleValue}>
-                        {todaySchedule.subjects?.join(', ') || 'None'}
+                        {(() => {
+                          const subjects = todaySchedule.subjects;
+                          if (!subjects) return 'None';
+                          if (Array.isArray(subjects)) return subjects.join(', ');
+                          if (typeof subjects === 'string') {
+                            try {
+                              const parsed = JSON.parse(subjects);
+                              return Array.isArray(parsed) ? parsed.join(', ') : subjects;
+                            } catch {
+                              return subjects;
+                            }
+                          }
+                          return 'None';
+                        })()}
                       </span>
                     </div>
                     <div className={styles.scheduleItem}>

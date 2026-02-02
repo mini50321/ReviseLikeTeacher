@@ -11,6 +11,7 @@ const sessionRoutes = require('./routes/sessions');
 const adminRoutes = require('./routes/admin');
 const pdfRoutes = require('./routes/pdf');
 const extractionRoutes = require('./routes/extractions');
+const scheduleRoutes = require('./routes/schedule');
 
 const app = express();
 
@@ -33,6 +34,7 @@ app.use('/api/sessions', sessionRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/pdf', pdfRoutes);
 app.use('/api/extractions', extractionRoutes);
+app.use('/api/schedule', scheduleRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.get('/', (req, res) => {

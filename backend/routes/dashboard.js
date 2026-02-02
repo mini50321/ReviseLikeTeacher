@@ -73,14 +73,14 @@ router.get('/', authenticate, async (req, res) => {
         date: todaySchedule.date,
         planned_questions: todaySchedule.planned_questions,
         planned_minutes: todaySchedule.planned_minutes,
-        subjects: todaySchedule.subjects,
-        topics: todaySchedule.topics,
+        subjects: todaySchedule.subjects ? (typeof todaySchedule.subjects === 'string' ? JSON.parse(todaySchedule.subjects) : todaySchedule.subjects) : [],
+        topics: todaySchedule.topics ? (typeof todaySchedule.topics === 'string' ? JSON.parse(todaySchedule.topics) : todaySchedule.topics) : [],
         status: todaySchedule.status
       } : null,
       sevenDaySchedule: sevenDayScheduleResult.rows.map(s => ({
         date: s.date,
         planned_questions: s.planned_questions,
-        subjects: s.subjects,
+        subjects: s.subjects ? (typeof s.subjects === 'string' ? JSON.parse(s.subjects) : s.subjects) : [],
         status: s.status
       })),
       topicMastery: topicMasteryResult.rows.map(t => ({

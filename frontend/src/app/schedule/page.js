@@ -12,6 +12,8 @@ export default function SchedulePage() {
   const [schedule, setSchedule] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [generating, setGenerating] = useState(false);
+  const [hasProfile, setHasProfile] = useState(false);
 
   useEffect(() => {
     fetchSchedule();
@@ -20,18 +22,35 @@ export default function SchedulePage() {
   const fetchSchedule = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/dashboard');
-      if (response.data.sevenDaySchedule) {
-        setSchedule(response.data.sevenDaySchedule);
+      setError('');
+      const response = await api.get('/schedule');
+      if (response.data.schedule) {
+        setSchedule(response.data.schedule);
       }
+      setHasProfile(true);
     } catch (err) {
       if (err.response?.status === 404) {
         setError('Please complete onboarding to view your schedule');
+        setHasProfile(false);
       } else {
         setError(err.response?.data?.error || 'Failed to load schedule');
+        setHasProfile(true);
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const generateSchedule = async () => {
+    try {
+      setGenerating(true);
+      setError('');
+      await api.post('/schedule');
+      await fetchSchedule();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to generate schedule');
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -96,10 +115,25 @@ export default function SchedulePage() {
             {schedule.length === 0 ? (
               <div className={styles.emptyState}>
                 <p>No schedule available yet.</p>
-                <p>Complete onboarding to generate your personalized revision schedule.</p>
-                <a href="/onboarding" className={styles.button}>
-                  Complete Onboarding
-                </a>
+                {hasProfile ? (
+                  <>
+                    <p>Click the button below to generate your personalized revision schedule.</p>
+                    <button 
+                      onClick={generateSchedule} 
+                      disabled={generating}
+                      className={styles.button}
+                    >
+                      {generating ? 'Generating...' : 'Generate Schedule'}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p>Complete onboarding to generate your personalized revision schedule.</p>
+                    <a href="/onboarding" className={styles.button}>
+                      Complete Onboarding
+                    </a>
+                  </>
+                )}
               </div>
             ) : (
               <div className={styles.scheduleList}>

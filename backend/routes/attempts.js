@@ -157,10 +157,11 @@ router.post('/:id/feedback/rate', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
+    const ratingId = db.generateUUID();
     await db.query(
-      `INSERT INTO feedback_ratings (attempt_id, user_id, rating, feedback_text) 
-       VALUES ($1, $2, $3, $4)`,
-      [id, userId, rating, feedback_text]
+      `INSERT INTO feedback_ratings (id, attempt_id, user_id, rating, feedback_text) 
+       VALUES ($1, $2, $3, $4, $5)`,
+      [ratingId, id, userId, rating, feedback_text || null]
     );
 
     await db.query(

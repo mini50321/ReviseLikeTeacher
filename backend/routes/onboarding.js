@@ -38,6 +38,7 @@ router.post('/', authenticate, async (req, res) => {
       [userId]
     );
 
+    let profile;
     if (existingProfile.rows.length > 0) {
       const result = await db.query(
         `UPDATE userprofile SET 
@@ -49,7 +50,7 @@ router.post('/', authenticate, async (req, res) => {
         [target_exam, exam_date, target_score_band, selected_subjects, 
          daily_study_minutes, weekly_question_target, userId]
       );
-      return res.json(result.rows[0]);
+      profile = result.rows[0];
     } else {
       const result = await db.query(
         `INSERT INTO userprofile 
@@ -59,7 +60,47 @@ router.post('/', authenticate, async (req, res) => {
         [userId, target_exam, exam_date, target_score_band, selected_subjects, 
          daily_study_minutes, weekly_question_target]
       );
-      return res.status(201).json(result.rows[0]);
+      profile = result.rows[0];
+    }
+
+    const questionsPerDay = Math.ceil(weekly_question_target / 7);
+    const selectedSubjectsArray = Array.isArray(selected_subjects) 
+      ? selected_subjects 
+      : (typeof selected_subjects === 'string' ? JSON.parse(selected_subjects) : []);
+
+    const today = new Date();
+    for (let i = 0; i < 7; i++) {
+      const scheduleDate = new Date(today);
+      scheduleDate.setDate(today.getDate() + i);
+      const dateString = scheduleDate.toISOString().split('T')[0];
+
+      const existingSchedule = await db.query(
+        'SELECT id FROM revisionschedule WHERE user_id = $1 AND date = $2',
+        [userId, dateString]
+      );
+
+      if (existingSchedule.rows.length === 0) {
+        const scheduleId = db.generateUUID();
+        await db.query(
+          `INSERT INTO revisionschedule 
+           (id, user_id, date, planned_questions, planned_minutes, subjects, status) 
+           VALUES ($1, $2, $3, $4, $5, $6, 'scheduled')`,
+          [
+            scheduleId,
+            userId,
+            dateString,
+            questionsPerDay,
+            daily_study_minutes,
+            JSON.stringify(selectedSubjectsArray)
+          ]
+        );
+      }
+    }
+
+    if (existingProfile.rows.length > 0) {
+      return res.json(profile);
+    } else {
+      return res.status(201).json(profile);
     }
   } catch (error) {
     console.error('Onboarding error:', error);
