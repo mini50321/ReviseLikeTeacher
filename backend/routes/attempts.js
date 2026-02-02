@@ -74,6 +74,12 @@ router.post('/', authenticate, async (req, res) => {
       };
     }
 
+    if (!evaluation.mastery_impact || evaluation.mastery_impact.delta === undefined) {
+      evaluation.mastery_impact = {
+        delta: 0
+      };
+    }
+
     const attemptId = db.generateUUID();
 
     await db.query(

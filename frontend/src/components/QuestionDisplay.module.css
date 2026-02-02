@@ -113,6 +113,7 @@
   resize: vertical;
   min-height: 150px;
   transition: all 0.3s ease;
+  pointer-events: auto;
 }
 
 .answerInput::placeholder {

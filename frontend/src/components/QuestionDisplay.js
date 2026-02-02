@@ -9,6 +9,8 @@ export default function QuestionDisplay({ question, questionNumber, totalQuestio
   const [timer, setTimer] = useState(null);
 
   useEffect(() => {
+    setAnswer('');
+    setTimeSpent(0);
     const startTime = Date.now();
     const interval = setInterval(() => {
       setTimeSpent(Math.floor((Date.now() - startTime) / 1000));
@@ -67,6 +69,7 @@ export default function QuestionDisplay({ question, questionNumber, totalQuestio
             placeholder="Type your answer here..."
             rows={6}
             disabled={loading}
+            autoComplete="off"
           />
         </div>
 
