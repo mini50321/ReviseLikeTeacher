@@ -167,9 +167,9 @@ export default function PDFUploadPage() {
                   </div>
                 ) : (
                   <div className={styles.pdfCards}>
-                    {pdfs.map(pdf => (
+                    {pdfs.map((pdf, index) => (
                       <div
-                        key={pdf.id}
+                        key={pdf.id || `pdf-${index}`}
                         className={`${styles.pdfCard} ${selectedPdf?.id === pdf.id ? styles.selected : ''}`}
                         onClick={() => setSelectedPdf(pdf)}
                       >
@@ -209,8 +209,8 @@ export default function PDFUploadPage() {
                     </div>
                   ) : (
                     <div className={styles.extractionList}>
-                      {extractions.map(extraction => (
-                        <div key={extraction.id} className={styles.extractionCard}>
+                      {extractions.map((extraction, index) => (
+                        <div key={extraction.id || `extraction-${index}`} className={styles.extractionCard}>
                           <div className={styles.extractionHeader}>
                             <div className={styles.extractionMeta}>
                               <span className={styles.badge}>{extraction.detected_subject}</span>
