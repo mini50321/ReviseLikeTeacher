@@ -60,7 +60,17 @@ export default function AdminDashboardPage() {
         <Header />
         <main className={styles.main}>
           <div className={styles.container}>
-            <h1 className={styles.title}>Admin Dashboard</h1>
+            <div className={styles.titleRow}>
+              <h1 className={styles.title}>Admin Dashboard</h1>
+              <div className={styles.actions}>
+                <a href="/admin/question-studio" className={styles.actionButton}>
+                  Manage Questions
+                </a>
+                <a href="/admin/question-studio?action=create" className={styles.actionButton}>
+                  Create Question
+                </a>
+              </div>
+            </div>
 
             {error && <div className={styles.error}>{error}</div>}
 
@@ -81,15 +91,6 @@ export default function AdminDashboardPage() {
                 <h3 className={styles.statTitle}>Completed Sessions</h3>
                 <p className={styles.statValue}>{stats?.completedSessions || 0}</p>
               </div>
-            </div>
-
-            <div className={styles.actions}>
-              <a href="/admin/question-studio" className={styles.actionButton}>
-                Manage Questions
-              </a>
-              <a href="/admin/question-studio?action=create" className={styles.actionButton}>
-                Create Question
-              </a>
             </div>
           </div>
         </main>

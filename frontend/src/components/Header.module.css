@@ -86,19 +86,29 @@
 }
 
 .logoutButton {
-  padding: 10px 20px;
+  padding: 10px;
   background: rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
   color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: all 0.3s ease;
+  min-width: 40px;
+  min-height: 40px;
 }
 
 .logoutButton:hover {
   background: rgba(255, 255, 255, 0.3);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.logoutButton svg {
+  width: 18px;
+  height: 18px;
+  display: block;
 }
