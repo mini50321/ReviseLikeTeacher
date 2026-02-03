@@ -91,14 +91,16 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
       return res.status(400).json({ error: 'Stem, type, subject, and topic required' });
     }
 
+    const questionId = db.generateUUID();
+
     const result = await db.query(
       `INSERT INTO question 
-       (stem, type, subject, topic, subtopic, difficulty, importance, 
+       (id, stem, type, subject, topic, subtopic, difficulty, importance, 
         cognitive_focus, ideal_answer, key_points, previous_year_tags, 
         image_path, status, created_by) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) 
        RETURNING *`,
-      [stem, type, subject, topic, subtopic, difficulty, importance, 
+      [questionId, stem, type, subject, topic, subtopic, difficulty, importance, 
        cognitive_focus, ideal_answer, JSON.stringify(key_points || []), 
        JSON.stringify(previous_year_tags || []), image_path, status, req.user.userId]
     );
@@ -118,6 +120,12 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
+
+    if (!id) {
+      return res.status(400).json({ error: 'Question ID is required' });
+    }
+
+    console.log('Updating question:', { id, updates });
 
     const allowedFields = ['stem', 'type', 'subject', 'topic', 'subtopic', 
                            'difficulty', 'importance', 'cognitive_focus', 

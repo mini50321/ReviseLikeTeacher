@@ -80,19 +80,42 @@ export default function QuestionForm({ question, onSave, onCancel }) {
         previous_year_tags: parsedPreviousYearTags
       };
 
-      if (question) {
+      console.log('Submitting question:', {
+        isEdit: !!question,
+        questionId: question?.id,
+        submitData: { ...submitData, key_points: submitData.key_points.length, previous_year_tags: submitData.previous_year_tags.length }
+      });
+
+      if (question && question.id) {
+        console.log('Updating question with ID:', question.id);
         await api.put(`/questions/${question.id}`, submitData);
       } else {
+        console.log('Creating new question');
         await api.post('/questions', submitData);
       }
 
       onSave();
     } catch (err) {
       console.error('Save question error:', err);
-      const errorMessage = err.response?.data?.error 
-        || err.response?.data?.message 
-        || err.message 
-        || 'Failed to save question';
+      console.error('Error response:', err.response?.data);
+      console.error('Question object:', question);
+      
+      let errorMessage = 'Failed to save question';
+      
+      if (err.response) {
+        if (err.response.status === 404) {
+          errorMessage = 'Question not found. This may happen if the question was deleted. Please create a new question.';
+        } else if (err.response.status === 400) {
+          errorMessage = err.response.data?.error || 'Invalid data. Please check all required fields.';
+        } else if (err.response.status === 403) {
+          errorMessage = 'You do not have permission to save questions. Please ensure you are logged in as an admin.';
+        } else {
+          errorMessage = err.response.data?.error || err.response.data?.message || `Server error (${err.response.status})`;
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
       const errorDetails = err.response?.data?.details;
       setError(errorDetails ? `${errorMessage}: ${errorDetails}` : errorMessage);
       setLoading(false);

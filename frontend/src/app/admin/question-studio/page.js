@@ -115,13 +115,31 @@ export default function QuestionStudioPage() {
   };
 
   const handleDelete = async (questionId) => {
+    if (!questionId) {
+      alert('Invalid question ID');
+      return;
+    }
+
     if (!confirm('Are you sure you want to delete this question?')) return;
 
     try {
+      console.log('Deleting question with ID:', questionId);
       await api.put(`/questions/${questionId}`, { status: 'inactive' });
       fetchQuestions();
     } catch (err) {
-      alert('Failed to delete question');
+      console.error('Delete question error:', err);
+      console.error('Error response:', err.response?.data);
+      
+      let errorMessage = 'Failed to delete question';
+      if (err.response?.status === 404) {
+        errorMessage = 'Question not found. It may have already been deleted.';
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      alert(errorMessage);
     }
   };
 

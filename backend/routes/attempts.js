@@ -16,8 +16,22 @@ router.post('/', authenticate, async (req, res) => {
       time_spent_seconds = 0
     } = req.body;
 
-    if (!question_id || !answer_text || !answer_method) {
-      return res.status(400).json({ error: 'Question ID, answer text, and method required' });
+    console.log('Attempt submission received:', {
+      question_id,
+      session_id,
+      has_answer_text: !!answer_text,
+      answer_method,
+      time_spent_seconds
+    });
+
+    if (!question_id) {
+      return res.status(400).json({ error: 'Question ID is required' });
+    }
+    if (!answer_text || answer_text.trim() === '') {
+      return res.status(400).json({ error: 'Answer text is required and cannot be empty' });
+    }
+    if (!answer_method) {
+      return res.status(400).json({ error: 'Answer method is required' });
     }
 
     const questionResult = await db.query('SELECT * FROM question WHERE id = $1', [question_id]);
@@ -134,7 +148,11 @@ router.post('/', authenticate, async (req, res) => {
     });
   } catch (error) {
     console.error('Submit attempt error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    const errorMessage = error.message || 'Internal server error';
+    res.status(500).json({ 
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 

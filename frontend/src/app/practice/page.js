@@ -120,7 +120,11 @@ function PracticePageContent() {
       updateSessionStats(response.data);
     } catch (error) {
       console.error('Failed to submit answer:', error);
-      alert('Failed to submit answer. Please try again.');
+      const errorMessage = error.response?.data?.error 
+        || error.response?.data?.message 
+        || error.message 
+        || 'Failed to submit answer. Please try again.';
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }
