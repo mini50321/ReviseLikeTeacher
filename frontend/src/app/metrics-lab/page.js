@@ -80,7 +80,9 @@ export default function MetricsLabPage() {
                 <div className={styles.card}>
                   <h3 className={styles.cardTitle}>Exam Readiness</h3>
                   <div className={styles.readinessScore}>
-                    <span className={styles.score}>{analytics.readiness?.percentage || 0}%</span>
+                    <span className={styles.score}>
+                      {(analytics.readiness?.percentage || 0).toFixed(2)}%
+                    </span>
                     <span className={styles.status}>{analytics.readiness?.status || 'off_track'}</span>
                   </div>
                   <p className={styles.cardDescription}>

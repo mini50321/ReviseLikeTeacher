@@ -30,5 +30,21 @@ router.get('/questions', authenticate, requireAdmin, async (req, res) => {
   }
 });
 
+router.get('/sessions', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const result = await db.query(
+      'SELECT * FROM session ORDER BY started_at DESC'
+    );
+
+    res.json({
+      sessions: result.rows,
+      total: result.rows.length
+    });
+  } catch (error) {
+    console.error('Get admin sessions error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;
 

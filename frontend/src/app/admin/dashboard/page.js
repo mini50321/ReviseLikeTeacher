@@ -19,7 +19,7 @@ export default function AdminDashboardPage() {
     try {
       const [questionsRes, sessionsRes] = await Promise.all([
         api.get('/admin/questions'),
-        api.get('/sessions')
+        api.get('/admin/sessions')
       ]);
 
       const questions = questionsRes.data.questions || [];

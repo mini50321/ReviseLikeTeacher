@@ -200,56 +200,60 @@ export default function PDFUploadPage() {
                 )}
               </div>
 
-              {selectedPdf && (
-                <div className={styles.extractions}>
-                  <div className={styles.extractionsHeader}>
-                    <h2 className={styles.sectionTitle}>
-                      Questions from: {selectedPdf.file_name}
-                    </h2>
+              <div className={styles.extractions}>
+                <div className={styles.extractionsHeader}>
+                  <h2 className={styles.sectionTitle}>
+                    {selectedPdf ? `Questions from: ${selectedPdf.file_name}` : 'Questions'}
+                  </h2>
+                  {selectedPdf && (
                     <button
                       className={styles.addButton}
                       onClick={() => setShowManualForm(true)}
                     >
                       Add Manual Question
                     </button>
-                  </div>
-
-                  {extractions.length === 0 ? (
-                    <div className={styles.emptyState}>
-                      <p>No questions extracted yet. Add questions manually or wait for AI extraction.</p>
-                    </div>
-                  ) : (
-                    <div className={styles.extractionList}>
-                      {extractions.map((extraction, index) => (
-                        <div key={extraction.id || `extraction-${index}`} className={styles.extractionCard}>
-                          <div className={styles.extractionHeader}>
-                            <div className={styles.extractionMeta}>
-                              <span className={styles.badge}>{extraction.detected_subject}</span>
-                              <span className={styles.badge}>{extraction.detected_topic}</span>
-                              <span className={styles.badge}>{extraction.detected_type}</span>
-                            </div>
-                            <span className={`${styles.status} ${styles[extraction.status]}`}>
-                              {extraction.status}
-                            </span>
-                          </div>
-                          <div className={styles.extractionText}>
-                            {extraction.extracted_text.substring(0, 200)}
-                            {extraction.extracted_text.length > 200 && '...'}
-                          </div>
-                          <div className={styles.extractionActions}>
-                            <button
-                              className={styles.reviewButton}
-                              onClick={() => setReviewingExtraction(extraction)}
-                            >
-                              Review
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
                   )}
                 </div>
-              )}
+
+                {!selectedPdf ? (
+                  <div className={styles.emptyState}>
+                    <p>Select a PDF from the list to view extracted questions.</p>
+                  </div>
+                ) : extractions.length === 0 ? (
+                  <div className={styles.emptyState}>
+                    <p>No questions extracted yet. Add questions manually or wait for AI extraction.</p>
+                  </div>
+                ) : (
+                  <div className={styles.extractionList}>
+                    {extractions.map((extraction, index) => (
+                      <div key={extraction.id || `extraction-${index}`} className={styles.extractionCard}>
+                        <div className={styles.extractionHeader}>
+                          <div className={styles.extractionMeta}>
+                            <span className={styles.badge}>{extraction.detected_subject}</span>
+                            <span className={styles.badge}>{extraction.detected_topic}</span>
+                            <span className={styles.badge}>{extraction.detected_type}</span>
+                          </div>
+                          <span className={`${styles.status} ${styles[extraction.status]}`}>
+                            {extraction.status}
+                          </span>
+                        </div>
+                        <div className={styles.extractionText}>
+                          {extraction.extracted_text.substring(0, 200)}
+                          {extraction.extracted_text.length > 200 && '...'}
+                        </div>
+                        <div className={styles.extractionActions}>
+                          <button
+                            className={styles.reviewButton}
+                            onClick={() => setReviewingExtraction(extraction)}
+                          >
+                            Review
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </main>
