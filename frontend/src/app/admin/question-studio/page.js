@@ -46,10 +46,20 @@ export default function QuestionStudioPage() {
 
   const fetchQuestions = async () => {
     try {
+      const statusFilter = filters.status || '';
+      console.log('Fetching questions with status filter:', statusFilter);
       const response = await api.get('/admin/questions', {
-        params: { status: filters.status || '' }
+        params: { status: statusFilter }
       });
-      setQuestions(response.data.questions || []);
+      const questions = response.data.questions || [];
+      console.log('Fetched questions:', questions.length, 'with status filter:', statusFilter);
+      console.log('Question statuses:', questions.map(q => ({ id: q.id, status: q.status })));
+      questions.forEach((q, idx) => {
+        if (!q.id) {
+          console.warn(`Question at index ${idx} missing ID:`, q);
+        }
+      });
+      setQuestions(questions);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to load questions');
     } finally {
@@ -95,6 +105,10 @@ export default function QuestionStudioPage() {
   };
 
   const handleEdit = (question) => {
+    console.log('Editing question:', question);
+    if (!question.id) {
+      console.warn('Question missing ID:', question);
+    }
     setEditingQuestion(question);
     setShowForm(true);
   };
@@ -124,15 +138,26 @@ export default function QuestionStudioPage() {
 
     try {
       console.log('Deleting question with ID:', questionId);
-      await api.put(`/questions/${questionId}`, { status: 'inactive' });
-      fetchQuestions();
+      const response = await api.put(`/questions/${questionId}`, { status: 'inactive' });
+      console.log('Delete successful, response:', response.data);
+      console.log('Updated question status:', response.data?.status);
+      
+      if (response.data?.status !== 'inactive') {
+        console.error('WARNING: Question status was not set to inactive! Status is:', response.data?.status);
+      }
+      
+      await fetchQuestions();
     } catch (err) {
       console.error('Delete question error:', err);
       console.error('Error response:', err.response?.data);
+      console.error('Error status:', err.response?.status);
+      console.error('Full error:', err);
       
       let errorMessage = 'Failed to delete question';
       if (err.response?.status === 404) {
         errorMessage = 'Question not found. It may have already been deleted.';
+      } else if (err.response?.status === 400) {
+        errorMessage = err.response.data?.error || 'Invalid request';
       } else if (err.response?.data?.error) {
         errorMessage = err.response.data.error;
       } else if (err.message) {
@@ -294,8 +319,8 @@ export default function QuestionStudioPage() {
                     <p>No questions found. Create your first question!</p>
                   </div>
                 ) : (
-                  filteredQuestions.map(question => (
-                    <div key={question.id} className={styles.questionCard}>
+                  filteredQuestions.map((question, index) => (
+                    <div key={question.id || `question-${index}`} className={styles.questionCard}>
                       <div className={styles.questionHeader}>
                         <div className={styles.questionMeta}>
                           <span className={styles.subject}>{question.subject}</span>

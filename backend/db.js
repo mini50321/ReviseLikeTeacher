@@ -46,15 +46,40 @@ const saveDatabase = () => {
   }
 };
 
-const convertQuery = (text) => {
+const convertQuery = (text, params) => {
   let converted = text;
+  const paramMatches = [];
+  const paramPattern = /\$(\d+)/g;
+  let match;
   
-  converted = converted.replace(/\$(\d+)/g, '?');
+  while ((match = paramPattern.exec(text)) !== null) {
+    paramMatches.push({
+      index: match.index,
+      paramNum: parseInt(match[1])
+    });
+  }
   
   converted = converted.replace(/RETURNING \*/gi, '');
   converted = converted.replace(/RETURNING [a-z_,\s]+/gi, '');
   
-  return converted;
+  if (paramMatches.length > 0) {
+    const reorderedParams = [];
+    paramMatches.sort((a, b) => a.index - b.index);
+    
+    paramMatches.forEach(m => {
+      if (m.paramNum > 0 && m.paramNum <= params.length) {
+        reorderedParams.push(params[m.paramNum - 1]);
+      }
+    });
+    
+    converted = converted.replace(/\$(\d+)/g, '?');
+    
+    return { query: converted, params: reorderedParams };
+  }
+  
+  converted = converted.replace(/\$(\d+)/g, '?');
+  
+  return { query: converted, params };
 };
 
 const normalizeParams = (params) => {
@@ -72,12 +97,14 @@ const query = async (text, params = []) => {
     const returningMatch = hasReturning ? text.match(/RETURNING\s+([a-z_,\s*]+)/i) : null;
     const tableMatch = text.match(/INSERT INTO\s+(\w+)/i);
     
-    const convertedQuery = convertQuery(text);
+    const converted = convertQuery(text, params);
+    const convertedQuery = converted.query;
+    const reorderedParams = converted.params;
     const isSelect = convertedQuery.trim().toUpperCase().startsWith('SELECT');
     
     if (isSelect) {
       const stmt = db.prepare(convertedQuery);
-      stmt.bind(normalizeParams(params));
+      stmt.bind(normalizeParams(reorderedParams));
       const rows = [];
       while (stmt.step()) {
         rows.push(stmt.getAsObject());
@@ -86,10 +113,18 @@ const query = async (text, params = []) => {
       return { rows };
     } else {
       const stmt = db.prepare(convertedQuery);
-      stmt.bind(normalizeParams(params));
-      stmt.step();
+      stmt.bind(normalizeParams(reorderedParams));
+      const stepResult = stmt.step();
+      const changes = stmt.getRowsModified ? stmt.getRowsModified() : (db.getRowsModified ? db.getRowsModified() : 1);
       const lastInsertRowid = db.exec("SELECT last_insert_rowid() as id")[0]?.values[0]?.[0];
       stmt.free();
+      
+      console.log('Non-SELECT query executed:', {
+        query: convertedQuery.substring(0, 100),
+        stepResult,
+        changes,
+        lastInsertRowid
+      });
       
       if (hasReturning && lastInsertRowid && tableMatch) {
         const tableName = tableMatch[1];
@@ -112,16 +147,17 @@ const query = async (text, params = []) => {
         selectStmt.free();
         
         saveDatabase();
-        return { rows: insertedRow ? [insertedRow] : [], rowCount: 1, lastInsertRowid };
+        return { rows: insertedRow ? [insertedRow] : [], rowCount: changes || 1, lastInsertRowid };
       }
       
       saveDatabase();
-      return { rows: [], rowCount: 1, lastInsertRowid };
+      return { rows: [], rowCount: changes || 1, lastInsertRowid };
     }
   } catch (error) {
     console.error('Database query error:', error);
     console.error('Original query:', text);
-    console.error('Converted query:', convertQuery(text));
+    const converted = convertQuery(text, params);
+    console.error('Converted query:', converted.query);
     throw error;
   }
 };
@@ -132,9 +168,11 @@ const queryOne = async (text, params = []) => {
       await initDatabase();
     }
     
-    const convertedQuery = convertQuery(text);
+    const converted = convertQuery(text, params);
+    const convertedQuery = converted.query;
+    const reorderedParams = converted.params;
     const stmt = db.prepare(convertedQuery);
-    stmt.bind(normalizeParams(params));
+    stmt.bind(normalizeParams(reorderedParams));
     let row = null;
     if (stmt.step()) {
       row = stmt.getAsObject();

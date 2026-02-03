@@ -153,17 +153,64 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
 
     const setClause = setParts.join(', ');
 
-    const result = await db.query(
-      `UPDATE question SET ${setClause}, updated_at = CURRENT_TIMESTAMP 
-       WHERE id = $1 RETURNING *`,
-      values
-    );
+    console.log('Executing UPDATE query:', {
+      id,
+      setClause,
+      values: values.slice(1)
+    });
 
-    if (result.rows.length === 0) {
+    const checkResult = await db.query('SELECT id, status FROM question WHERE id = $1', [id]);
+    
+    if (checkResult.rows.length === 0) {
+      console.log('Question not found in database:', id);
       return res.status(404).json({ error: 'Question not found' });
     }
 
-    res.json(result.rows[0]);
+    console.log('Question found:', checkResult.rows[0]);
+
+    try {
+      const updateQuery = `UPDATE question SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = $1`;
+      console.log('Executing UPDATE:', updateQuery);
+      console.log('UPDATE values (full):', values);
+      console.log('UPDATE setClause:', setClause);
+      console.log('UPDATE updateFields:', updateFields);
+      
+      const updateResult = await db.query(updateQuery, values);
+      console.log('UPDATE query executed, result:', JSON.stringify(updateResult, null, 2));
+      console.log('UPDATE rowCount:', updateResult.rowCount);
+      
+      if (!updateResult || updateResult.rowCount === 0) {
+        console.error('CRITICAL: UPDATE query did not affect any rows!');
+        console.error('This means the WHERE clause did not match or the query failed silently.');
+        return res.status(500).json({ error: 'Update query did not affect any rows' });
+      }
+
+      if (updateResult.rowCount === 0) {
+        console.error('WARNING: UPDATE affected 0 rows! The question may not exist or the WHERE clause did not match.');
+      }
+
+      const updatedResult = await db.query('SELECT * FROM question WHERE id = $1', [id]);
+      console.log('SELECT after UPDATE returned:', updatedResult.rows.length, 'rows');
+      
+      if (updatedResult.rows.length === 0) {
+        console.error('Question not found after update for ID:', id);
+        return res.status(404).json({ error: 'Question not found or could not be updated' });
+      }
+
+      const returnedStatus = updatedResult.rows[0].status;
+      console.log('Question found after UPDATE. Status before:', checkResult.rows[0].status, 'Status after:', returnedStatus);
+      
+      if (returnedStatus === checkResult.rows[0].status && 'status' in updates) {
+        console.error('ERROR: Status was not updated! Expected:', updates.status, 'Got:', returnedStatus);
+      }
+
+      console.log('Question updated successfully. New status:', returnedStatus);
+      res.json(updatedResult.rows[0]);
+    } catch (updateError) {
+      console.error('Error during UPDATE operation:', updateError);
+      console.error('Update error stack:', updateError.stack);
+      throw updateError;
+    }
   } catch (error) {
     console.error('Update question error:', error);
     const errorMessage = error.message || 'Internal server error';

@@ -7,18 +7,31 @@ router.get('/questions', authenticate, requireAdmin, async (req, res) => {
   try {
     const { status } = req.query;
 
+    console.log('GET /admin/questions - status filter:', status);
+
     let query = 'SELECT * FROM question';
     const params = [];
     let paramCount = 1;
 
-    if (status) {
+    if (status && status.trim() !== '') {
       query += ` WHERE status = $${paramCount++}`;
       params.push(status);
+      console.log('Applying status filter:', status);
+    } else {
+      console.log('No status filter applied - returning all questions');
     }
 
     query += ' ORDER BY created_at DESC';
 
+    console.log('Query:', query);
+    console.log('Params:', params);
+
     const result = await db.query(query, params);
+
+    console.log('Returning', result.rows.length, 'questions');
+    if (result.rows.length > 0) {
+      console.log('Sample question statuses:', result.rows.slice(0, 3).map(q => ({ id: q.id, status: q.status })));
+    }
 
     res.json({
       questions: result.rows,
