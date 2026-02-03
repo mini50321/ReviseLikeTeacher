@@ -22,7 +22,11 @@ export default function LoginPage() {
     const result = await login(email, password);
 
     if (result.success) {
-      router.push('/dashboard');
+      if (result.user?.role === 'admin') {
+        router.push('/admin/dashboard');
+      } else {
+        router.push('/dashboard');
+      }
     } else {
       setError(result.error);
       setLoading(false);

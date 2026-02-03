@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth');
 const { db } = require('../db');
+const { calculateReadiness } = require('../services/readiness');
 
 router.get('/', authenticate, async (req, res) => {
   try {
@@ -100,6 +101,29 @@ router.get('/', authenticate, async (req, res) => {
     });
   } catch (error) {
     console.error('Dashboard error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/recalculate-readiness', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const readiness = await calculateReadiness(userId);
+    
+    if (!readiness) {
+      return res.status(404).json({ error: 'Profile not found. Please complete onboarding.' });
+    }
+
+    res.json({
+      message: 'Readiness recalculated',
+      readiness: {
+        percentage: readiness.readiness_percentage,
+        status: readiness.status,
+        forecast: readiness.forecast_data
+      }
+    });
+  } catch (error) {
+    console.error('Recalculate readiness error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

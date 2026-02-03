@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '../../contexts/AuthContext';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import Header from '../../components/Header';
 import api from '../../lib/api';
@@ -12,10 +13,18 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
+    if (authLoading) return;
+    
+    if (user?.role === 'admin') {
+      window.location.href = '/admin/dashboard';
+      return;
+    }
+    
     fetchDashboardData();
-  }, []);
+  }, [user, authLoading]);
 
   const fetchDashboardData = async () => {
     try {
@@ -27,6 +36,19 @@ export default function DashboardPage() {
       setLoading(false);
     }
   };
+
+  if (authLoading || (user?.role === 'admin')) {
+    return (
+      <ProtectedRoute>
+        <div>
+          <Header />
+          <main className={styles.main}>
+            <div className={styles.loading}>Redirecting...</div>
+          </main>
+        </div>
+      </ProtectedRoute>
+    );
+  }
 
   if (loading) {
     return (
@@ -43,6 +65,11 @@ export default function DashboardPage() {
 
   if (error) {
     if (error.includes('onboarding')) {
+      const { user } = useAuth();
+      if (user?.role === 'admin') {
+        router.push('/admin/dashboard');
+        return null;
+      }
       return (
         <ProtectedRoute>
           <div>

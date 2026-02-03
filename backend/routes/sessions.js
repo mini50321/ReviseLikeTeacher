@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth');
 const { db } = require('../db');
+const { calculateReadiness } = require('../services/readiness');
 
 router.post('/', authenticate, async (req, res) => {
   try {
@@ -111,6 +112,12 @@ router.post('/:id/complete', authenticate, async (req, res) => {
        RETURNING *`,
       [totalQuestions, averageScore, accuracy, totalTime, id]
     );
+
+    try {
+      await calculateReadiness(userId);
+    } catch (readinessError) {
+      console.error('Failed to update readiness after session completion:', readinessError);
+    }
 
     res.json(result.rows[0]);
   } catch (error) {

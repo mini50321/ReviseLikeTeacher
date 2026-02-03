@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect } from 'react';
-import { authAPI } from '../lib/api';
+import { authAPI, userAPI } from '../lib/api';
 
 const AuthContext = createContext(null);
 
@@ -10,20 +10,26 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storedUser = localStorage.getItem('user');
-      const token = localStorage.getItem('token');
-      
-      if (storedUser && token) {
-        try {
-          setUser(JSON.parse(storedUser));
-        } catch (error) {
-          localStorage.removeItem('user');
-          localStorage.removeItem('token');
+    const loadUser = async () => {
+      if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('token');
+        
+        if (token) {
+          try {
+            const data = await userAPI.getCurrentUser();
+            const userData = data.user;
+            localStorage.setItem('user', JSON.stringify(userData));
+            setUser(userData);
+          } catch (error) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+          }
         }
+        setLoading(false);
       }
-      setLoading(false);
-    }
+    };
+    
+    loadUser();
   }, []);
 
   const login = async (email, password) => {
@@ -35,7 +41,7 @@ export function AuthProvider({ children }) {
       localStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
       
-      return { success: true };
+      return { success: true, user: userData };
     } catch (error) {
       return {
         success: false,
