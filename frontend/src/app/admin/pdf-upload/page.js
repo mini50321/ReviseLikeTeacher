@@ -70,10 +70,21 @@ export default function PDFUploadPage() {
       formData.append('file', file);
 
       const response = await api.post('/pdf/upload', formData);
+      const uploadedPdf = response.data;
 
-      setPdfs(prev => [response.data, ...prev]);
-      setSelectedPdf(response.data);
+      const pdfData = {
+        ...uploadedPdf,
+        uploaded_at: uploadedPdf.uploaded_at || new Date().toISOString(),
+        file_size: uploadedPdf.file_size || file.size
+      };
+
+      setPdfs(prev => [pdfData, ...prev]);
+      setSelectedPdf(pdfData);
       setShowUpload(false);
+      
+      setTimeout(() => {
+        fetchPDFs();
+      }, 500);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to upload PDF');
     } finally {
@@ -174,13 +185,13 @@ export default function PDFUploadPage() {
                         onClick={() => setSelectedPdf(pdf)}
                       >
                         <div className={styles.pdfInfo}>
-                          <h3 className={styles.pdfName}>{pdf.file_name}</h3>
+                          <h3 className={styles.pdfName}>{pdf.file_name || 'Untitled PDF'}</h3>
                           <p className={styles.pdfMeta}>
-                            {new Date(pdf.uploaded_at).toLocaleDateString()} • 
-                            {(pdf.file_size / 1024 / 1024).toFixed(2)} MB
+                            {pdf.uploaded_at ? new Date(pdf.uploaded_at).toLocaleDateString() : 'Unknown date'} • 
+                            {pdf.file_size ? `${(pdf.file_size / 1024 / 1024).toFixed(2)} MB` : 'Unknown size'}
                           </p>
-                          <span className={`${styles.status} ${styles[pdf.upload_status]}`}>
-                            {pdf.upload_status}
+                          <span className={`${styles.status} ${styles[pdf.upload_status || 'uploaded']}`}>
+                            {pdf.upload_status || 'uploaded'}
                           </span>
                         </div>
                       </div>
