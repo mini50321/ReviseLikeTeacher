@@ -88,6 +88,32 @@ app.get('/health/db', async (req, res) => {
   }
 });
 
+app.post('/api/make-admin', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Email required' });
+    }
+    
+    const { db } = require('./db');
+    
+    const checkUser = await db.query('SELECT id FROM users WHERE email = $1', [email]);
+    if (checkUser.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found. Please sign up first.' });
+    }
+    
+    await db.query('UPDATE users SET role = $1 WHERE email = $2', ['admin', email]);
+    
+    res.json({ 
+      message: `User ${email} is now an admin! Please log out and log back in to access the admin panel.`,
+      success: true 
+    });
+  } catch (error) {
+    console.error('Make admin error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 app.use((err, req, res, next) => {
   console.error('Error:', err);
   res.status(500).json({ error: 'Internal server error' });
