@@ -6,5 +6,11 @@ const nextConfig = {
   },
 }
 
+if (process.env.PORT) {
+  nextConfig.server = {
+    port: parseInt(process.env.PORT),
+  };
+}
+
 module.exports = nextConfig
 

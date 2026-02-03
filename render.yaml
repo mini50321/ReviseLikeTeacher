@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: reviseliketeacher-backend
+    env: node
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        generateValue: true
+    healthCheckPath: /health
+
+  - type: web
+    name: reviseliketeacher-frontend
+    env: node
+    buildCommand: cd frontend && npm install && npm run build
+    startCommand: cd frontend && npm start
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          type: web
+          name: reviseliketeacher-backend
+          property: host
+        value: https://reviseliketeacher-backend.onrender.com/api
+      - key: NODE_ENV
+        value: production
+    healthCheckPath: /
+

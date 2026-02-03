@@ -15,8 +15,21 @@ const scheduleRoutes = require('./routes/schedule');
 
 const app = express();
 
+const allowedOrigins = process.env.NODE_ENV === 'production'
+  ? [
+      process.env.FRONTEND_URL || 'https://reviseliketeacher-frontend.onrender.com',
+      'https://reviseliketeacher-frontend.onrender.com'
+    ]
+  : ['http://localhost:3001', 'http://localhost:5173', 'http://localhost:3000'];
+
 app.use(cors({
-  origin: ['http://localhost:3001', 'http://localhost:5173', 'http://localhost:3000'],
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(null, true);
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
