@@ -106,7 +106,11 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('Create question error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    const errorMessage = error.message || 'Internal server error';
+    res.status(500).json({ 
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
@@ -154,7 +158,11 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Update question error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    const errorMessage = error.message || 'Internal server error';
+    res.status(500).json({ 
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 

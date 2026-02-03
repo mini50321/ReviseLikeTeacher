@@ -63,12 +63,21 @@ export default function QuestionForm({ question, onSave, onCancel }) {
     setLoading(true);
 
     try {
+      let parsedPreviousYearTags = [];
+      if (formData.previous_year_tags) {
+        try {
+          parsedPreviousYearTags = JSON.parse(formData.previous_year_tags);
+        } catch (parseError) {
+          setError(`Invalid JSON in Previous Year Tags: ${parseError.message}. Please use valid JSON format like ["NEET PG 2023"]`);
+          setLoading(false);
+          return;
+        }
+      }
+
       const submitData = {
         ...formData,
         key_points: formData.key_points.split('\n').filter(k => k.trim()),
-        previous_year_tags: formData.previous_year_tags 
-          ? JSON.parse(formData.previous_year_tags)
-          : []
+        previous_year_tags: parsedPreviousYearTags
       };
 
       if (question) {
@@ -79,7 +88,13 @@ export default function QuestionForm({ question, onSave, onCancel }) {
 
       onSave();
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to save question');
+      console.error('Save question error:', err);
+      const errorMessage = err.response?.data?.error 
+        || err.response?.data?.message 
+        || err.message 
+        || 'Failed to save question';
+      const errorDetails = err.response?.data?.details;
+      setError(errorDetails ? `${errorMessage}: ${errorDetails}` : errorMessage);
       setLoading(false);
     }
   };
