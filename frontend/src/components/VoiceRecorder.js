@@ -10,6 +10,8 @@ export default function VoiceRecorder({ onRecordingComplete, onError }) {
   const [audioUrl, setAudioUrl] = useState(null);
   const [recordingTime, setRecordingTime] = useState(0);
   const [audioLevel, setAudioLevel] = useState(0);
+  const [error, setError] = useState('');
+  const [checkingDevices, setCheckingDevices] = useState(false);
 
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
@@ -47,9 +49,42 @@ export default function VoiceRecorder({ onRecordingComplete, onError }) {
     }
   };
 
-  const startRecording = async () => {
+  const checkMicrophoneAvailability = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Your browser does not support microphone access. Please use Chrome, Edge, or Firefox.');
+      }
+
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const audioInputs = devices.filter(device => device.kind === 'audioinput');
+      
+      if (audioInputs.length === 0) {
+        throw new Error('No microphone found. Please connect a microphone and refresh the page.');
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Microphone check error:', error);
+      throw error;
+    }
+  };
+
+  const startRecording = async () => {
+    setError('');
+    setCheckingDevices(true);
+
+    try {
+      await checkMicrophoneAvailability();
+
+      const constraints = {
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
 
       const mediaRecorder = new MediaRecorder(stream, {
@@ -92,10 +127,36 @@ export default function VoiceRecorder({ onRecordingComplete, onError }) {
       }, 1000);
 
       updateAudioLevel();
+      setCheckingDevices(false);
     } catch (error) {
       console.error('Error starting recording:', error);
+      setCheckingDevices(false);
+      
+      let errorMessage = 'Failed to start recording. ';
+      
+      if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        errorMessage = 'No microphone found. Please:\n' +
+          '1. Connect a microphone to your computer\n' +
+          '2. Check if it\'s enabled in system settings\n' +
+          '3. Refresh the page and try again';
+      } else if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        errorMessage = 'Microphone permission denied. Please:\n' +
+          '1. Click the lock icon in your browser\'s address bar\n' +
+          '2. Allow microphone access\n' +
+          '3. Refresh the page and try again';
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        errorMessage = 'Microphone is being used by another application. Please:\n' +
+          '1. Close other applications using the microphone\n' +
+          '2. Try again';
+      } else if (error.message) {
+        errorMessage = error.message;
+      } else {
+        errorMessage += 'Please check your microphone connection and browser permissions.';
+      }
+      
+      setError(errorMessage);
       if (onError) {
-        onError(error.message || 'Failed to start recording');
+        onError(errorMessage);
       }
     }
   };
@@ -154,18 +215,47 @@ export default function VoiceRecorder({ onRecordingComplete, onError }) {
 
   return (
     <div className={styles.container}>
+      {error && (
+        <div className={styles.errorMessage}>
+          <div className={styles.errorIcon}>⚠️</div>
+          <div className={styles.errorText}>
+            {error.split('\n').map((line, index) => (
+              <div key={index}>{line}</div>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setError('')}
+            className={styles.errorClose}
+            title="Dismiss"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       <div className={styles.controls}>
         {!isRecording && !audioBlob && (
           <button
             type="button"
             onClick={startRecording}
             className={styles.recordButton}
+            disabled={checkingDevices}
             title="Start Recording"
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-              <circle cx="12" cy="12" r="10" />
-            </svg>
-            Start Recording
+            {checkingDevices ? (
+              <>
+                <span className={styles.spinner}></span>
+                Checking microphone...
+              </>
+            ) : (
+              <>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="12" cy="12" r="10" />
+                </svg>
+                Start Recording
+              </>
+            )}
           </button>
         )}
 
