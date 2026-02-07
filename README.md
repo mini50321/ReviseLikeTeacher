@@ -23,7 +23,11 @@ NEET PG (and similar exams) preparation platform that builds a personalized, dat
 ├── frontend/           # React/Next.js frontend
 │   └── src/            # Source code
 ├── docs/               # Documentation (if exists)
-└── ai-service/         # Python FastAPI AI service (to be created)
+└── ai-service/         # Python FastAPI AI service
+    ├── services/       # AI service modules
+    │   ├── transcription.py  # Voice transcription service
+    │   └── evaluation.py     # Answer evaluation service
+    └── main.py         # FastAPI application
 ```
 
 ## Setup Instructions
@@ -115,13 +119,61 @@ NODE_ENV=development
 
 The database file (`database.sqlite`) will be created automatically in the `backend/` directory when you first run the server.
 
-### 5. AI Service Setup (Next Steps)
+### 5. AI Service Setup
 
+**Prerequisites:**
+- Python 3.9+
+- OpenAI API key (for answer evaluation)
+
+**Setup:**
+
+1. Create virtual environment:
 ```bash
 cd ai-service
-pip install -r requirements.txt
-uvicorn main:app --reload
+python -m venv venv
 ```
+
+2. Activate virtual environment:
+
+**Windows:**
+```bash
+venv\Scripts\activate
+```
+
+**Linux/Mac:**
+```bash
+source venv/bin/activate
+```
+
+3. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+4. Create `.env` file:
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and add your OpenAI API key:
+```
+OPENAI_API_KEY=your_openai_api_key_here
+PORT=8000
+```
+
+5. Run the service:
+```bash
+python main.py
+```
+
+Or with uvicorn:
+```bash
+uvicorn main:app --reload --port 8000
+```
+
+The AI service will be available at `http://localhost:8000`
+
+**Note:** Whisper models will be downloaded automatically on first use. The first transcription may take longer.
 
 ## Development
 
@@ -161,10 +213,14 @@ View interactive docs by importing into Swagger UI or Postman.
 
 ## Features
 
-- ✅ User authentication (register, login, password reset) - Frontend implemented
+- ✅ User authentication (register, login, password reset)
 - ✅ Student onboarding
 - ✅ Question bank management
 - ✅ Practice sessions with voice/text answers
+  - Voice recording in English, Hindi, and Hinglish
+  - Real-time audio visualization
+  - Audio playback before submission
+  - Transcription with confidence indicators
 - ✅ AI-powered answer evaluation
 - ✅ Revision schedule generation
 - ✅ Mastery tracking
@@ -174,14 +230,27 @@ View interactive docs by importing into Swagger UI or Postman.
 
 ## Milestones
 
-- [x] Milestone 1: Requirements & Architecture (Stage 1-3)
-- [x] Milestone 1: Database Schema (Stage 4)
-- [x] Milestone 1: API Specification (Stage 5)
-- [x] Milestone 1: Project Setup (Stage 6)
-- [ ] Milestone 2: Basic app setup (5 days)
-- [ ] Milestone 3: Voice answers & AI evaluation (5 days)
-- [ ] Milestone 4: Revision planning & analytics (5 days)
-- [ ] Milestone 5: Testing & deployment (3 days)
+- [x] Milestone 1: Requirements & Architecture
+- [x] Milestone 2: Basic app setup (login, dashboard, practice, admin panel, PDF upload)
+- [x] Milestone 3: Voice answers & AI evaluation
+  - [x] Voice transcription (English, Hindi, Hinglish)
+  - [x] AI answer evaluation
+  - [x] Language switching
+  - [x] Fast response times
+  - [x] Audio playback and visualization
+  - [x] Transcription confidence indicators
+  - [x] Comprehensive error handling
+  - [x] Browser compatibility checks
+- [ ] Milestone 4: Revision planning & analytics
+- [ ] Milestone 5: Testing & deployment
+
+## Voice Features Documentation
+
+See [VOICE_FEATURES.md](./VOICE_FEATURES.md) for detailed documentation on voice answer functionality.
+
+## Testing
+
+See [TESTING_CHECKLIST.md](./TESTING_CHECKLIST.md) for comprehensive testing procedures.
 
 ## License
 

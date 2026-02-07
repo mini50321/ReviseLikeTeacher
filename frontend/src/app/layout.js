@@ -1,4 +1,6 @@
 import { AuthProvider } from '../contexts/AuthContext';
+import NetworkStatus from '../components/NetworkStatus';
+import BrowserCompatibilityWarning from '../components/BrowserCompatibilityWarning';
 import './globals.css';
 
 export const metadata = {
@@ -11,6 +13,8 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body>
         <AuthProvider>
+          <NetworkStatus />
+          <BrowserCompatibilityWarning />
           {children}
         </AuthProvider>
       </body>

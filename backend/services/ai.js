@@ -19,7 +19,7 @@ async function evaluateAnswer({ question, studentAnswer, currentMastery, userId 
       current_mastery: currentMastery,
       user_id: userId
     }, {
-      timeout: 3000
+      timeout: 10000
     });
 
     if (response.data && response.data.score !== undefined && response.data.feedback) {
@@ -57,23 +57,37 @@ function calculateFallbackScore(answer, question) {
   return 70;
 }
 
-async function transcribeVoice(audioBuffer, language) {
+async function transcribeVoice(audioBuffer, language, filename = 'audio.webm') {
   try {
+    const FormData = require('form-data');
     const formData = new FormData();
-    formData.append('audio', audioBuffer, 'audio.webm');
+    
+    formData.append('audio', audioBuffer, {
+      filename: filename,
+      contentType: 'audio/webm'
+    });
     formData.append('language', language);
 
     const response = await axios.post(`${AI_SERVICE_URL}/transcribe`, formData, {
       headers: {
-        'Content-Type': 'multipart/form-data'
+        ...formData.getHeaders()
       },
-      timeout: 5000
+      timeout: 30000,
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity
     });
 
-    return response.data;
+    if (response.data && response.data.transcription !== undefined) {
+      return response.data;
+    }
+    
+    throw new Error('Invalid response from AI service');
   } catch (error) {
-    console.error('Voice transcription error:', error);
-    throw new Error('Transcription failed');
+    console.error('Voice transcription error:', error.message || error);
+    if (error.response) {
+      console.error('AI service response:', error.response.status, error.response.data);
+    }
+    throw new Error(`Transcription failed: ${error.message || 'Unknown error'}`);
   }
 }
 

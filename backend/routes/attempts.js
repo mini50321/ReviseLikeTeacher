@@ -21,6 +21,7 @@ router.post('/', authenticate, async (req, res) => {
       session_id,
       has_answer_text: !!answer_text,
       answer_method,
+      language: language || 'not specified',
       time_spent_seconds
     });
 
@@ -30,8 +31,16 @@ router.post('/', authenticate, async (req, res) => {
     if (!answer_text || answer_text.trim() === '') {
       return res.status(400).json({ error: 'Answer text is required and cannot be empty' });
     }
-    if (!answer_method) {
-      return res.status(400).json({ error: 'Answer method is required' });
+    if (!answer_method || !['voice', 'text'].includes(answer_method)) {
+      return res.status(400).json({ error: 'Answer method is required and must be "voice" or "text"' });
+    }
+
+    if (!language && answer_method === 'voice') {
+      return res.status(400).json({ error: 'Language is required for voice answers' });
+    }
+
+    if (language && !['english', 'hindi', 'hinglish'].includes(language)) {
+      return res.status(400).json({ error: 'Invalid language. Must be: english, hindi, or hinglish' });
     }
 
     const questionResult = await db.query('SELECT * FROM question WHERE id = $1', [question_id]);

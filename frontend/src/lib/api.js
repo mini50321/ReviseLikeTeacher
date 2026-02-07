@@ -71,4 +71,35 @@ export const userAPI = {
   },
 };
 
+export const voiceAPI = {
+  transcribe: async (audioBlob, language, onUploadProgress) => {
+    if (!navigator.onLine) {
+      throw new Error('No internet connection');
+    }
+
+    const formData = new FormData();
+    formData.append('audio', audioBlob, 'recording.webm');
+    formData.append('language', language);
+
+    const response = await api.post('/voice/transcribe', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      timeout: 60000,
+      onUploadProgress: (progressEvent) => {
+        if (onUploadProgress && progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          onUploadProgress(percentCompleted);
+        }
+      },
+    });
+
+    if (!response.data || response.data.transcription === undefined) {
+      throw new Error('Invalid transcription response from server');
+    }
+
+    return response.data;
+  },
+};
+
 export default api;

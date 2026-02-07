@@ -101,29 +101,68 @@ function PracticePageContent() {
     }
   };
 
-  const handleAnswerSubmit = async (answerText, timeSpent) => {
+  const handleAnswerSubmit = async (answerText, timeSpent, answerMethod = 'text', language = null) => {
     if (!session || !questions[currentQuestionIndex]) return;
+
+    if (!navigator.onLine) {
+      alert('No internet connection. Please check your network and try again.');
+      return;
+    }
 
     setLoading(true);
     try {
       const question = questions[currentQuestionIndex];
-      const response = await api.post('/attempts', {
+      const requestData = {
         question_id: question.id,
         session_id: session.id,
         answer_text: answerText,
-        answer_method: 'text',
+        answer_method: answerMethod,
         time_spent_seconds: timeSpent
+      };
+
+      if (language && answerMethod === 'voice') {
+        requestData.language = language;
+      }
+
+      console.log('Submitting answer:', {
+        answer_method: answerMethod,
+        language: language,
+        answer_length: answerText.length
       });
+
+      const response = await api.post('/attempts', requestData);
+
+      if (!response.data || !response.data.score === undefined) {
+        throw new Error('Invalid response from server');
+      }
 
       setCurrentAttempt(response.data);
       setShowFeedback(true);
       updateSessionStats(response.data);
     } catch (error) {
       console.error('Failed to submit answer:', error);
-      const errorMessage = error.response?.data?.error 
-        || error.response?.data?.message 
-        || error.message 
-        || 'Failed to submit answer. Please try again.';
+      
+      let errorMessage = 'Failed to submit answer. ';
+      
+      if (!navigator.onLine) {
+        errorMessage = 'No internet connection. Please check your network and try again.';
+      } else if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        errorMessage = 'Request timed out. Please try again.';
+      } else if (error.response?.status === 400) {
+        errorMessage = error.response?.data?.error || 'Invalid answer format. Please check your input.';
+      } else if (error.response?.status === 401) {
+        errorMessage = 'Session expired. Please log in again.';
+      } else if (error.response?.status === 404) {
+        errorMessage = 'Question or session not found. Please refresh the page.';
+      } else if (error.response?.status >= 500) {
+        errorMessage = 'Server error. Please try again in a moment.';
+      } else {
+        errorMessage = error.response?.data?.error 
+          || error.response?.data?.message 
+          || error.message 
+          || 'Failed to submit answer. Please try again.';
+      }
+      
       alert(errorMessage);
     } finally {
       setLoading(false);

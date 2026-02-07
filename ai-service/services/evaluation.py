@@ -1,0 +1,188 @@
+import os
+from typing import Dict, Any, Optional
+from openai import OpenAI
+import asyncio
+
+_client = None
+
+def get_openai_client():
+    global _client
+    if _client is None:
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            return None
+        _client = OpenAI(api_key=api_key)
+    return _client
+
+async def evaluate_answer(
+    question: Dict[str, Any],
+    student_answer: str,
+    current_mastery: float = 0.0,
+    user_id: Optional[str] = None
+) -> Dict[str, Any]:
+    client = get_openai_client()
+    
+    if not client:
+        ideal_answer = question.get("ideal_answer", "")
+        return get_fallback_evaluation(question, student_answer, ideal_answer)
+    
+    try:
+        
+        question_stem = question.get("stem", "")
+        ideal_answer = question.get("ideal_answer", "")
+        key_points = question.get("key_points", [])
+        topic = question.get("topic", "")
+        subject = question.get("subject", "")
+        difficulty = question.get("difficulty", "medium")
+        
+        if isinstance(key_points, str):
+            try:
+                import json
+                key_points = json.loads(key_points)
+            except:
+                key_points = []
+        
+        if not isinstance(key_points, list):
+            key_points = []
+        
+        key_points_text = "\n".join([f"- {point}" for point in key_points]) if key_points else "Not specified"
+        
+        prompt = f"""You are an expert medical education evaluator assessing a student's answer to a NEET PG question.
+
+Question: {question_stem}
+Subject: {subject}
+Topic: {topic}
+Difficulty: {difficulty}
+
+Key Points to Cover:
+{key_points_text}
+
+Ideal Answer: {ideal_answer}
+
+Student's Answer: {student_answer}
+
+Please evaluate the student's answer and provide:
+1. A score from 0-100 based on:
+   - Accuracy of medical facts
+   - Completeness in covering key points
+   - Clarity and structure
+   - Relevance to the question
+2. Constructive feedback with:
+   - Strengths: What the student did well
+   - Improvements: What needs to be improved
+   - Model Explanation: A clear, concise explanation of the correct answer
+
+Respond in JSON format:
+{{
+    "score": <number 0-100>,
+    "feedback": {{
+        "strengths": "<text>",
+        "improvements": "<text>",
+        "model_explanation": "<text>"
+    }}
+}}"""
+
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None,
+            lambda: client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are an expert medical education evaluator. Always respond with valid JSON."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.3,
+                max_tokens=500
+            )
+        )
+        
+        import json
+        content = response.choices[0].message.content.strip()
+        
+        if content.startswith("```json"):
+            content = content[7:]
+        if content.startswith("```"):
+            content = content[3:]
+        if content.endswith("```"):
+            content = content[:-3]
+        content = content.strip()
+        
+        result = json.loads(content)
+        
+        score = max(0, min(100, int(result.get("score", 50))))
+        
+        feedback = result.get("feedback", {})
+        if not isinstance(feedback, dict):
+            feedback = {
+                "strengths": "Thank you for your answer.",
+                "improvements": "Keep practicing to improve.",
+                "model_explanation": ideal_answer or "Review the topic for a complete answer."
+            }
+        
+        mastery_delta = calculate_mastery_delta(score, current_mastery, difficulty)
+        
+        return {
+            "score": score,
+            "feedback": {
+                "strengths": feedback.get("strengths", "Thank you for your answer."),
+                "improvements": feedback.get("improvements", "Keep practicing to improve."),
+                "model_explanation": feedback.get("model_explanation", ideal_answer or "Review the topic for a complete answer.")
+            },
+            "mastery_impact": {
+                "delta": mastery_delta
+            }
+        }
+        
+    except Exception as e:
+        print(f"OpenAI evaluation error: {str(e)}")
+        ideal_answer = question.get("ideal_answer", "")
+        return get_fallback_evaluation(question, student_answer, ideal_answer)
+
+def calculate_mastery_delta(score: float, current_mastery: float, difficulty: str) -> float:
+    base_delta = (score / 100) * 0.15
+    
+    difficulty_multiplier = {
+        "easy": 0.8,
+        "medium": 1.0,
+        "hard": 1.2
+    }
+    
+    multiplier = difficulty_multiplier.get(difficulty.lower(), 1.0)
+    
+    if current_mastery > 80:
+        multiplier *= 0.5
+    elif current_mastery < 30:
+        multiplier *= 1.5
+    
+    delta = base_delta * multiplier
+    
+    if score < 40:
+        delta *= -0.5
+    
+    return round(delta, 3)
+
+def get_fallback_evaluation(question: Dict[str, Any], student_answer: str, ideal_answer: str) -> Dict[str, Any]:
+    answer_length = len(student_answer)
+    ideal_length = len(ideal_answer) if ideal_answer else 100
+    
+    if answer_length < 10:
+        score = 20
+    elif answer_length < ideal_length * 0.3:
+        score = 40
+    elif answer_length < ideal_length * 0.6:
+        score = 60
+    else:
+        score = 70
+    
+    return {
+        "score": score,
+        "feedback": {
+            "strengths": "Thank you for your answer.",
+            "improvements": "Keep practicing to improve your answer quality.",
+            "model_explanation": ideal_answer or "Review the topic for a complete answer."
+        },
+        "mastery_impact": {
+            "delta": (score / 100) * 0.1
+        }
+    }
+
