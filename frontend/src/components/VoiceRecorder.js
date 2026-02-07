@@ -1,0 +1,240 @@
+'use client';
+
+import { useState, useRef, useEffect } from 'react';
+import styles from './VoiceRecorder.module.css';
+
+export default function VoiceRecorder({ onRecordingComplete, onError }) {
+  const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [audioBlob, setAudioBlob] = useState(null);
+  const [audioUrl, setAudioUrl] = useState(null);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [audioLevel, setAudioLevel] = useState(0);
+
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const streamRef = useRef(null);
+  const timerRef = useRef(null);
+  const analyserRef = useRef(null);
+  const animationFrameRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+      if (audioUrl) {
+        URL.revokeObjectURL(audioUrl);
+      }
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [audioUrl]);
+
+  const updateAudioLevel = () => {
+    if (analyserRef.current && isRecording && !isPaused) {
+      const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+      analyserRef.current.getByteFrequencyData(dataArray);
+      const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+      setAudioLevel(Math.min(100, (average / 255) * 100));
+      animationFrameRef.current = requestAnimationFrame(updateAudioLevel);
+    } else {
+      setAudioLevel(0);
+    }
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
+      });
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
+      analyserRef.current = analyser;
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType });
+        setAudioBlob(blob);
+        const url = URL.createObjectURL(blob);
+        setAudioUrl(url);
+        if (onRecordingComplete) {
+          onRecordingComplete(blob);
+        }
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setIsPaused(false);
+      setRecordingTime(0);
+
+      timerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+
+      updateAudioLevel();
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      if (onError) {
+        onError(error.message || 'Failed to start recording');
+      }
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      setIsPaused(false);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    }
+  };
+
+  const pauseRecording = () => {
+    if (mediaRecorderRef.current && isRecording && !isPaused) {
+      mediaRecorderRef.current.pause();
+      setIsPaused(true);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    }
+  };
+
+  const resumeRecording = () => {
+    if (mediaRecorderRef.current && isRecording && isPaused) {
+      mediaRecorderRef.current.resume();
+      setIsPaused(false);
+      updateAudioLevel();
+    }
+  };
+
+  const resetRecording = () => {
+    stopRecording();
+    setAudioBlob(null);
+    if (audioUrl) {
+      URL.revokeObjectURL(audioUrl);
+      setAudioUrl(null);
+    }
+    setRecordingTime(0);
+    setAudioLevel(0);
+  };
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <div className={styles.container}>
+      <div className={styles.controls}>
+        {!isRecording && !audioBlob && (
+          <button
+            type="button"
+            onClick={startRecording}
+            className={styles.recordButton}
+            title="Start Recording"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="12" cy="12" r="10" />
+            </svg>
+            Start Recording
+          </button>
+        )}
+
+        {isRecording && (
+          <>
+            <button
+              type="button"
+              onClick={isPaused ? resumeRecording : pauseRecording}
+              className={styles.pauseButton}
+              title={isPaused ? "Resume" : "Pause"}
+            >
+              {isPaused ? (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="5 3 19 12 5 21" />
+                </svg>
+              ) : (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                  <rect x="6" y="4" width="4" height="16" />
+                  <rect x="14" y="4" width="4" height="16" />
+                </svg>
+              )}
+              {isPaused ? 'Resume' : 'Pause'}
+            </button>
+            <button
+              type="button"
+              onClick={stopRecording}
+              className={styles.stopButton}
+              title="Stop Recording"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="6" y="6" width="12" height="12" />
+              </svg>
+              Stop
+            </button>
+          </>
+        )}
+
+        {audioBlob && !isRecording && (
+          <>
+            <button
+              type="button"
+              onClick={resetRecording}
+              className={styles.resetButton}
+              title="Record Again"
+            >
+              Record Again
+            </button>
+          </>
+        )}
+      </div>
+
+      {isRecording && (
+        <div className={styles.recordingInfo}>
+          <div className={styles.timeDisplay}>{formatTime(recordingTime)}</div>
+          <div className={styles.visualizer}>
+            <div
+              className={styles.levelBar}
+              style={{ width: `${audioLevel}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {audioUrl && !isRecording && (
+        <div className={styles.playback}>
+          <audio src={audioUrl} controls className={styles.audioPlayer} />
+        </div>
+      )}
+    </div>
+  );
+}
+
