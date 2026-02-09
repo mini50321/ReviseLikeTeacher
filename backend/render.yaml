@@ -11,5 +11,7 @@ services:
         value: 10000
       - key: JWT_SECRET
         generateValue: true
+      - key: AI_SERVICE_URL
+        value: https://reviseliketeacher-ai-service.onrender.com
     healthCheckPath: /health
 

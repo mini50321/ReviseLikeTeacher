@@ -59,6 +59,10 @@ function calculateFallbackScore(answer, question) {
 
 async function transcribeVoice(audioBuffer, language, filename = 'audio.webm') {
   try {
+    if (!AI_SERVICE_URL || AI_SERVICE_URL === 'http://localhost:8000') {
+      throw new Error('AI service is not configured. Please set AI_SERVICE_URL environment variable.');
+    }
+
     const FormData = require('form-data');
     const formData = new FormData();
     
@@ -68,11 +72,13 @@ async function transcribeVoice(audioBuffer, language, filename = 'audio.webm') {
     });
     formData.append('language', language);
 
+    console.log(`Attempting to transcribe audio via AI service at: ${AI_SERVICE_URL}/transcribe`);
+
     const response = await axios.post(`${AI_SERVICE_URL}/transcribe`, formData, {
       headers: {
         ...formData.getHeaders()
       },
-      timeout: 30000,
+      timeout: 60000,
       maxContentLength: Infinity,
       maxBodyLength: Infinity
     });
@@ -84,8 +90,20 @@ async function transcribeVoice(audioBuffer, language, filename = 'audio.webm') {
     throw new Error('Invalid response from AI service');
   } catch (error) {
     console.error('Voice transcription error:', error.message || error);
+    if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
+      throw new Error('Cannot connect to AI transcription service. Please ensure the AI service is deployed and AI_SERVICE_URL is configured correctly.');
+    }
     if (error.response) {
       console.error('AI service response:', error.response.status, error.response.data);
+      if (error.response.status === 500) {
+        throw new Error('AI transcription service encountered an error. Please check the AI service logs.');
+      }
+      if (error.response.status === 404) {
+        throw new Error('AI transcription endpoint not found. Please check the AI service configuration.');
+      }
+    }
+    if (error.message.includes('timeout')) {
+      throw new Error('Transcription request timed out. The audio file may be too large or the AI service is overloaded.');
     }
     throw new Error(`Transcription failed: ${error.message || 'Unknown error'}`);
   }
