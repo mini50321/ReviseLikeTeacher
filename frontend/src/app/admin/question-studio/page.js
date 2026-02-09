@@ -123,9 +123,35 @@ export default function QuestionStudioPage() {
     router.replace('/admin/question-studio');
   };
 
-  const handleFormSave = () => {
-    fetchQuestions();
-    handleFormClose();
+  const handleFormSave = async (formData) => {
+    try {
+      const questionData = {
+        stem: formData.question_text || formData.stem,
+        type: formData.type,
+        subject: formData.subject,
+        topic: formData.topic || '',
+        subtopic: formData.subtopic || '',
+        difficulty: formData.difficulty || 'medium',
+        importance: formData.importance || 'medium',
+        cognitive_focus: formData.cognitive_focus || 'factual',
+        ideal_answer: formData.ideal_answer || '',
+        key_points: formData.key_points || [],
+        previous_year_tags: formData.previous_year_tags || [],
+        status: formData.status || 'active'
+      };
+
+      if (editingQuestion && editingQuestion.id) {
+        await api.put(`/questions/${editingQuestion.id}`, questionData);
+      } else {
+        await api.post('/questions', questionData);
+      }
+      
+      await fetchQuestions();
+      handleFormClose();
+    } catch (err) {
+      console.error('Save question error:', err);
+      alert(err.response?.data?.error || 'Failed to save question');
+    }
   };
 
   const handleDelete = async (questionId) => {

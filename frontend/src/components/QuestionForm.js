@@ -17,7 +17,19 @@ export default function QuestionForm({ question, onSave, onCancel }) {
 
   useEffect(() => {
     if (question) {
-      setFormData(question);
+      setFormData({
+        question_text: question.stem || question.question_text || '',
+        subject: question.subject || '',
+        topic: question.topic || '',
+        type: question.type || 'short_answer',
+        difficulty: question.difficulty || 'medium',
+        importance: question.importance || 'medium',
+        cognitive_focus: question.cognitive_focus || 'understanding',
+        status: question.status || 'active',
+        ideal_answer: question.ideal_answer || '',
+        key_points: question.key_points || [],
+        previous_year_tags: question.previous_year_tags || []
+      });
     }
   }, [question]);
 
