@@ -29,45 +29,6 @@ export default function QuestionDisplay({ question, questionNumber, totalQuestio
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (loading) return;
-      if (e.target.matches('textarea, input') && e.key !== 'Enter') return;
-
-      if (answerMethod === 'voice') {
-        if (e.key === ' ' && !e.target.matches('textarea, input')) {
-          e.preventDefault();
-          if (voiceRecorderRef.current) {
-            if (voiceRecorderRef.current.isRecording) {
-              voiceRecorderRef.current.stopRecording();
-            } else if (!voiceRecorderRef.current.hasRecording) {
-              voiceRecorderRef.current.startRecording();
-            } else if (audioBlob && !transcription && !transcribing) {
-              if (transcribeButtonRef.current) {
-                transcribeButtonRef.current.click();
-              }
-            }
-          }
-        }
-        
-        if ((e.ctrlKey || e.metaKey) && e.key === 't' && audioBlob && !transcribing) {
-          e.preventDefault();
-          if (transcribeButtonRef.current) {
-            transcribeButtonRef.current.click();
-          }
-        }
-      }
-
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && answerText.trim()) {
-        e.preventDefault();
-        handleSubmit(e);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [answerMethod, audioBlob, transcription, transcribing, answerText, loading, handleSubmit]);
-
   const handleRecordingComplete = (blob) => {
     setAudioBlob(blob);
     setTranscription('');
@@ -121,6 +82,45 @@ export default function QuestionDisplay({ question, questionNumber, totalQuestio
     const finalAnswer = answerMethod === 'voice' ? transcription : answerText;
     onSubmit(finalAnswer.trim(), timeSpent, answerMethod, answerMethod === 'voice' ? language : null);
   }, [answerMethod, audioBlob, transcription, answerText, timeSpent, language, onSubmit, handleTranscribe]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (loading) return;
+      if (e.target.matches('textarea, input') && e.key !== 'Enter') return;
+
+      if (answerMethod === 'voice') {
+        if (e.key === ' ' && !e.target.matches('textarea, input')) {
+          e.preventDefault();
+          if (voiceRecorderRef.current) {
+            if (voiceRecorderRef.current.isRecording) {
+              voiceRecorderRef.current.stopRecording();
+            } else if (!voiceRecorderRef.current.hasRecording) {
+              voiceRecorderRef.current.startRecording();
+            } else if (audioBlob && !transcription && !transcribing) {
+              if (transcribeButtonRef.current) {
+                transcribeButtonRef.current.click();
+              }
+            }
+          }
+        }
+        
+        if ((e.ctrlKey || e.metaKey) && e.key === 't' && audioBlob && !transcribing) {
+          e.preventDefault();
+          if (transcribeButtonRef.current) {
+            transcribeButtonRef.current.click();
+          }
+        }
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && answerText.trim()) {
+        e.preventDefault();
+        handleSubmit(e);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [answerMethod, audioBlob, transcription, transcribing, answerText, loading, handleSubmit]);
 
   return (
     <div className={styles.container}>
