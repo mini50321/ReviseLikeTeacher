@@ -2,8 +2,7 @@ services:
   - type: web
     name: reviseliketeacher-ai-service
     env: python
-    pythonVersion: "3.11"
-    buildCommand: pip install --upgrade pip setuptools wheel && pip install -r requirements.txt
+    buildCommand: pip install --upgrade pip && pip install --upgrade setuptools wheel build && pip install -r requirements.txt
     startCommand: python main.py
     envVars:
       - key: PORT
