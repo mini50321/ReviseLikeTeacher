@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import styles from './VoiceRecorder.module.css';
 
-export default function VoiceRecorder({ onRecordingComplete, onError }) {
+const VoiceRecorder = forwardRef(function VoiceRecorder({ onRecordingComplete, onError }, ref) {
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [audioBlob, setAudioBlob] = useState(null);
@@ -221,6 +221,13 @@ export default function VoiceRecorder({ onRecordingComplete, onError }) {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  useImperativeHandle(ref, () => ({
+    startRecording,
+    stopRecording,
+    isRecording,
+    hasRecording: !!audioBlob
+  }));
+
   return (
     <div className={styles.container}>
       {error && (
@@ -334,5 +341,7 @@ export default function VoiceRecorder({ onRecordingComplete, onError }) {
       )}
     </div>
   );
-}
+});
+
+export default VoiceRecorder;
 
