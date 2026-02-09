@@ -1,4 +1,4 @@
-import whisper
+from faster_whisper import WhisperModel
 import tempfile
 import os
 from typing import Dict, Any
@@ -9,7 +9,10 @@ _model_cache = {}
 async def load_model(model_name: str = "base"):
     if model_name not in _model_cache:
         loop = asyncio.get_event_loop()
-        model = await loop.run_in_executor(None, whisper.load_model, model_name)
+        model = await loop.run_in_executor(
+            None,
+            lambda: WhisperModel(model_name, device="cpu", compute_type="int8")
+        )
         _model_cache[model_name] = model
     return _model_cache[model_name]
 
@@ -38,7 +41,7 @@ async def transcribe_audio(audio_content: bytes, language: str, filename: str = 
         
         try:
             loop = asyncio.get_event_loop()
-            result = await loop.run_in_executor(
+            segments, info = await loop.run_in_executor(
                 None,
                 lambda: model.transcribe(
                     temp_path,
@@ -47,19 +50,19 @@ async def transcribe_audio(audio_content: bytes, language: str, filename: str = 
                 )
             )
             
-            transcription_text = result["text"].strip()
-            segments = result.get("segments", [])
+            transcription_text = " ".join([segment.text for segment in segments]).strip()
+            segments_list = list(segments)
             
             confidence = 0.0
-            if segments:
-                avg_confidence = sum(seg.get("no_speech_prob", 0) for seg in segments) / len(segments)
+            if segments_list:
+                avg_confidence = sum(seg.no_speech_prob for seg in segments_list) / len(segments_list)
                 confidence = max(0.0, min(1.0, 1.0 - avg_confidence))
             
             return {
                 "transcription": transcription_text,
                 "confidence": round(confidence, 2),
                 "language": language,
-                "segments": len(segments)
+                "segments": len(segments_list)
             }
         finally:
             if os.path.exists(temp_path):
