@@ -55,13 +55,6 @@ export default function VoiceRecorder({ onRecordingComplete, onError }) {
         throw new Error('Your browser does not support microphone access. Please use Chrome, Edge, or Firefox.');
       }
 
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const audioInputs = devices.filter(device => device.kind === 'audioinput');
-      
-      if (audioInputs.length === 0) {
-        throw new Error('No microphone found. Please connect a microphone and refresh the page.');
-      }
-
       return true;
     } catch (error) {
       console.error('Microphone check error:', error);
@@ -76,15 +69,29 @@ export default function VoiceRecorder({ onRecordingComplete, onError }) {
     try {
       await checkMicrophoneAvailability();
 
-      const constraints = {
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
+      let stream;
+      const attempts = [
+        { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } },
+        { audio: { echoCancellation: true } },
+        { audio: true }
+      ];
+      
+      let lastError;
+      for (const constraints of attempts) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia(constraints);
+          break;
+        } catch (error) {
+          lastError = error;
+          if (error.name !== 'NotFoundError' && error.name !== 'DevicesNotFoundError') {
+            throw error;
+          }
         }
-      };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      }
+      
+      if (!stream) {
+        throw lastError || new Error('Failed to access microphone');
+      }
       streamRef.current = stream;
 
       const mediaRecorder = new MediaRecorder(stream, {
@@ -138,7 +145,8 @@ export default function VoiceRecorder({ onRecordingComplete, onError }) {
         errorMessage = 'No microphone found. Please:\n' +
           '1. Connect a microphone to your computer\n' +
           '2. Check if it\'s enabled in system settings\n' +
-          '3. Refresh the page and try again';
+          '3. Try clearing site data: Settings → Privacy → Site Settings → localhost:3001 → Reset permissions\n' +
+          '4. Refresh the page and try again';
       } else if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
         errorMessage = 'Microphone permission denied. Please:\n' +
           '1. Click the lock icon in your browser\'s address bar\n' +
