@@ -8,10 +8,10 @@ export default function QuestionForm({ question, onSave, onCancel }) {
     question_text: '',
     subject: '',
     topic: '',
-    type: 'short_answer',
+    type: 'saq',
     difficulty: 'medium',
     importance: 'medium',
-    cognitive_focus: 'understanding',
+    cognitive_focus: 'factual',
     status: 'active'
   });
 
@@ -21,10 +21,10 @@ export default function QuestionForm({ question, onSave, onCancel }) {
         question_text: question.stem || question.question_text || '',
         subject: question.subject || '',
         topic: question.topic || '',
-        type: question.type || 'short_answer',
+        type: question.type || 'saq',
         difficulty: question.difficulty || 'medium',
         importance: question.importance || 'medium',
-        cognitive_focus: question.cognitive_focus || 'understanding',
+        cognitive_focus: question.cognitive_focus || 'factual',
         status: question.status || 'active',
         ideal_answer: question.ideal_answer || '',
         key_points: question.key_points || [],
@@ -84,9 +84,11 @@ export default function QuestionForm({ question, onSave, onCancel }) {
             <div className={styles.formGroup}>
               <label>Type</label>
               <select name="type" value={formData.type} onChange={handleChange}>
-                <option value="short_answer">Short Answer</option>
-                <option value="long_answer">Long Answer</option>
-                <option value="multiple_choice">Multiple Choice</option>
+                <option value="saq">Short Answer (SAQ)</option>
+                <option value="mcq">Multiple Choice (MCQ)</option>
+                <option value="case_based">Case-based</option>
+                <option value="true_false">True/False</option>
+                <option value="assertion_reason">Assertion-Reason</option>
               </select>
             </div>
 
@@ -113,10 +115,9 @@ export default function QuestionForm({ question, onSave, onCancel }) {
             <div className={styles.formGroup}>
               <label>Cognitive Focus</label>
               <select name="cognitive_focus" value={formData.cognitive_focus} onChange={handleChange}>
-                <option value="remembering">Remembering</option>
-                <option value="understanding">Understanding</option>
-                <option value="applying">Applying</option>
-                <option value="analyzing">Analyzing</option>
+                <option value="factual">Factual</option>
+                <option value="conceptual">Conceptual</option>
+                <option value="clinical">Clinical</option>
               </select>
             </div>
           </div>
