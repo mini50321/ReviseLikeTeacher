@@ -90,16 +90,28 @@ async function transcribeVoice(audioBuffer, language, filename = 'audio.webm') {
     throw new Error('Invalid response from AI service');
   } catch (error) {
     console.error('Voice transcription error:', error.message || error);
+    console.error('Full error details:', {
+      message: error.message,
+      code: error.code,
+      status: error.response?.status,
+      responseData: error.response?.data,
+      url: `${AI_SERVICE_URL}/transcribe`
+    });
+    
     if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
-      throw new Error('Cannot connect to AI transcription service. Please ensure the AI service is deployed and AI_SERVICE_URL is configured correctly.');
+      throw new Error(`Cannot connect to AI transcription service at ${AI_SERVICE_URL}. Please ensure the AI service is deployed and running.`);
     }
     if (error.response) {
       console.error('AI service response:', error.response.status, error.response.data);
       if (error.response.status === 500) {
-        throw new Error('AI transcription service encountered an error. Please check the AI service logs.');
+        const aiError = error.response.data?.detail || error.response.data?.error || 'Unknown error';
+        throw new Error(`AI transcription service error: ${aiError}. Please check the AI service logs on Render.`);
       }
       if (error.response.status === 404) {
-        throw new Error('AI transcription endpoint not found. Please check the AI service configuration.');
+        throw new Error(`AI transcription endpoint not found at ${AI_SERVICE_URL}/transcribe. Please check the AI service configuration.`);
+      }
+      if (error.response.status === 503) {
+        throw new Error('AI transcription service is unavailable. The service may be starting up or overloaded.');
       }
     }
     if (error.message.includes('timeout')) {

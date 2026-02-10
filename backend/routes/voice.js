@@ -70,9 +70,16 @@ router.post('/transcribe', authenticate, upload.single('audio'), async (req, res
     });
   } catch (error) {
     console.error('Transcription route error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      response: error.response?.data,
+      status: error.response?.status
+    });
     res.status(500).json({ 
       error: error.message || 'Transcription failed',
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      serviceUrl: process.env.AI_SERVICE_URL || 'Not configured'
     });
   }
 });

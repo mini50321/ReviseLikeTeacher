@@ -41,17 +41,17 @@ async def transcribe_audio(audio_content: bytes, language: str, filename: str = 
         
         try:
             loop = asyncio.get_event_loop()
-            segments, info = await loop.run_in_executor(
-                None,
-                lambda: model.transcribe(
+            def transcribe_sync():
+                segments, info = model.transcribe(
                     temp_path,
                     language=lang_code if language != "hinglish" else None,
                     task="transcribe"
                 )
-            )
+                return list(segments), info
             
-            transcription_text = " ".join([segment.text for segment in segments]).strip()
-            segments_list = list(segments)
+            segments_list, info = await loop.run_in_executor(None, transcribe_sync)
+            
+            transcription_text = " ".join([segment.text for segment in segments_list]).strip()
             
             confidence = 0.0
             if segments_list:
