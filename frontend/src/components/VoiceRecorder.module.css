@@ -18,7 +18,8 @@
 .recordButton,
 .stopButton,
 .pauseButton,
-.resetButton {
+.resetButton,
+.uploadButton {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -30,6 +31,14 @@
   cursor: pointer;
   transition: all 0.2s;
   color: #ffffff;
+}
+
+.uploadButton {
+  background: #3b82f6;
+}
+
+.uploadButton:hover {
+  background: #2563eb;
 }
 
 .recordButton {

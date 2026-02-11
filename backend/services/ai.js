@@ -59,7 +59,7 @@ function calculateFallbackScore(answer, question) {
 
 async function transcribeVoice(audioBuffer, language, filename = 'audio.webm') {
   try {
-    if (!AI_SERVICE_URL || AI_SERVICE_URL === 'http://localhost:8000') {
+    if (!AI_SERVICE_URL) {
       throw new Error('AI service is not configured. Please set AI_SERVICE_URL environment variable.');
     }
 
@@ -83,11 +83,14 @@ async function transcribeVoice(audioBuffer, language, filename = 'audio.webm') {
       maxBodyLength: Infinity
     });
 
+    console.log('AI service response:', JSON.stringify(response.data, null, 2));
+
     if (response.data && response.data.transcription !== undefined) {
       return response.data;
     }
     
-    throw new Error('Invalid response from AI service');
+    console.error('Invalid response structure:', response.data);
+    throw new Error(`Invalid response from AI service. Expected 'transcription' field, got: ${JSON.stringify(response.data)}`);
   } catch (error) {
     console.error('Voice transcription error:', error.message || error);
     console.error('Full error details:', {

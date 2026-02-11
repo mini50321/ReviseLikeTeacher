@@ -215,6 +215,33 @@ const VoiceRecorder = forwardRef(function VoiceRecorder({ onRecordingComplete, o
     setAudioLevel(0);
   };
 
+  const handleFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('audio/')) {
+      setError('Please select an audio file (WAV, MP3, WebM, etc.)');
+      e.target.value = '';
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Audio file is too large. Maximum size is 10MB.');
+      e.target.value = '';
+      return;
+    }
+
+    setError('');
+    const blob = new Blob([file], { type: file.type });
+    setAudioBlob(blob);
+    const url = URL.createObjectURL(blob);
+    setAudioUrl(url);
+    if (onRecordingComplete) {
+      onRecordingComplete(blob);
+    }
+    e.target.value = '';
+  };
+
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -251,27 +278,41 @@ const VoiceRecorder = forwardRef(function VoiceRecorder({ onRecordingComplete, o
 
       <div className={styles.controls}>
         {!isRecording && !audioBlob && (
-          <button
-            type="button"
-            onClick={startRecording}
-            className={styles.recordButton}
-            disabled={checkingDevices}
-            title="Start Recording"
-          >
-            {checkingDevices ? (
-              <>
-                <span className={styles.spinner}></span>
-                Checking microphone...
-              </>
-            ) : (
-              <>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="12" cy="12" r="10" />
-                </svg>
-                Start Recording
-              </>
-            )}
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={startRecording}
+              className={styles.recordButton}
+              disabled={checkingDevices}
+              title="Start Recording"
+            >
+              {checkingDevices ? (
+                <>
+                  <span className={styles.spinner}></span>
+                  Checking microphone...
+                </>
+              ) : (
+                <>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="12" cy="12" r="10" />
+                  </svg>
+                  Start Recording
+                </>
+              )}
+            </button>
+            <label className={styles.uploadButton}>
+              <input
+                type="file"
+                accept="audio/*"
+                onChange={handleFileUpload}
+                style={{ display: 'none' }}
+              />
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+              </svg>
+              Upload Audio File
+            </label>
+          </>
         )}
 
         {isRecording && (

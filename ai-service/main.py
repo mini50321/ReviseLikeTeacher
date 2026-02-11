@@ -52,7 +52,10 @@ async def transcribe(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Transcription error: {str(e)}")
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"Transcription error in endpoint: {str(e)}")
+        print(f"Traceback: {error_trace}")
         raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
 
 @app.post("/evaluate")
