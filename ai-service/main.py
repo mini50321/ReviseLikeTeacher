@@ -9,6 +9,8 @@ from dotenv import load_dotenv
 from services.transcription import transcribe_audio
 from services.evaluation import evaluate_answer
 
+env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+load_dotenv(dotenv_path=env_path)
 load_dotenv()
 
 app = FastAPI(title="ReviseLikeTeacher AI Service", version="1.0.0")
