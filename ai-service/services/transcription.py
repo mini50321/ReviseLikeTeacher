@@ -2,9 +2,14 @@ from openai import OpenAI
 from openai import RateLimitError, APIError, APIConnectionError
 import tempfile
 import os
+import sys
 from typing import Dict, Any, Optional
 import asyncio
 from dotenv import load_dotenv
+
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
 
 _client: Optional[OpenAI] = None
 
@@ -108,7 +113,11 @@ async def transcribe_audio(audio_content: bytes, language: str, filename: str = 
         transcript = await loop.run_in_executor(None, transcribe_sync)
         
         transcription_text = transcript.text.strip() if hasattr(transcript, 'text') else str(transcript).strip()
-        print(f"Transcription text: {transcription_text[:100]}...")
+        try:
+            print(f"Transcription text: {transcription_text[:100]}...")
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            safe_text = transcription_text[:100].encode('utf-8', errors='replace').decode('utf-8', errors='replace')
+            print(f"Transcription text: {safe_text}...")
         
         confidence = 0.95
         
@@ -131,8 +140,12 @@ async def transcribe_audio(audio_content: bytes, language: str, filename: str = 
             "segments": segments_count
         }
         
-        print(f"Transcription complete: {len(transcription_text)} characters, language={result['language']}")
-        print(f"Returning result: {result}")
+        try:
+            print(f"Transcription complete: {len(transcription_text)} characters, language={result['language']}")
+            print(f"Returning result: {result}")
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            print(f"Transcription complete: {len(transcription_text)} characters, language={result['language']}")
+            print("Returning result (contains Unicode characters)")
         return result
         
     except RateLimitError as e:
