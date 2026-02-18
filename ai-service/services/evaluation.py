@@ -86,7 +86,7 @@ Respond in JSON format:
         response = await loop.run_in_executor(
             None,
             lambda: client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "You are an expert medical education evaluator. Always respond with valid JSON."},
                     {"role": "user", "content": prompt}
