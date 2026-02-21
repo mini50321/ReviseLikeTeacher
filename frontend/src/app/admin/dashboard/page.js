@@ -69,6 +69,9 @@ export default function AdminDashboardPage() {
                 <a href="/admin/question-studio?action=create" className={styles.actionButton}>
                   Create Question
                 </a>
+                <a href="/admin/analytics" className={styles.actionButton}>
+                  Analytics & Overrides
+                </a>
               </div>
             </div>
 

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth');
 const { db } = require('../db');
+const { generateSmartSchedule, getTopicPriorities } = require('../services/scheduler');
 
 router.get('/', authenticate, async (req, res) => {
   try {
@@ -17,7 +18,14 @@ router.get('/', authenticate, async (req, res) => {
       [userId, startDate, endDate]
     );
 
-    res.json({ schedule: result.rows });
+    const schedule = result.rows.map(s => ({
+      ...s,
+      subjects: s.subjects ? (typeof s.subjects === 'string' ? JSON.parse(s.subjects) : s.subjects) : [],
+      topics: s.topics ? (typeof s.topics === 'string' ? JSON.parse(s.topics) : s.topics) : [],
+      difficulty_mix: s.difficulty_mix ? (typeof s.difficulty_mix === 'string' ? JSON.parse(s.difficulty_mix) : s.difficulty_mix) : null
+    }));
+
+    res.json({ schedule });
   } catch (error) {
     console.error('Get schedule error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -28,69 +36,32 @@ router.post('/', authenticate, async (req, res) => {
   try {
     const userId = req.user.userId;
 
-    const profileResult = await db.query(
-      'SELECT * FROM userprofile WHERE user_id = $1',
-      [userId]
-    );
+    const result = await generateSmartSchedule(userId);
 
-    if (profileResult.rows.length === 0) {
+    if (!result) {
       return res.status(404).json({ error: 'Profile not found. Please complete onboarding.' });
     }
 
-    const profile = profileResult.rows[0];
-    const dailyMinutes = profile.daily_study_minutes || 60;
-    const weeklyQuestions = profile.weekly_question_target || 50;
-    const questionsPerDay = Math.ceil(weeklyQuestions / 7);
-    const selectedSubjects = profile.selected_subjects ? JSON.parse(profile.selected_subjects) : [];
-
-    const today = new Date();
-    const schedules = [];
-
-    for (let i = 0; i < 7; i++) {
-      const scheduleDate = new Date(today);
-      scheduleDate.setDate(today.getDate() + i);
-      const dateString = scheduleDate.toISOString().split('T')[0];
-
-      const existingSchedule = await db.query(
-        'SELECT id FROM revisionschedule WHERE user_id = $1 AND date = $2',
-        [userId, dateString]
-      );
-
-      if (existingSchedule.rows.length > 0) {
-        continue;
-      }
-
-      const scheduleId = db.generateUUID();
-      await db.query(
-        `INSERT INTO revisionschedule 
-         (id, user_id, date, planned_questions, planned_minutes, subjects, status) 
-         VALUES ($1, $2, $3, $4, $5, $6, 'scheduled')`,
-        [
-          scheduleId,
-          userId,
-          dateString,
-          questionsPerDay,
-          dailyMinutes,
-          JSON.stringify(selectedSubjects)
-        ]
-      );
-
-      schedules.push({
-        id: scheduleId,
-        date: dateString,
-        planned_questions: questionsPerDay,
-        planned_minutes: dailyMinutes,
-        subjects: selectedSubjects
-      });
-    }
-
     res.json({
-      message: 'Schedule generated successfully',
-      schedules_created: schedules.length,
-      schedules
+      message: 'Smart schedule generated successfully',
+      schedules_created: result.schedules.length,
+      schedules: result.schedules,
+      prioritized_topics: result.prioritized_topics
     });
   } catch (error) {
     console.error('Generate schedule error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/priorities', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const priorities = await getTopicPriorities(userId);
+
+    res.json({ priorities });
+  } catch (error) {
+    console.error('Get priorities error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -99,20 +70,28 @@ router.put('/:date', authenticate, async (req, res) => {
   try {
     const userId = req.user.userId;
     const { date } = req.params;
-    const { status } = req.body;
+    const { status, completed_questions, actual_minutes } = req.body;
 
     if (!status || !['complete', 'partial', 'skipped'].includes(status)) {
       return res.status(400).json({ error: 'Valid status required' });
     }
 
-    const result = await db.query(
-      'UPDATE revisionschedule SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2 AND date = $3',
-      [status, userId, date]
+    const existing = await db.query(
+      'SELECT * FROM revisionschedule WHERE user_id = $1 AND date = $2',
+      [userId, date]
     );
 
-    if (result.rowCount === 0) {
+    if (existing.rows.length === 0) {
       return res.status(404).json({ error: 'Schedule not found' });
     }
+
+    await db.query(
+      `UPDATE revisionschedule
+       SET status = $1, completed_questions = $2, actual_minutes = $3,
+           completed_at = CASE WHEN $1 = 'complete' THEN CURRENT_TIMESTAMP ELSE completed_at END
+       WHERE user_id = $4 AND date = $5`,
+      [status, completed_questions || 0, actual_minutes || 0, userId, date]
+    );
 
     res.json({ message: 'Schedule status updated' });
   } catch (error) {
@@ -122,4 +101,3 @@ router.put('/:date', authenticate, async (req, res) => {
 });
 
 module.exports = router;
-

@@ -13,6 +13,7 @@ const pdfRoutes = require('./routes/pdf');
 const extractionRoutes = require('./routes/extractions');
 const scheduleRoutes = require('./routes/schedule');
 const voiceRoutes = require('./routes/voice');
+const analyticsRoutes = require('./routes/analytics');
 
 const app = express();
 
@@ -50,6 +51,7 @@ app.use('/api/pdf', pdfRoutes);
 app.use('/api/extractions', extractionRoutes);
 app.use('/api/schedule', scheduleRoutes);
 app.use('/api/voice', voiceRoutes);
+app.use('/api/analytics', analyticsRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.get('/', (req, res) => {

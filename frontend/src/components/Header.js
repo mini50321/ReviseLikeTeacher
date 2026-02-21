@@ -28,13 +28,16 @@ export default function Header() {
           {user?.role === 'admin' ? (
             <>
               <Link href="/admin/dashboard" className={styles.navLink}>
-                Admin Dashboard
+                Dashboard
               </Link>
               <Link href="/admin/question-studio" className={styles.navLink}>
-                Question Studio
+                Questions
               </Link>
               <Link href="/admin/pdf-upload" className={styles.navLink}>
                 PDF Upload
+              </Link>
+              <Link href="/admin/analytics" className={styles.navLink}>
+                Analytics
               </Link>
             </>
           ) : (
