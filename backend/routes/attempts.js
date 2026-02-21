@@ -4,6 +4,8 @@ const { authenticate } = require('../middleware/auth');
 const { db } = require('../db');
 const { evaluateAnswer } = require('../services/ai');
 
+const round = (num, decimals) => Math.round(num * Math.pow(10, decimals)) / Math.pow(10, decimals);
+
 router.post('/', authenticate, async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -58,43 +60,86 @@ router.post('/', authenticate, async (req, res) => {
     const currentMastery = masteryResult.rows[0]?.mastery_level || 0;
 
     let evaluation;
-    try {
-      evaluation = await evaluateAnswer({
-        question,
-        studentAnswer: answer_text,
-        currentMastery,
-        userId
-      });
-    } catch (error) {
-      console.error('Error evaluating answer, using fallback:', error);
-      const fallbackScore = 50;
-      evaluation = {
-        score: fallbackScore,
-        feedback: {
-          strengths: "Thank you for your answer.",
-          improvements: "Keep practicing to improve.",
-          model_explanation: question.ideal_answer || "Review the topic for a complete answer."
-        },
-        mastery_impact: {
-          delta: 0
-        }
-      };
-    }
 
-    if (!evaluation || evaluation.score === undefined || !evaluation.feedback) {
-      console.error('Invalid evaluation object:', evaluation);
-      const fallbackScore = 50;
+    const isMCQType = ['mcq', 'true_false', 'assertion_reason'].includes(question.type);
+    const hasCorrectAnswer = question.correct_answer && question.correct_answer.trim() !== '';
+
+    if (isMCQType && hasCorrectAnswer) {
+      const isCorrect = answer_text.trim().toUpperCase() === question.correct_answer.trim().toUpperCase();
+      const score = isCorrect ? 100 : 0;
+
+      let parsedOptions = {};
+      if (question.options) {
+        try {
+          parsedOptions = typeof question.options === 'string' ? JSON.parse(question.options) : question.options;
+        } catch (e) {
+          parsedOptions = {};
+        }
+      }
+
+      const selectedText = parsedOptions[answer_text.trim().toUpperCase()] || answer_text;
+      const correctText = parsedOptions[question.correct_answer.trim().toUpperCase()] || question.correct_answer;
+
+      const difficultyMultiplier = { easy: 0.8, medium: 1.0, hard: 1.2 };
+      const mult = difficultyMultiplier[question.difficulty] || 1.0;
+      const delta = isCorrect ? round(0.15 * mult, 3) : round(-0.075 * mult, 3);
+
       evaluation = {
-        score: fallbackScore,
+        score,
         feedback: {
-          strengths: "Thank you for your answer.",
-          improvements: "Keep practicing to improve.",
-          model_explanation: question.ideal_answer || "Review the topic for a complete answer."
+          is_mcq: true,
+          is_correct: isCorrect,
+          selected_option: answer_text.trim().toUpperCase(),
+          selected_text: selectedText,
+          correct_option: question.correct_answer.trim().toUpperCase(),
+          correct_text: correctText,
+          strengths: isCorrect ? 'Correct answer!' : `You selected ${answer_text.trim().toUpperCase()}) ${selectedText}`,
+          improvements: isCorrect ? 'Great job! Keep it up.' : `The correct answer is ${question.correct_answer.trim().toUpperCase()}) ${correctText}`,
+          model_explanation: question.ideal_answer || (isCorrect ? 'Well done!' : `The correct answer is option ${question.correct_answer.trim().toUpperCase()}.`)
         },
         mastery_impact: {
-          delta: 0
+          delta
         }
       };
+    } else {
+      try {
+        evaluation = await evaluateAnswer({
+          question,
+          studentAnswer: answer_text,
+          currentMastery,
+          userId
+        });
+      } catch (error) {
+        console.error('Error evaluating answer, using fallback:', error);
+        const fallbackScore = 50;
+        evaluation = {
+          score: fallbackScore,
+          feedback: {
+            strengths: "Thank you for your answer.",
+            improvements: "Keep practicing to improve.",
+            model_explanation: question.ideal_answer || "Review the topic for a complete answer."
+          },
+          mastery_impact: {
+            delta: 0
+          }
+        };
+      }
+
+      if (!evaluation || evaluation.score === undefined || !evaluation.feedback) {
+        console.error('Invalid evaluation object:', evaluation);
+        const fallbackScore = 50;
+        evaluation = {
+          score: fallbackScore,
+          feedback: {
+            strengths: "Thank you for your answer.",
+            improvements: "Keep practicing to improve.",
+            model_explanation: question.ideal_answer || "Review the topic for a complete answer."
+          },
+          mastery_impact: {
+            delta: 0
+          }
+        };
+      }
     }
 
     if (!evaluation.mastery_impact || evaluation.mastery_impact.delta === undefined) {

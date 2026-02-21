@@ -67,6 +67,48 @@
   white-space: pre-wrap;
 }
 
+.mcqResult {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mcqOptionResult {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 20px;
+  border-radius: 10px;
+}
+
+.mcqCorrectOption {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.mcqWrongOption {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.mcqOptionLabel {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.mcqOptionValue {
+  font-size: 17px;
+  font-weight: 500;
+  color: #ffffff;
+}
+
+.mcqExplanation {
+  margin-top: 10px;
+}
+
 .actions {
   display: flex;
   justify-content: flex-end;

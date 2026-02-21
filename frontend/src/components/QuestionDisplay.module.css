@@ -48,6 +48,62 @@
   font-weight: 500;
 }
 
+.mcqOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.mcqOption {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mcqOption:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.mcqOptionSelected {
+  background: rgba(79, 70, 229, 0.15);
+  border-color: rgba(79, 70, 229, 0.5);
+}
+
+.mcqLabel {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  transition: all 0.2s;
+}
+
+.mcqLabelSelected {
+  border-color: #4f46e5;
+  background: #4f46e5;
+  color: #ffffff;
+}
+
+.mcqText {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
 .answerForm {
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(20px);
