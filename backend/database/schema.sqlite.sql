@@ -44,6 +44,8 @@ CREATE TABLE question (
     ideal_answer TEXT,
     key_points TEXT,
     previous_year_tags TEXT,
+    options TEXT,
+    correct_answer TEXT,
     image_path TEXT,
     status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'draft')),
     created_by TEXT REFERENCES users(id),

@@ -58,12 +58,17 @@
 .formGroup textarea,
 .formGroup select {
   padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.1);
+  background: #1e1e1e;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
   color: #ffffff;
   font-size: 15px;
   font-family: inherit;
+}
+
+.formGroup select option {
+  background: #1e1e1e;
+  color: #ffffff;
 }
 
 .formGroup input:focus,

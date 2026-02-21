@@ -29,10 +29,32 @@ const initDatabase = async () => {
       console.log('✅ Database schema initialized');
     } else {
       console.log('✅ Database loaded');
+      runMigrations();
     }
   } catch (error) {
     console.error('❌ Database initialization error:', error);
     throw error;
+  }
+};
+
+const runMigrations = () => {
+  try {
+    const tableInfo = db.exec("PRAGMA table_info(question)");
+    const columns = tableInfo[0]?.values.map(row => row[1]) || [];
+
+    if (!columns.includes('options')) {
+      db.run("ALTER TABLE question ADD COLUMN options TEXT");
+      console.log('✅ Migration: Added options column to question table');
+    }
+
+    if (!columns.includes('correct_answer')) {
+      db.run("ALTER TABLE question ADD COLUMN correct_answer TEXT");
+      console.log('✅ Migration: Added correct_answer column to question table');
+    }
+
+    saveDatabase();
+  } catch (error) {
+    console.error('Migration error:', error);
   }
 };
 

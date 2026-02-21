@@ -137,6 +137,8 @@ export default function QuestionStudioPage() {
         ideal_answer: formData.ideal_answer || '',
         key_points: formData.key_points || [],
         previous_year_tags: formData.previous_year_tags || [],
+        options: formData.options || null,
+        correct_answer: formData.correct_answer || null,
         status: formData.status || 'active'
       };
 

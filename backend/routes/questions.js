@@ -83,6 +83,8 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
       ideal_answer,
       key_points,
       previous_year_tags,
+      options,
+      correct_answer,
       image_path,
       status = 'active'
     } = req.body;
@@ -91,18 +93,24 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
       return res.status(400).json({ error: 'Stem, type, subject, and topic required' });
     }
 
+    if ((type === 'mcq' || type === 'true_false' || type === 'assertion_reason') && !correct_answer) {
+      return res.status(400).json({ error: 'Correct answer is required for this question type' });
+    }
+
     const questionId = db.generateUUID();
 
     const result = await db.query(
       `INSERT INTO question 
        (id, stem, type, subject, topic, subtopic, difficulty, importance, 
         cognitive_focus, ideal_answer, key_points, previous_year_tags, 
-        image_path, status, created_by) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) 
+        options, correct_answer, image_path, status, created_by) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) 
        RETURNING *`,
       [questionId, stem, type, subject, topic, subtopic, difficulty, importance, 
        cognitive_focus, ideal_answer, JSON.stringify(key_points || []), 
-       JSON.stringify(previous_year_tags || []), image_path, status, req.user.userId]
+       JSON.stringify(previous_year_tags || []), 
+       options ? JSON.stringify(options) : null, correct_answer || null,
+       image_path, status, req.user.userId]
     );
 
     res.status(201).json(result.rows[0]);
@@ -130,7 +138,7 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
     const allowedFields = ['stem', 'type', 'subject', 'topic', 'subtopic', 
                            'difficulty', 'importance', 'cognitive_focus', 
                            'ideal_answer', 'key_points', 'previous_year_tags',
-                           'image_path', 'status'];
+                           'options', 'correct_answer', 'image_path', 'status'];
     const updateFields = Object.keys(updates).filter(key => allowedFields.includes(key));
 
     if (updateFields.length === 0) {
@@ -142,7 +150,7 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
     let paramCount = 2;
 
     updateFields.forEach(field => {
-      if (field === 'key_points' || field === 'previous_year_tags') {
+      if (field === 'key_points' || field === 'previous_year_tags' || field === 'options') {
         setParts.push(`${field} = $${paramCount++}`);
         values.push(JSON.stringify(updates[field]));
       } else {

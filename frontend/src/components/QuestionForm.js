@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import styles from './QuestionForm.module.css';
 
+const OPTION_LABELS = ['A', 'B', 'C', 'D'];
+
 export default function QuestionForm({ question, onSave, onCancel }) {
   const [formData, setFormData] = useState({
     question_text: '',
@@ -12,11 +14,24 @@ export default function QuestionForm({ question, onSave, onCancel }) {
     difficulty: 'medium',
     importance: 'medium',
     cognitive_focus: 'factual',
-    status: 'active'
+    status: 'active',
+    options: { A: '', B: '', C: '', D: '' },
+    correct_answer: ''
   });
 
   useEffect(() => {
     if (question) {
+      let parsedOptions = { A: '', B: '', C: '', D: '' };
+      if (question.options) {
+        try {
+          parsedOptions = typeof question.options === 'string'
+            ? JSON.parse(question.options)
+            : question.options;
+        } catch (e) {
+          parsedOptions = { A: '', B: '', C: '', D: '' };
+        }
+      }
+
       setFormData({
         question_text: question.stem || question.question_text || '',
         subject: question.subject || '',
@@ -28,19 +43,55 @@ export default function QuestionForm({ question, onSave, onCancel }) {
         status: question.status || 'active',
         ideal_answer: question.ideal_answer || '',
         key_points: question.key_points || [],
-        previous_year_tags: question.previous_year_tags || []
+        previous_year_tags: question.previous_year_tags || [],
+        options: parsedOptions,
+        correct_answer: question.correct_answer || ''
       });
     }
   }, [question]);
 
+  const needsOptions = formData.type === 'mcq' || formData.type === 'true_false' || formData.type === 'assertion_reason';
+
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'type') {
+      if (value === 'true_false') {
+        setFormData(prev => ({
+          ...prev,
+          type: value,
+          options: { A: 'True', B: 'False', C: '', D: '' },
+          correct_answer: ''
+        }));
+        return;
+      }
+      if (value !== 'mcq' && value !== 'true_false' && value !== 'assertion_reason') {
+        setFormData(prev => ({
+          ...prev,
+          type: value,
+          options: { A: '', B: '', C: '', D: '' },
+          correct_answer: ''
+        }));
+        return;
+      }
+    }
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleOptionChange = (label, value) => {
+    setFormData(prev => ({
+      ...prev,
+      options: { ...prev.options, [label]: value }
+    }));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     onSave(formData);
+  };
+
+  const getActiveOptions = () => {
+    if (formData.type === 'true_false') return ['A', 'B'];
+    return OPTION_LABELS;
   };
 
   return (
@@ -102,6 +153,39 @@ export default function QuestionForm({ question, onSave, onCancel }) {
             </div>
           </div>
 
+          {needsOptions && (
+            <div className={styles.optionsSection}>
+              <label className={styles.optionsSectionLabel}>Options *</label>
+              <div className={styles.optionsList}>
+                {getActiveOptions().map((label) => (
+                  <div key={label} className={styles.optionRow}>
+                    <div
+                      className={`${styles.optionRadio} ${formData.correct_answer === label ? styles.optionRadioSelected : ''}`}
+                      onClick={() => setFormData(prev => ({ ...prev, correct_answer: label }))}
+                      title={`Mark ${label} as correct answer`}
+                    >
+                      {label}
+                    </div>
+                    <input
+                      className={styles.optionInput}
+                      value={formData.options[label] || ''}
+                      onChange={(e) => handleOptionChange(label, e.target.value)}
+                      placeholder={`Option ${label}`}
+                      required
+                      readOnly={formData.type === 'true_false'}
+                    />
+                    {formData.correct_answer === label && (
+                      <span className={styles.correctBadge}>Correct</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {!formData.correct_answer && (
+                <p className={styles.optionHint}>Click on an option letter to mark it as the correct answer</p>
+              )}
+            </div>
+          )}
+
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
               <label>Importance</label>
@@ -143,4 +227,3 @@ export default function QuestionForm({ question, onSave, onCancel }) {
     </div>
   );
 }
-
