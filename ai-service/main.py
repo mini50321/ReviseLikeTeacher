@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from services.transcription import transcribe_audio
 from services.evaluation import evaluate_answer
 from services.tts import generate_speech
+from services.pdf_extraction import extract_questions_from_pdf
 
 env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
 load_dotenv(dotenv_path=env_path)
@@ -120,21 +121,28 @@ async def text_to_speech(request: dict):
 
 
 @app.post("/extract-pdf")
-async def extract_pdf(request: dict):
+async def extract_pdf(
+    file: UploadFile = File(...),
+    filename: str = Form("")
+):
     try:
-        pdf_path = request.get("pdf_path")
-        
-        if not pdf_path:
-            raise HTTPException(status_code=400, detail="pdf_path is required")
-        
-        return JSONResponse(content={
-            "message": "PDF extraction endpoint - to be implemented",
-            "pdf_path": pdf_path
-        })
+        pdf_content = await file.read()
+
+        if len(pdf_content) == 0:
+            raise HTTPException(status_code=400, detail="PDF file is empty")
+
+        if len(pdf_content) > 50 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="PDF file too large (max 50MB)")
+
+        result = await extract_questions_from_pdf(pdf_content, filename or file.filename or "unknown.pdf")
+
+        return JSONResponse(content=result)
     except HTTPException:
         raise
     except Exception as e:
+        import traceback
         print(f"PDF extraction error: {str(e)}")
+        print(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"PDF extraction failed: {str(e)}")
 
 if __name__ == "__main__":

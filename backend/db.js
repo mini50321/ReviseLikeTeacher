@@ -52,6 +52,34 @@ const runMigrations = () => {
       console.log('✅ Migration: Added correct_answer column to question table');
     }
 
+    const eqInfo = db.exec("PRAGMA table_info(extractedquestion)");
+    const eqColumns = eqInfo[0]?.values.map(row => row[1]) || [];
+
+    if (!eqColumns.includes('extracted_options')) {
+      db.run("ALTER TABLE extractedquestion ADD COLUMN extracted_options TEXT");
+      console.log('✅ Migration: Added extracted_options column to extractedquestion');
+    }
+
+    if (!eqColumns.includes('extracted_correct_answer')) {
+      db.run("ALTER TABLE extractedquestion ADD COLUMN extracted_correct_answer TEXT");
+      console.log('✅ Migration: Added extracted_correct_answer column to extractedquestion');
+    }
+
+    if (!eqColumns.includes('extracted_ideal_answer')) {
+      db.run("ALTER TABLE extractedquestion ADD COLUMN extracted_ideal_answer TEXT");
+      console.log('✅ Migration: Added extracted_ideal_answer column to extractedquestion');
+    }
+
+    if (!eqColumns.includes('frequency_count')) {
+      db.run("ALTER TABLE extractedquestion ADD COLUMN frequency_count INTEGER DEFAULT 1");
+      console.log('✅ Migration: Added frequency_count column to extractedquestion');
+    }
+
+    if (!eqColumns.includes('most_recent_year')) {
+      db.run("ALTER TABLE extractedquestion ADD COLUMN most_recent_year INTEGER");
+      console.log('✅ Migration: Added most_recent_year column to extractedquestion');
+    }
+
     saveDatabase();
   } catch (error) {
     console.error('Migration error:', error);

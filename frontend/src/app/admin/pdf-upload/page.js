@@ -12,10 +12,11 @@ export default function PDFUploadPage() {
   const [pdfs, setPdfs] = useState([]);
   const [selectedPdf, setSelectedPdf] = useState(null);
   const [extractions, setExtractions] = useState([]);
-  const [showUpload, setShowUpload] = useState(false);
   const [showManualForm, setShowManualForm] = useState(false);
   const [reviewingExtraction, setReviewingExtraction] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [extracting, setExtracting] = useState(false);
+  const [extractionResult, setExtractionResult] = useState(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -25,6 +26,7 @@ export default function PDFUploadPage() {
   useEffect(() => {
     if (selectedPdf) {
       fetchExtractions(selectedPdf.id);
+      setExtractionResult(null);
     }
   }, [selectedPdf]);
 
@@ -80,15 +82,49 @@ export default function PDFUploadPage() {
 
       setPdfs(prev => [pdfData, ...prev]);
       setSelectedPdf(pdfData);
-      setShowUpload(false);
-      
-      setTimeout(() => {
-        fetchPDFs();
-      }, 500);
+
+      setTimeout(() => { fetchPDFs(); }, 500);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to upload PDF');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExtractQuestions = async () => {
+    if (!selectedPdf) return;
+
+    setExtracting(true);
+    setError('');
+    setExtractionResult(null);
+
+    try {
+      const response = await api.post(`/pdf/${selectedPdf.id}/extract`, {}, {
+        timeout: 300000
+      });
+
+      setExtractionResult(response.data);
+      fetchExtractions(selectedPdf.id);
+      fetchPDFs();
+    } catch (err) {
+      setError(err.response?.data?.error || 'AI extraction failed. Please try again.');
+    } finally {
+      setExtracting(false);
+    }
+  };
+
+  const handleDeletePdf = async (pdfId) => {
+    if (!confirm('Delete this PDF and all its extracted questions?')) return;
+
+    try {
+      await api.delete(`/pdf/${pdfId}`);
+      setPdfs(prev => prev.filter(p => p.id !== pdfId));
+      if (selectedPdf?.id === pdfId) {
+        setSelectedPdf(null);
+        setExtractions([]);
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to delete PDF');
     }
   };
 
@@ -111,6 +147,15 @@ export default function PDFUploadPage() {
       setReviewingExtraction(null);
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to review extraction');
+    }
+  };
+
+  const getImportanceStyle = (importance) => {
+    switch (importance) {
+      case 'high': return { background: 'rgba(239, 68, 68, 0.25)', border: '1px solid rgba(239, 68, 68, 0.5)', color: '#fca5a5' };
+      case 'medium': return { background: 'rgba(251, 191, 36, 0.25)', border: '1px solid rgba(251, 191, 36, 0.5)', color: '#fde68a' };
+      case 'low': return { background: 'rgba(107, 114, 128, 0.25)', border: '1px solid rgba(107, 114, 128, 0.5)', color: '#d1d5db' };
+      default: return {};
     }
   };
 
@@ -151,7 +196,7 @@ export default function PDFUploadPage() {
         <main className={styles.main}>
           <div className={styles.container}>
             <div className={styles.header}>
-              <h1 className={styles.title}>PDF Upload & Review</h1>
+              <h1 className={styles.title}>PDF Upload & Extract</h1>
               <div className={styles.actions}>
                 <label className={styles.uploadButton}>
                   Upload PDF
@@ -167,6 +212,26 @@ export default function PDFUploadPage() {
 
             {error && <div className={styles.error}>{error}</div>}
 
+            {extractionResult && (
+              <div className={styles.extractionSummary}>
+                <h3 className={styles.summaryTitle}>Extraction Complete</h3>
+                <p className={styles.summaryText}>{extractionResult.summary}</p>
+                {extractionResult.importance_breakdown && (
+                  <div className={styles.importanceBreakdown}>
+                    <span className={styles.importanceChip} style={getImportanceStyle('high')}>
+                      🔴 High: {extractionResult.importance_breakdown.high || 0}
+                    </span>
+                    <span className={styles.importanceChip} style={getImportanceStyle('medium')}>
+                      🟡 Medium: {extractionResult.importance_breakdown.medium || 0}
+                    </span>
+                    <span className={styles.importanceChip} style={getImportanceStyle('low')}>
+                      ⚪ Low: {extractionResult.importance_breakdown.low || 0}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className={styles.content}>
               <div className={styles.pdfList}>
                 <h2 className={styles.sectionTitle}>Uploaded PDFs</h2>
@@ -174,7 +239,7 @@ export default function PDFUploadPage() {
                   <div className={styles.loading}>Loading...</div>
                 ) : pdfs.length === 0 ? (
                   <div className={styles.emptyState}>
-                    <p>No PDFs uploaded yet. Upload your first PDF to get started.</p>
+                    <p>No PDFs uploaded yet.</p>
                   </div>
                 ) : (
                   <div className={styles.pdfCards}>
@@ -187,12 +252,21 @@ export default function PDFUploadPage() {
                         <div className={styles.pdfInfo}>
                           <h3 className={styles.pdfName}>{pdf.file_name || 'Untitled PDF'}</h3>
                           <p className={styles.pdfMeta}>
-                            {pdf.uploaded_at ? new Date(pdf.uploaded_at).toLocaleDateString() : 'Unknown date'} • 
-                            {pdf.file_size ? `${(pdf.file_size / 1024 / 1024).toFixed(2)} MB` : 'Unknown size'}
+                            {pdf.uploaded_at ? new Date(pdf.uploaded_at).toLocaleDateString() : 'Unknown date'} •
+                            {pdf.file_size ? ` ${(pdf.file_size / 1024 / 1024).toFixed(2)} MB` : ' Unknown size'}
                           </p>
-                          <span className={`${styles.status} ${styles[pdf.upload_status || 'uploaded']}`}>
-                            {pdf.upload_status || 'uploaded'}
-                          </span>
+                          <div className={styles.pdfActions}>
+                            <span className={`${styles.status} ${styles[pdf.upload_status || 'uploaded']}`}>
+                              {pdf.upload_status || 'uploaded'}
+                            </span>
+                            <button
+                              className={styles.deleteButton}
+                              onClick={(e) => { e.stopPropagation(); handleDeletePdf(pdf.id); }}
+                              title="Delete PDF"
+                            >
+                              ✕
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -206,24 +280,41 @@ export default function PDFUploadPage() {
                     {selectedPdf ? `Questions from: ${selectedPdf.file_name}` : 'Questions'}
                   </h2>
                   {selectedPdf && (
-                    <button
-                      className={styles.addButton}
-                      onClick={() => setShowManualForm(true)}
-                    >
-                      Add Manual Question
-                    </button>
+                    <div className={styles.actions}>
+                      <button
+                        className={styles.extractButton}
+                        onClick={handleExtractQuestions}
+                        disabled={extracting}
+                      >
+                        {extracting ? 'Extracting with AI...' : '🤖 Extract Questions'}
+                      </button>
+                      <button
+                        className={styles.addButton}
+                        onClick={() => setShowManualForm(true)}
+                      >
+                        Add Manual
+                      </button>
+                    </div>
                   )}
                 </div>
 
+                {extracting && (
+                  <div className={styles.extractingState}>
+                    <div className={styles.spinner}></div>
+                    <p>AI is reading the PDF and extracting questions...</p>
+                    <p className={styles.extractingHint}>This may take 30-60 seconds depending on the PDF size.</p>
+                  </div>
+                )}
+
                 {!selectedPdf ? (
                   <div className={styles.emptyState}>
-                    <p>Select a PDF from the list to view extracted questions.</p>
+                    <p>Select a PDF from the list to view or extract questions.</p>
                   </div>
-                ) : extractions.length === 0 ? (
+                ) : !extracting && extractions.length === 0 ? (
                   <div className={styles.emptyState}>
-                    <p>No questions extracted yet. Add questions manually or wait for AI extraction.</p>
+                    <p>No questions extracted yet. Click "Extract Questions" to let AI parse this PDF.</p>
                   </div>
-                ) : (
+                ) : !extracting && (
                   <div className={styles.extractionList}>
                     {extractions.map((extraction, index) => (
                       <div key={extraction.id || `extraction-${index}`} className={styles.extractionCard}>
@@ -232,6 +323,24 @@ export default function PDFUploadPage() {
                             <span className={styles.badge}>{extraction.detected_subject}</span>
                             <span className={styles.badge}>{extraction.detected_topic}</span>
                             <span className={styles.badge}>{extraction.detected_type}</span>
+                            <span
+                              className={styles.importanceBadge}
+                              style={getImportanceStyle(extraction.detected_importance)}
+                            >
+                              {extraction.detected_importance === 'high' ? '🔴' :
+                               extraction.detected_importance === 'medium' ? '🟡' : '⚪'}
+                              {' '}{extraction.detected_importance || 'medium'}
+                            </span>
+                            {extraction.frequency_count > 1 && (
+                              <span className={styles.badge} style={{ background: 'rgba(139, 92, 246, 0.25)', border: '1px solid rgba(139, 92, 246, 0.5)' }}>
+                                Repeated {extraction.frequency_count}x
+                              </span>
+                            )}
+                            {extraction.most_recent_year && (
+                              <span className={styles.badge} style={{ background: 'rgba(59, 130, 246, 0.25)', border: '1px solid rgba(59, 130, 246, 0.5)' }}>
+                                Last: {extraction.most_recent_year}
+                              </span>
+                            )}
                           </div>
                           <span className={`${styles.status} ${styles[extraction.status]}`}>
                             {extraction.status}
@@ -261,4 +370,3 @@ export default function PDFUploadPage() {
     </ProtectedRoute>
   );
 }
-

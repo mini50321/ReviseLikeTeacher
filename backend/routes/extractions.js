@@ -49,9 +49,11 @@ router.put('/:id/review', authenticate, requireAdmin, async (req, res) => {
         difficulty: extraction.detected_difficulty,
         importance: extraction.detected_importance,
         cognitive_focus: extraction.detected_cognitive_focus,
-        ideal_answer: '',
+        ideal_answer: extraction.extracted_ideal_answer || '',
         key_points: extraction.detected_key_points,
         previous_year_tags: extraction.detected_previous_year_tags,
+        options: extraction.extracted_options || null,
+        correct_answer: extraction.extracted_correct_answer || null,
         image_path: extraction.extracted_image_path,
         status: 'active'
       };
@@ -61,11 +63,12 @@ router.put('/:id/review', authenticate, requireAdmin, async (req, res) => {
       }
 
       const questionResult = await db.query(
-        `INSERT INTO question 
-         (stem, type, subject, topic, subtopic, difficulty, importance, 
-          cognitive_focus, ideal_answer, key_points, previous_year_tags, 
-          image_path, status, created_by, source_pdf_id, extracted_question_id) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) 
+        `INSERT INTO question
+         (stem, type, subject, topic, subtopic, difficulty, importance,
+          cognitive_focus, ideal_answer, key_points, previous_year_tags,
+          options, correct_answer,
+          image_path, status, created_by, source_pdf_id, extracted_question_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
          RETURNING *`,
         [
           questionData.stem,
@@ -79,6 +82,8 @@ router.put('/:id/review', authenticate, requireAdmin, async (req, res) => {
           questionData.ideal_answer || '',
           JSON.stringify(questionData.key_points || []),
           JSON.stringify(questionData.previous_year_tags || []),
+          questionData.options || null,
+          questionData.correct_answer || null,
           questionData.image_path || '',
           questionData.status || 'active',
           req.user.userId,

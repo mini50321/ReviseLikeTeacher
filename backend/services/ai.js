@@ -211,18 +211,34 @@ async function textToSpeech(text, voice = 'nova', speed = 1.0) {
   }
 }
 
-async function extractQuestionsFromPDF(pdfPath) {
-  try {
-    const response = await axios.post(`${AI_SERVICE_URL}/extract-pdf`, {
-      pdf_path: pdfPath
-    }, {
-      timeout: 300000
-    });
+async function extractQuestionsFromPDF(pdfBuffer, filename = 'document.pdf') {
+  await ensureAIServiceReady();
 
-    return response.data;
+  try {
+    const result = await retryRequest(async () => {
+      const FormData = require('form-data');
+      const formData = new FormData();
+
+      formData.append('file', pdfBuffer, {
+        filename: filename,
+        contentType: 'application/pdf'
+      });
+      formData.append('filename', filename);
+
+      const response = await axios.post(`${AI_SERVICE_URL}/extract-pdf`, formData, {
+        headers: { ...formData.getHeaders() },
+        timeout: 300000,
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity
+      });
+
+      return response.data;
+    }, { maxRetries: 2, initialDelay: 5000, label: 'PDF extraction' });
+
+    return result;
   } catch (error) {
-    console.error('PDF extraction error:', error);
-    throw new Error('PDF extraction failed');
+    console.error('PDF extraction error:', error.message || error);
+    throw new Error(`PDF extraction failed: ${error.message || 'Unknown error'}`);
   }
 }
 

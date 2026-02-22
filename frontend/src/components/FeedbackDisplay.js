@@ -8,7 +8,7 @@ export default function FeedbackDisplay({ attempt, onNext, onEnd, isLastQuestion
   const [audioState, setAudioState] = useState('idle');
   const [audioUrl, setAudioUrl] = useState(null);
   const audioRef = useRef(null);
-  const hasFetchedRef = useRef(false);
+  const fetchedTextRef = useRef(null);
 
   const score = attempt?.score || 0;
   const feedbackData = attempt?.feedback || {};
@@ -16,49 +16,48 @@ export default function FeedbackDisplay({ attempt, onNext, onEnd, isLastQuestion
   const isPassing = score >= 70;
   const isMCQ = feedbackData.is_mcq === true;
 
-  const fetchAndPlayAudio = useCallback(async (text) => {
-    if (!text || audioState === 'loading') return;
-
+  const fetchAudio = useCallback(async (text) => {
+    if (!text) return;
     setAudioState('loading');
     try {
       const audioBlob = await voiceAPI.speak(text);
       const url = URL.createObjectURL(audioBlob);
       setAudioUrl(url);
       setAudioState('ready');
-
-      const audio = new Audio(url);
-      audioRef.current = audio;
-
-      audio.onplay = () => setAudioState('playing');
-      audio.onended = () => setAudioState('ready');
-      audio.onerror = () => setAudioState('error');
-
-      await audio.play();
     } catch (error) {
-      console.error('TTS error:', error);
+      console.error('TTS fetch error:', error);
       setAudioState('error');
     }
   }, []);
 
   useEffect(() => {
-    if (teacherResponse && !hasFetchedRef.current) {
-      hasFetchedRef.current = true;
-      fetchAndPlayAudio(teacherResponse);
+    if (teacherResponse && fetchedTextRef.current !== teacherResponse) {
+      fetchedTextRef.current = teacherResponse;
+      fetchAudio(teacherResponse);
     }
-  }, [teacherResponse, fetchAndPlayAudio]);
+  }, [teacherResponse, fetchAudio]);
 
   useEffect(() => {
+    if (!audioUrl || audioState !== 'ready') return;
+
+    const audio = new Audio(audioUrl);
+    audioRef.current = audio;
+
+    audio.onplay = () => setAudioState('playing');
+    audio.onended = () => setAudioState('ready');
+    audio.onerror = () => setAudioState('error');
+
+    audio.play().catch(() => {
+      setAudioState('ready');
+    });
+
     return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-      if (audioUrl) {
-        URL.revokeObjectURL(audioUrl);
-      }
-      hasFetchedRef.current = false;
+      audio.pause();
+      audio.onplay = null;
+      audio.onended = null;
+      audio.onerror = null;
     };
-  }, []);
+  }, [audioUrl]);
 
   const togglePlayback = () => {
     if (!audioRef.current) return;
@@ -68,14 +67,15 @@ export default function FeedbackDisplay({ attempt, onNext, onEnd, isLastQuestion
       setAudioState('ready');
     } else if (audioState === 'ready') {
       audioRef.current.currentTime = 0;
-      audioRef.current.play();
+      audioRef.current.play().catch(() => {});
     }
   };
 
   const retryAudio = () => {
-    hasFetchedRef.current = false;
+    fetchedTextRef.current = null;
     if (teacherResponse) {
-      fetchAndPlayAudio(teacherResponse);
+      fetchedTextRef.current = teacherResponse;
+      fetchAudio(teacherResponse);
     }
   };
 
@@ -149,14 +149,14 @@ export default function FeedbackDisplay({ attempt, onNext, onEnd, isLastQuestion
               <div className={styles.voiceLabel}>
                 {audioState === 'loading' && 'Teacher is speaking...'}
                 {audioState === 'playing' && 'Listening to teacher...'}
-                {audioState === 'ready' && 'Teacher feedback ready'}
+                {audioState === 'ready' && 'Click play to listen'}
                 {audioState === 'idle' && 'Loading voice...'}
                 {audioState === 'error' && 'Voice unavailable'}
               </div>
               <div className={styles.voiceControls}>
                 {(audioState === 'ready' || audioState === 'playing') && (
                   <button onClick={togglePlayback} className={styles.playButton}>
-                    {audioState === 'playing' ? '⏸ Pause' : '▶ Replay'}
+                    {audioState === 'playing' ? '⏸ Pause' : '▶ Play'}
                   </button>
                 )}
                 {audioState === 'error' && (
