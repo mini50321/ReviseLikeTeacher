@@ -1,6 +1,6 @@
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 import uvicorn
 from typing import Optional
 import os
@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 
 from services.transcription import transcribe_audio
 from services.evaluation import evaluate_answer
+from services.tts import generate_speech
 
 env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
 load_dotenv(dotenv_path=env_path)
@@ -84,6 +85,39 @@ async def evaluate(request: dict):
     except Exception as e:
         print(f"Evaluation error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Evaluation failed: {str(e)}")
+
+@app.post("/tts")
+async def text_to_speech(request: dict):
+    try:
+        text = request.get("text")
+        voice = request.get("voice", "nova")
+        speed = request.get("speed", 1.0)
+
+        if not text:
+            raise HTTPException(status_code=400, detail="Text is required")
+
+        if len(text) > 4096:
+            text = text[:4096]
+
+        allowed_voices = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"]
+        if voice not in allowed_voices:
+            voice = "nova"
+
+        audio_bytes = await generate_speech(text=text, voice=voice, speed=speed)
+
+        return Response(
+            content=audio_bytes,
+            media_type="audio/mpeg",
+            headers={
+                "Content-Disposition": "inline; filename=teacher_response.mp3"
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"TTS error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Speech generation failed: {str(e)}")
+
 
 @app.post("/extract-pdf")
 async def extract_pdf(request: dict):

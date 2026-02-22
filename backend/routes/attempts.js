@@ -84,6 +84,21 @@ router.post('/', authenticate, async (req, res) => {
       const mult = difficultyMultiplier[question.difficulty] || 1.0;
       const delta = isCorrect ? round(0.15 * mult, 3) : round(-0.075 * mult, 3);
 
+      let teacherResponse = '';
+      if (isCorrect) {
+        teacherResponse = `That's right, well done! The answer is ${question.correct_answer.trim().toUpperCase()}, ${correctText}. `;
+        if (question.ideal_answer) {
+          teacherResponse += question.ideal_answer;
+        }
+      } else {
+        teacherResponse = `Not quite. You selected ${answer_text.trim().toUpperCase()}, ${selectedText}, but the correct answer is ${question.correct_answer.trim().toUpperCase()}, ${correctText}. `;
+        if (question.ideal_answer) {
+          teacherResponse += `Here's why: ${question.ideal_answer}`;
+        } else {
+          teacherResponse += `Make sure to review this topic carefully to understand the reasoning.`;
+        }
+      }
+
       evaluation = {
         score,
         feedback: {
@@ -97,6 +112,7 @@ router.post('/', authenticate, async (req, res) => {
           improvements: isCorrect ? 'Great job! Keep it up.' : `The correct answer is ${question.correct_answer.trim().toUpperCase()}) ${correctText}`,
           model_explanation: question.ideal_answer || (isCorrect ? 'Well done!' : `The correct answer is option ${question.correct_answer.trim().toUpperCase()}.`)
         },
+        teacher_response: teacherResponse,
         mastery_impact: {
           delta
         }
@@ -119,6 +135,7 @@ router.post('/', authenticate, async (req, res) => {
             improvements: "Keep practicing to improve.",
             model_explanation: question.ideal_answer || "Review the topic for a complete answer."
           },
+          teacher_response: "Thank you for your answer. Keep practicing and reviewing the topic to strengthen your understanding.",
           mastery_impact: {
             delta: 0
           }
@@ -135,6 +152,7 @@ router.post('/', authenticate, async (req, res) => {
             improvements: "Keep practicing to improve.",
             model_explanation: question.ideal_answer || "Review the topic for a complete answer."
           },
+          teacher_response: "Thank you for your answer. Keep practicing and reviewing the topic to strengthen your understanding.",
           mastery_impact: {
             delta: 0
           }
@@ -193,6 +211,7 @@ router.post('/', authenticate, async (req, res) => {
       id: insertedAttempt.rows[0]?.id || null,
       feedback: evaluation.feedback,
       score: evaluation.score,
+      teacher_response: evaluation.teacher_response || null,
       mastery_impact: {
         topic: question.topic,
         previous_mastery: currentMastery,

@@ -47,7 +47,7 @@ async def evaluate_answer(
         
         key_points_text = "\n".join([f"- {point}" for point in key_points]) if key_points else "Not specified"
         
-        prompt = f"""You are an expert medical education evaluator assessing a student's answer to a NEET PG question.
+        prompt = f"""You are a warm, knowledgeable medical teacher having a one-on-one conversation with your student. You are evaluating their answer to a NEET PG question.
 
 Question: {question_stem}
 Subject: {subject}
@@ -61,16 +61,16 @@ Ideal Answer: {ideal_answer}
 
 Student's Answer: {student_answer}
 
-Please evaluate the student's answer and provide:
-1. A score from 0-100 based on:
-   - Accuracy of medical facts
-   - Completeness in covering key points
-   - Clarity and structure
-   - Relevance to the question
-2. Constructive feedback with:
-   - Strengths: What the student did well
-   - Improvements: What needs to be improved
-   - Model Explanation: A clear, concise explanation of the correct answer
+Evaluate the student's answer and provide:
+1. A score from 0-100
+2. Structured feedback (strengths, improvements, model_explanation)
+3. A "teacher_response" — this is the most important part. Write it as if you are SPEAKING directly to the student in a warm, conversational tone. Like a teacher sitting across from them:
+   - Acknowledge what they got right
+   - Gently point out what they missed or got wrong
+   - Teach the key points they need to know
+   - Be encouraging but honest
+   - Keep it under 150 words, natural and spoken
+   - Do NOT use bullet points or formatting — write it as natural speech
 
 Respond in JSON format:
 {{
@@ -79,7 +79,8 @@ Respond in JSON format:
         "strengths": "<text>",
         "improvements": "<text>",
         "model_explanation": "<text>"
-    }}
+    }},
+    "teacher_response": "<natural conversational teacher response>"
 }}"""
 
         loop = asyncio.get_event_loop()
@@ -91,8 +92,8 @@ Respond in JSON format:
                     {"role": "system", "content": "You are an expert medical education evaluator. Always respond with valid JSON."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.3,
-                max_tokens=500
+                temperature=0.4,
+                max_tokens=800
             )
         )
         
@@ -119,8 +120,12 @@ Respond in JSON format:
                 "model_explanation": ideal_answer or "Review the topic for a complete answer."
             }
         
+        teacher_response = result.get("teacher_response", "")
+        if not teacher_response:
+            teacher_response = f"Thank you for your answer. {feedback.get('strengths', '')} {feedback.get('improvements', '')}"
+
         mastery_delta = calculate_mastery_delta(score, current_mastery, difficulty)
-        
+
         return {
             "score": score,
             "feedback": {
@@ -128,6 +133,7 @@ Respond in JSON format:
                 "improvements": feedback.get("improvements", "Keep practicing to improve."),
                 "model_explanation": feedback.get("model_explanation", ideal_answer or "Review the topic for a complete answer.")
             },
+            "teacher_response": teacher_response,
             "mastery_impact": {
                 "delta": mastery_delta
             }
@@ -181,6 +187,7 @@ def get_fallback_evaluation(question: Dict[str, Any], student_answer: str, ideal
             "improvements": "Keep practicing to improve your answer quality.",
             "model_explanation": ideal_answer or "Review the topic for a complete answer."
         },
+        "teacher_response": "Thank you for your answer. Keep practicing and reviewing the topic to strengthen your understanding.",
         "mastery_impact": {
             "delta": (score / 100) * 0.1
         }

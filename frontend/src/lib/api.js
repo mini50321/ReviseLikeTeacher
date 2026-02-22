@@ -100,6 +100,27 @@ export const voiceAPI = {
 
     return response.data;
   },
+
+  speak: async (text, voice = 'nova', speed = 1.0) => {
+    if (!navigator.onLine) {
+      throw new Error('No internet connection');
+    }
+
+    if (!text || !text.trim()) {
+      throw new Error('No text to speak');
+    }
+
+    const response = await api.post('/voice/tts', {
+      text,
+      voice,
+      speed
+    }, {
+      responseType: 'blob',
+      timeout: 30000
+    });
+
+    return response.data;
+  },
 };
 
 export default api;

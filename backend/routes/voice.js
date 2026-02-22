@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const { authenticate } = require('../middleware/auth');
-const { transcribeVoice } = require('../services/ai');
+const { transcribeVoice, textToSpeech } = require('../services/ai');
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -80,6 +80,35 @@ router.post('/transcribe', authenticate, upload.single('audio'), async (req, res
       error: error.message || 'Transcription failed',
       details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
       serviceUrl: process.env.AI_SERVICE_URL || 'Not configured'
+    });
+  }
+});
+
+router.post('/tts', authenticate, async (req, res) => {
+  try {
+    const { text, voice, speed } = req.body;
+
+    if (!text || !text.trim()) {
+      return res.status(400).json({ error: 'Text is required' });
+    }
+
+    const audioBuffer = await textToSpeech(
+      text,
+      voice || 'nova',
+      speed || 1.0
+    );
+
+    res.set({
+      'Content-Type': 'audio/mpeg',
+      'Content-Length': audioBuffer.byteLength,
+      'Content-Disposition': 'inline; filename=teacher_response.mp3'
+    });
+
+    res.send(Buffer.from(audioBuffer));
+  } catch (error) {
+    console.error('TTS route error:', error);
+    res.status(500).json({
+      error: error.message || 'Speech generation failed'
     });
   }
 });

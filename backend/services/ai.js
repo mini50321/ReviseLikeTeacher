@@ -179,6 +179,38 @@ async function transcribeVoice(audioBuffer, language, filename = 'audio.webm') {
   }
 }
 
+async function textToSpeech(text, voice = 'nova', speed = 1.0) {
+  if (!text || !text.trim()) {
+    throw new Error('Text is required for speech generation');
+  }
+
+  await ensureAIServiceReady();
+
+  try {
+    const result = await retryRequest(async () => {
+      const response = await axios.post(`${AI_SERVICE_URL}/tts`, {
+        text: text.substring(0, 4096),
+        voice,
+        speed
+      }, {
+        timeout: 30000,
+        responseType: 'arraybuffer'
+      });
+
+      if (!response.data || response.data.byteLength === 0) {
+        throw new Error('Empty audio response from TTS service');
+      }
+
+      return response.data;
+    }, { maxRetries: 2, initialDelay: 2000, label: 'TTS generation' });
+
+    return result;
+  } catch (error) {
+    console.error('TTS error after retries:', error.message || error);
+    throw new Error(`Speech generation failed: ${error.message || 'Unknown error'}`);
+  }
+}
+
 async function extractQuestionsFromPDF(pdfPath) {
   try {
     const response = await axios.post(`${AI_SERVICE_URL}/extract-pdf`, {
@@ -214,6 +246,7 @@ function startKeepAlive() {
 module.exports = {
   evaluateAnswer,
   transcribeVoice,
+  textToSpeech,
   extractQuestionsFromPDF,
   startKeepAlive
 };
