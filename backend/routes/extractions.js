@@ -62,15 +62,16 @@ router.put('/:id/review', authenticate, requireAdmin, async (req, res) => {
         Object.assign(questionData, corrections);
       }
 
+      const questionId = db.generateUUID();
       const questionResult = await db.query(
         `INSERT INTO question
-         (stem, type, subject, topic, subtopic, difficulty, importance,
+         (id, stem, type, subject, topic, subtopic, difficulty, importance,
           cognitive_focus, ideal_answer, key_points, previous_year_tags,
           options, correct_answer,
           image_path, status, created_by, source_pdf_id, extracted_question_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
-         RETURNING *`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
         [
+          questionId,
           questionData.stem,
           questionData.type,
           questionData.subject,
@@ -102,7 +103,7 @@ router.put('/:id/review', authenticate, requireAdmin, async (req, res) => {
 
       res.json({
         message: 'Question accepted and added to bank',
-        question: questionResult.rows[0]
+        question: { id: questionId, ...questionData }
       });
     } else if (action === 'reject') {
       await db.query(

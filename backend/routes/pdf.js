@@ -53,14 +53,21 @@ router.post('/upload', authenticate, requireAdmin, upload.single('file'), async 
     const filePath = `/uploads/${req.file.filename}`;
     const fileSize = req.file.size;
 
-    const result = await db.query(
+    await db.query(
       `INSERT INTO pdfupload (id, admin_id, file_name, file_path, file_size, upload_status) 
-       VALUES ($1, $2, $3, $4, $5, 'uploaded') 
-       RETURNING *`,
+       VALUES ($1, $2, $3, $4, $5, 'uploaded')`,
       [pdfId, req.user.userId, req.file.originalname, filePath, fileSize]
     );
 
-    res.status(201).json(result.rows[0]);
+    res.status(201).json({
+      id: pdfId,
+      admin_id: req.user.userId,
+      file_name: req.file.originalname,
+      file_path: filePath,
+      file_size: fileSize,
+      upload_status: 'uploaded',
+      uploaded_at: new Date().toISOString()
+    });
   } catch (error) {
     console.error('PDF upload error:', error);
     res.status(500).json({ error: 'Internal server error' });
