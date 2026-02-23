@@ -23,7 +23,7 @@
 
 .loading {
   min-height: 100vh;
-  background: #0a0f1c;
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -184,7 +184,7 @@
   height: 14px;
   border-radius: 50%;
   border: 2px solid rgba(255, 255, 255, 0.15);
-  background: #1a1a2e;
+  background: rgba(255, 255, 255, 0.05);
   flex-shrink: 0;
   transition: all 0.3s;
 }

@@ -32,9 +32,9 @@
 }
 
 .error {
-  background: #fee;
-  border: 1px solid #fcc;
-  color: #c33;
+  background: rgba(239, 83, 80, 0.1);
+  border: 1px solid rgba(239, 83, 80, 0.3);
+  color: #ef5350;
   padding: 0.75rem 1rem;
   border-radius: 8px;
   margin-bottom: 1rem;
@@ -46,7 +46,7 @@
 .error button {
   background: none;
   border: none;
-  color: #c33;
+  color: #ef5350;
   cursor: pointer;
   font-size: 1.1rem;
 }
@@ -92,22 +92,24 @@
 }
 
 .statCard {
-  background: white;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 12px;
   padding: 1.5rem;
   text-align: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
 .statValue {
   font-size: 2rem;
   font-weight: 700;
-  color: #4361ee;
+  color: #818cf8;
 }
 
 .statLabel {
   font-size: 0.85rem;
-  color: #888;
+  color: rgba(255, 255, 255, 0.5);
   margin-top: 0.25rem;
 }
 
@@ -119,16 +121,18 @@
 }
 
 .breakdownCard {
-  background: white;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 12px;
   padding: 1.25rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
 .breakdownTitle {
   font-size: 1rem;
   font-weight: 600;
-  color: #1a1a2e;
+  color: #ffffff;
   margin-bottom: 0.75rem;
 }
 
@@ -147,12 +151,12 @@
 
 .breakdownCount {
   font-weight: 600;
-  color: #4361ee;
+  color: #818cf8;
 }
 
 .label {
   font-size: 0.9rem;
-  color: #555;
+  color: rgba(255, 255, 255, 0.7);
   text-transform: capitalize;
 }
 
@@ -164,16 +168,18 @@
   text-transform: uppercase;
 }
 
-.status_pending { background: #fff3cd; color: #856404; }
-.status_approved { background: #d4edda; color: #155724; }
-.status_rejected { background: #f8d7da; color: #721c24; }
-.status_edited { background: #cce5ff; color: #004085; }
+.status_pending { background: rgba(240, 173, 78, 0.25); color: #f0ad4e; }
+.status_approved { background: rgba(45, 106, 79, 0.3); color: #52b788; }
+.status_rejected { background: rgba(231, 76, 60, 0.3); color: #ef5350; }
+.status_edited { background: rgba(67, 97, 238, 0.2); color: #818cf8; }
 
 .subjectSection {
-  background: white;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 12px;
   padding: 1.25rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
 .subjectGrid {
@@ -190,7 +196,7 @@
 
 .subjectName {
   font-size: 0.85rem;
-  color: #333;
+  color: rgba(255, 255, 255, 0.7);
   width: 180px;
   flex-shrink: 0;
 }
@@ -198,7 +204,7 @@
 .subjectBar {
   flex: 1;
   height: 8px;
-  background: #eee;
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -213,7 +219,7 @@
 .subjectCount {
   font-weight: 600;
   font-size: 0.85rem;
-  color: #4361ee;
+  color: #818cf8;
   width: 40px;
   text-align: right;
 }
@@ -227,19 +233,22 @@
 
 .filterInput {
   padding: 0.5rem 0.75rem;
-  border: 1px solid #ddd;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
   font-size: 0.9rem;
   flex: 1;
   min-width: 160px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
 }
 
 .filterSelect {
   padding: 0.5rem 0.75rem;
-  border: 1px solid #ddd;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
   font-size: 0.9rem;
-  background: white;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
   min-width: 140px;
 }
 
@@ -249,23 +258,24 @@
   gap: 1rem;
   margin-bottom: 1rem;
   padding: 0.75rem 1rem;
-  background: white;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
 
 .selectAllButton {
   padding: 0.5rem 1rem;
-  border: 1px solid #ddd;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
-  background: white;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
   font-size: 0.85rem;
 }
 
 .selectedCount {
   font-size: 0.9rem;
-  color: #666;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .convertButton {
@@ -292,7 +302,7 @@
 .emptyState {
   text-align: center;
   padding: 3rem;
-  color: #999;
+  color: rgba(255, 255, 255, 0.4);
   font-size: 1rem;
 }
 
@@ -306,21 +316,20 @@
   display: flex;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
-  background: white;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 10px;
   cursor: pointer;
-  border: 2px solid transparent;
   transition: all 0.2s;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
 
 .mcqItem:hover {
-  border-color: #4361ee33;
+  border-color: rgba(67, 97, 238, 0.3);
 }
 
 .mcqItem.selected {
   border-color: #4361ee;
-  background: #f0f4ff;
+  background: rgba(67, 97, 238, 0.15);
 }
 
 .mcqCheckbox {
@@ -341,7 +350,7 @@
 
 .mcqStem {
   font-size: 0.9rem;
-  color: #333;
+  color: rgba(255, 255, 255, 0.85);
   line-height: 1.4;
   margin-bottom: 0.4rem;
 }
@@ -354,10 +363,10 @@
 
 .tag {
   padding: 0.15rem 0.5rem;
-  background: #f0f0f0;
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 6px;
   font-size: 0.75rem;
-  color: #555;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .yieldBadge {
@@ -367,17 +376,17 @@
   font-weight: 600;
 }
 
-.yield_core { background: #d4edda; color: #155724; }
-.yield_frequent { background: #cce5ff; color: #004085; }
-.yield_occasional { background: #fff3cd; color: #856404; }
-.yield_rare { background: #f8d7da; color: #721c24; }
+.yield_core { background: rgba(45, 106, 79, 0.3); color: #52b788; }
+.yield_frequent { background: rgba(67, 97, 238, 0.2); color: #818cf8; }
+.yield_occasional { background: rgba(240, 173, 78, 0.25); color: #f0ad4e; }
+.yield_rare { background: rgba(231, 76, 60, 0.25); color: #ef5350; }
 
 .difficultyBadge {
   padding: 0.15rem 0.5rem;
-  background: #e8e8e8;
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 6px;
   font-size: 0.75rem;
-  color: #666;
+  color: rgba(255, 255, 255, 0.5);
   text-transform: capitalize;
 }
 
@@ -388,10 +397,12 @@
 }
 
 .conversionCard {
-  background: white;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 12px;
   padding: 1.25rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
 .conversionHeader {
@@ -415,14 +426,14 @@
   font-weight: 600;
 }
 
-.cog_conceptual { background: #e3f2fd; color: #1565c0; }
-.cog_application { background: #e8f5e9; color: #2e7d32; }
-.cog_analysis { background: #fce4ec; color: #c62828; }
+.cog_conceptual { background: rgba(21, 101, 192, 0.2); color: #42a5f5; }
+.cog_application { background: rgba(46, 125, 50, 0.2); color: #66bb6a; }
+.cog_analysis { background: rgba(198, 40, 40, 0.2); color: #ef5350; }
 
 .typeBadge {
   padding: 0.15rem 0.5rem;
-  background: #f3e5f5;
-  color: #7b1fa2;
+  background: rgba(123, 31, 162, 0.2);
+  color: #ce93d8;
   border-radius: 6px;
   font-size: 0.75rem;
   font-weight: 500;
@@ -434,7 +445,7 @@
   border: none;
   font-size: 1rem;
   cursor: pointer;
-  color: #888;
+  color: rgba(255, 255, 255, 0.5);
   padding: 0.25rem;
 }
 
@@ -448,7 +459,7 @@
 .comparisonSide {
   flex: 1;
   padding: 0.75rem;
-  background: #f8f9fa;
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
 }
 
@@ -456,14 +467,14 @@
   font-size: 0.7rem;
   text-transform: uppercase;
   font-weight: 700;
-  color: #999;
+  color: rgba(255, 255, 255, 0.4);
   margin-bottom: 0.4rem;
   letter-spacing: 0.5px;
 }
 
 .comparisonText {
   font-size: 0.85rem;
-  color: #333;
+  color: rgba(255, 255, 255, 0.8);
   line-height: 1.45;
 }
 
@@ -471,13 +482,13 @@
   display: flex;
   align-items: center;
   font-size: 1.5rem;
-  color: #4361ee;
+  color: #818cf8;
   font-weight: 700;
 }
 
 .expandedContent {
   padding: 1rem;
-  background: #f8f9fa;
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
   margin-bottom: 0.75rem;
 }
@@ -486,11 +497,11 @@
   margin-bottom: 0.75rem;
   font-size: 0.85rem;
   line-height: 1.5;
-  color: #444;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .detailGroup strong {
-  color: #1a1a2e;
+  color: #ffffff;
 }
 
 .keyPointsList {
@@ -512,7 +523,7 @@
 }
 
 .correctOption {
-  color: #155724;
+  color: #52b788;
   font-weight: 600;
 }
 
@@ -535,10 +546,10 @@
   transition: opacity 0.2s;
 }
 
-.approveButton { background: #d4edda; color: #155724; }
-.editButton { background: #cce5ff; color: #004085; }
-.rejectButton { background: #f8d7da; color: #721c24; }
-.deleteButton { background: #f0f0f0; color: #666; margin-left: auto; }
+.approveButton { background: rgba(45, 106, 79, 0.3); color: #52b788; }
+.editButton { background: rgba(67, 97, 238, 0.2); color: #818cf8; }
+.rejectButton { background: rgba(231, 76, 60, 0.25); color: #ef5350; }
+.deleteButton { background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.5); margin-left: auto; }
 
 .approveButton:hover,
 .editButton:hover,
@@ -548,7 +559,7 @@
 }
 
 .editForm {
-  background: #f8f9fa;
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
   padding: 1rem;
   margin-top: 0.5rem;
@@ -562,7 +573,7 @@
   display: block;
   font-size: 0.8rem;
   font-weight: 600;
-  color: #555;
+  color: rgba(255, 255, 255, 0.6);
   margin-bottom: 0.25rem;
 }
 
@@ -576,28 +587,33 @@
   width: 100%;
   min-height: 80px;
   padding: 0.5rem;
-  border: 1px solid #ddd;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 6px;
   font-size: 0.85rem;
   font-family: inherit;
   resize: vertical;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
 }
 
 .editInput {
   width: 100%;
   padding: 0.5rem;
-  border: 1px solid #ddd;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 6px;
   font-size: 0.85rem;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
 }
 
 .editSelect {
   width: 100%;
   padding: 0.5rem;
-  border: 1px solid #ddd;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 6px;
   font-size: 0.85rem;
-  background: white;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
 }
 
 .editActions {
@@ -619,8 +635,8 @@
 
 .cancelButton {
   padding: 0.5rem 1.25rem;
-  background: #e0e0e0;
-  color: #333;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -638,4 +654,3 @@
   .actionBar { flex-direction: column; align-items: stretch; }
   .convertButton { margin-left: 0; }
 }
-

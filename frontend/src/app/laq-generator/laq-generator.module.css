@@ -32,9 +32,9 @@
 }
 
 .error {
-  background: #fee;
-  border: 1px solid #fcc;
-  color: #c33;
+  background: rgba(239, 83, 80, 0.1);
+  border: 1px solid rgba(239, 83, 80, 0.3);
+  color: #ef5350;
   padding: 0.75rem 1rem;
   border-radius: 8px;
   margin-bottom: 1rem;
@@ -46,7 +46,7 @@
 .error button {
   background: none;
   border: none;
-  color: #c33;
+  color: #ef5350;
   cursor: pointer;
   font-size: 1.1rem;
 }
@@ -72,7 +72,7 @@
 }
 
 .tabButton:hover { color: rgba(255, 255, 255, 0.9); }
-.activeTab { color: #ffffff; border-bottom-color: #4361ee; }
+.activeTab { color: #ffffff; border-bottom-color: #7209b7; }
 
 .tabContent { min-height: 400px; }
 
@@ -84,22 +84,24 @@
 }
 
 .statCard {
-  background: white;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 12px;
   padding: 1.5rem;
   text-align: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
 .statValue {
   font-size: 2rem;
   font-weight: 700;
-  color: #7209b7;
+  color: #ce93d8;
 }
 
 .statLabel {
   font-size: 0.85rem;
-  color: #888;
+  color: rgba(255, 255, 255, 0.5);
   margin-top: 0.25rem;
 }
 
@@ -111,17 +113,19 @@
 }
 
 .breakdownCard {
-  background: white;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 12px;
   padding: 1.25rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   margin-bottom: 1rem;
 }
 
 .breakdownTitle {
   font-size: 1rem;
   font-weight: 600;
-  color: #1a1a2e;
+  color: #ffffff;
   margin-bottom: 0.75rem;
 }
 
@@ -135,11 +139,12 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .breakdownCount {
   font-weight: 600;
-  color: #7209b7;
+  color: #ce93d8;
 }
 
 .statusBadge {
@@ -150,10 +155,10 @@
   text-transform: uppercase;
 }
 
-.status_pending { background: #fff3cd; color: #856404; }
-.status_approved { background: #d4edda; color: #155724; }
-.status_rejected { background: #f8d7da; color: #721c24; }
-.status_edited { background: #cce5ff; color: #004085; }
+.status_pending { background: rgba(240, 173, 78, 0.25); color: #f0ad4e; }
+.status_approved { background: rgba(45, 106, 79, 0.3); color: #52b788; }
+.status_rejected { background: rgba(231, 76, 60, 0.3); color: #ef5350; }
+.status_edited { background: rgba(67, 97, 238, 0.2); color: #818cf8; }
 
 .diffBadge {
   padding: 0.2rem 0.6rem;
@@ -163,9 +168,9 @@
   text-transform: capitalize;
 }
 
-.diff_easy { background: #d4edda; color: #155724; }
-.diff_medium { background: #fff3cd; color: #856404; }
-.diff_hard { background: #f8d7da; color: #721c24; }
+.diff_easy { background: rgba(45, 106, 79, 0.3); color: #52b788; }
+.diff_medium { background: rgba(240, 173, 78, 0.25); color: #f0ad4e; }
+.diff_hard { background: rgba(231, 76, 60, 0.3); color: #ef5350; }
 
 .topTopicsList {
   display: flex;
@@ -182,20 +187,20 @@
 
 .topTopicRank {
   font-weight: 700;
-  color: #7209b7;
+  color: #ce93d8;
   width: 30px;
 }
 
 .topTopicName {
   flex: 1;
   font-size: 0.9rem;
-  color: #333;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .topTopicCount {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #666;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .generateSection {
@@ -205,10 +210,12 @@
 }
 
 .generateCard {
-  background: white;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 16px;
   padding: 2rem;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
   max-width: 600px;
   width: 100%;
 }
@@ -216,12 +223,12 @@
 .generateTitle {
   font-size: 1.3rem;
   font-weight: 700;
-  color: #1a1a2e;
+  color: #ffffff;
   margin-bottom: 0.5rem;
 }
 
 .generateDesc {
-  color: #666;
+  color: rgba(255, 255, 255, 0.5);
   font-size: 0.9rem;
   margin-bottom: 1.5rem;
   line-height: 1.5;
@@ -242,15 +249,16 @@
 .formGroup label {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #555;
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .formSelect {
   padding: 0.6rem 0.75rem;
-  border: 1px solid #ddd;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
   font-size: 0.9rem;
-  background: white;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
 }
 
 .generateButton {
@@ -278,26 +286,29 @@
 
 .filterInput {
   padding: 0.5rem 0.75rem;
-  border: 1px solid #ddd;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
   font-size: 0.9rem;
   flex: 1;
   min-width: 160px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
 }
 
 .filterSelect {
   padding: 0.5rem 0.75rem;
-  border: 1px solid #ddd;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
   font-size: 0.9rem;
-  background: white;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
   min-width: 140px;
 }
 
 .emptyState {
   text-align: center;
   padding: 3rem;
-  color: #999;
+  color: rgba(255, 255, 255, 0.4);
   font-size: 1rem;
 }
 
@@ -308,10 +319,12 @@
 }
 
 .laqCard {
-  background: white;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 12px;
   padding: 1.25rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
 .laqHeader {
@@ -330,10 +343,10 @@
 
 .tag {
   padding: 0.15rem 0.5rem;
-  background: #f0f0f0;
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 6px;
   font-size: 0.75rem;
-  color: #555;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .expandButton {
@@ -341,16 +354,16 @@
   border: none;
   font-size: 1rem;
   cursor: pointer;
-  color: #888;
+  color: rgba(255, 255, 255, 0.5);
   padding: 0.25rem;
 }
 
 .vignettePreview {
   font-size: 0.9rem;
-  color: #444;
+  color: rgba(255, 255, 255, 0.8);
   line-height: 1.5;
   padding: 0.75rem;
-  background: #fafafa;
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
   border-left: 3px solid #7209b7;
 }
@@ -367,7 +380,7 @@
 .sectionTitle {
   font-size: 0.9rem;
   font-weight: 700;
-  color: #1a1a2e;
+  color: #ffffff;
   margin-bottom: 0.5rem;
 }
 
@@ -377,14 +390,14 @@
   gap: 0.75rem;
   margin-bottom: 0.5rem;
   padding: 0.5rem 0.75rem;
-  background: #f8f9fa;
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
 }
 
 .questionNumber,
 .answerNumber {
   font-weight: 700;
-  color: #7209b7;
+  color: #ce93d8;
   min-width: 28px;
   flex-shrink: 0;
 }
@@ -392,16 +405,16 @@
 .questionText,
 .answerText {
   font-size: 0.85rem;
-  color: #333;
+  color: rgba(255, 255, 255, 0.8);
   line-height: 1.5;
 }
 
 .answerItem {
-  background: #f0fff0;
+  background: rgba(45, 106, 79, 0.1);
 }
 
 .answerNumber {
-  color: #155724;
+  color: #52b788;
 }
 
 .detailsGrid {
@@ -413,14 +426,14 @@
 
 .detailCard {
   padding: 0.75rem;
-  background: #f8f9fa;
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
 }
 
 .detailCard h5 {
   font-size: 0.8rem;
   font-weight: 700;
-  color: #555;
+  color: rgba(255, 255, 255, 0.5);
   margin-bottom: 0.4rem;
 }
 
@@ -432,24 +445,24 @@
 
 .conceptTag {
   padding: 0.15rem 0.5rem;
-  background: #e3f2fd;
-  color: #1565c0;
+  background: rgba(21, 101, 192, 0.2);
+  color: #42a5f5;
   border-radius: 6px;
   font-size: 0.75rem;
 }
 
 .intTag {
   padding: 0.15rem 0.5rem;
-  background: #f3e5f5;
-  color: #7b1fa2;
+  background: rgba(123, 31, 162, 0.2);
+  color: #ce93d8;
   border-radius: 6px;
   font-size: 0.75rem;
 }
 
 .trapTag {
   padding: 0.15rem 0.5rem;
-  background: #fce4ec;
-  color: #c62828;
+  background: rgba(198, 40, 40, 0.2);
+  color: #ef5350;
   border-radius: 6px;
   font-size: 0.75rem;
 }
@@ -459,12 +472,12 @@
   margin: 0;
   padding-left: 1.2rem;
   font-size: 0.8rem;
-  color: #444;
+  color: rgba(255, 255, 255, 0.7);
   line-height: 1.5;
 }
 
 .mistakeList li {
-  color: #c62828;
+  color: #ef5350;
 }
 
 .laqActions {
@@ -487,10 +500,10 @@
   transition: opacity 0.2s;
 }
 
-.approveButton { background: #d4edda; color: #155724; }
-.editButton { background: #cce5ff; color: #004085; }
-.rejectButton { background: #f8d7da; color: #721c24; }
-.deleteButton { background: #f0f0f0; color: #666; margin-left: auto; }
+.approveButton { background: rgba(45, 106, 79, 0.3); color: #52b788; }
+.editButton { background: rgba(67, 97, 238, 0.2); color: #818cf8; }
+.rejectButton { background: rgba(231, 76, 60, 0.25); color: #ef5350; }
+.deleteButton { background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.5); margin-left: auto; }
 
 .approveButton:hover,
 .editButton:hover,
@@ -500,7 +513,7 @@
 }
 
 .editForm {
-  background: #f8f9fa;
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
   padding: 1rem;
   margin-top: 0.75rem;
@@ -510,31 +523,36 @@
   width: 100%;
   min-height: 120px;
   padding: 0.5rem;
-  border: 1px solid #ddd;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 6px;
   font-size: 0.85rem;
   font-family: inherit;
   resize: vertical;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
 }
 
 .editTextareaSmall {
   width: 100%;
   min-height: 60px;
   padding: 0.5rem;
-  border: 1px solid #ddd;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 6px;
   font-size: 0.85rem;
   font-family: inherit;
   resize: vertical;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
 }
 
 .editSelect {
   width: 100%;
   padding: 0.5rem;
-  border: 1px solid #ddd;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 6px;
   font-size: 0.85rem;
-  background: white;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
 }
 
 .editActions {
@@ -556,8 +574,8 @@
 
 .cancelButton {
   padding: 0.5rem 1.25rem;
-  background: #e0e0e0;
-  color: #333;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -571,4 +589,3 @@
   .detailsGrid { grid-template-columns: 1fr; }
   .filterBar { flex-direction: column; }
 }
-

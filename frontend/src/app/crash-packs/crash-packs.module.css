@@ -23,7 +23,7 @@
 
 .loading {
   min-height: 100vh;
-  background: #0a0f1c;
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
