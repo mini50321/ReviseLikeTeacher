@@ -4,7 +4,16 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '../contexts/AuthContext';
+import {
+  LayoutDashboard, Stethoscope, Dumbbell, CalendarDays, ClipboardList,
+  BrainCircuit, FileText, BookOpen, Search, BarChart3, Trophy,
+  ScrollText, Zap, Target, Link2, Puzzle, CreditCard,
+  PenSquare, FileUp, TrendingUp, RefreshCw, FlaskConical,
+  BadgeCheck, Users, LogOut, ChevronLeft, ChevronRight
+} from 'lucide-react';
 import styles from './Header.module.css';
+
+const iconProps = { size: 18, strokeWidth: 1.8 };
 
 export default function Header() {
   const { user, logout, isAuthenticated } = useAuth();
@@ -36,32 +45,32 @@ export default function Header() {
     {
       label: 'Management',
       links: [
-        { href: '/admin/dashboard', icon: '📊', text: 'Dashboard' },
-        { href: '/admin/question-studio', icon: '✏️', text: 'Questions' },
-        { href: '/admin/pdf-upload', icon: '📄', text: 'PDF Upload' },
-        { href: '/admin/analytics', icon: '📈', text: 'Analytics' },
+        { href: '/admin/dashboard', icon: <LayoutDashboard {...iconProps} />, text: 'Dashboard' },
+        { href: '/admin/question-studio', icon: <PenSquare {...iconProps} />, text: 'Questions' },
+        { href: '/admin/pdf-upload', icon: <FileUp {...iconProps} />, text: 'PDF Upload' },
+        { href: '/admin/analytics', icon: <TrendingUp {...iconProps} />, text: 'Analytics' },
       ]
     },
     {
       label: 'Analysis',
       links: [
-        { href: '/distractor-lab', icon: '🔍', text: 'Distractors' },
-        { href: '/integration-tags', icon: '🔗', text: 'Integration' },
-        { href: '/concept-clusters', icon: '🧩', text: 'Clusters' },
+        { href: '/distractor-lab', icon: <Search {...iconProps} />, text: 'Distractors' },
+        { href: '/integration-tags', icon: <Link2 {...iconProps} />, text: 'Integration' },
+        { href: '/concept-clusters', icon: <Puzzle {...iconProps} />, text: 'Clusters' },
       ]
     },
     {
       label: 'Content',
       links: [
-        { href: '/saq-converter', icon: '🔄', text: 'SAQ Converter' },
-        { href: '/laq-generator', icon: '🧪', text: 'LAQ Generator' },
-        { href: '/question-quality', icon: '✅', text: 'Quality' },
+        { href: '/saq-converter', icon: <RefreshCw {...iconProps} />, text: 'SAQ Converter' },
+        { href: '/laq-generator', icon: <FlaskConical {...iconProps} />, text: 'LAQ Generator' },
+        { href: '/question-quality', icon: <BadgeCheck {...iconProps} />, text: 'Quality' },
       ]
     },
     {
       label: 'Students',
       links: [
-        { href: '/student-progress', icon: '👥', text: 'Progress' },
+        { href: '/student-progress', icon: <Users {...iconProps} />, text: 'Progress' },
       ]
     }
   ];
@@ -70,53 +79,53 @@ export default function Header() {
     {
       label: 'Core',
       links: [
-        { href: '/dashboard', icon: '🏠', text: 'Dashboard' },
-        { href: '/diagnostic', icon: '🩺', text: 'Diagnostic' },
-        { href: '/practice', icon: '💪', text: 'Practice' },
+        { href: '/dashboard', icon: <LayoutDashboard {...iconProps} />, text: 'Dashboard' },
+        { href: '/diagnostic', icon: <Stethoscope {...iconProps} />, text: 'Diagnostic' },
+        { href: '/practice', icon: <Dumbbell {...iconProps} />, text: 'Practice' },
       ]
     },
     {
       label: 'Planning',
       links: [
-        { href: '/schedule', icon: '📅', text: 'Schedule' },
-        { href: '/daily-plan', icon: '📋', text: 'Daily Plan' },
+        { href: '/schedule', icon: <CalendarDays {...iconProps} />, text: 'Schedule' },
+        { href: '/daily-plan', icon: <ClipboardList {...iconProps} />, text: 'Daily Plan' },
       ]
     },
     {
       label: 'Learning',
       links: [
-        { href: '/misconceptions', icon: '🧠', text: 'Misconceptions' },
-        { href: '/exam-notes', icon: '📝', text: 'Exam Notes' },
-        { href: '/teaching-units', icon: '📚', text: 'Teaching Units' },
+        { href: '/misconceptions', icon: <BrainCircuit {...iconProps} />, text: 'Misconceptions' },
+        { href: '/exam-notes', icon: <FileText {...iconProps} />, text: 'Exam Notes' },
+        { href: '/teaching-units', icon: <BookOpen {...iconProps} />, text: 'Teaching Units' },
       ]
     },
     {
       label: 'Insights',
       links: [
-        { href: '/distractor-lab', icon: '🔍', text: 'Distractors' },
-        { href: '/metrics-lab', icon: '📈', text: 'Analytics' },
-        { href: '/advanced-analytics', icon: '🏆', text: 'Rank' },
+        { href: '/distractor-lab', icon: <Search {...iconProps} />, text: 'Distractors' },
+        { href: '/metrics-lab', icon: <BarChart3 {...iconProps} />, text: 'Analytics' },
+        { href: '/advanced-analytics', icon: <Trophy {...iconProps} />, text: 'Rank' },
       ]
     },
     {
       label: 'Testing',
       links: [
-        { href: '/mock-tests', icon: '📝', text: 'Mock Tests' },
-        { href: '/crash-packs', icon: '⚡', text: 'Crash Packs' },
-        { href: '/last30', icon: '🎯', text: 'Last 30 Days' },
+        { href: '/mock-tests', icon: <ScrollText {...iconProps} />, text: 'Mock Tests' },
+        { href: '/crash-packs', icon: <Zap {...iconProps} />, text: 'Crash Packs' },
+        { href: '/last30', icon: <Target {...iconProps} />, text: 'Last 30 Days' },
       ]
     },
     {
       label: 'Advanced',
       links: [
-        { href: '/integration-tags', icon: '🔗', text: 'Integration' },
-        { href: '/concept-clusters', icon: '🧩', text: 'Clusters' },
+        { href: '/integration-tags', icon: <Link2 {...iconProps} />, text: 'Integration' },
+        { href: '/concept-clusters', icon: <Puzzle {...iconProps} />, text: 'Clusters' },
       ]
     },
     {
       label: 'Account',
       links: [
-        { href: '/subscription', icon: '💎', text: 'Plans' },
+        { href: '/subscription', icon: <CreditCard {...iconProps} />, text: 'Plans' },
       ]
     }
   ];
@@ -147,12 +156,7 @@ export default function Header() {
             onClick={() => setCollapsed(!collapsed)}
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              {collapsed
-                ? <polyline points="9 18 15 12 9 6" />
-                : <polyline points="15 18 9 12 15 6" />
-              }
-            </svg>
+            {collapsed ? <ChevronRight size={16} strokeWidth={2} /> : <ChevronLeft size={16} strokeWidth={2} />}
           </button>
         </div>
 
@@ -178,11 +182,7 @@ export default function Header() {
         <div className={styles.userSection}>
           {!collapsed && <div className={styles.userEmail}>{user?.email}</div>}
           <button onClick={logout} className={styles.logoutButton} title="Log Out" aria-label="Log Out">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
+            <LogOut size={18} strokeWidth={2} />
             {!collapsed && <span className={styles.logoutText}>Log Out</span>}
           </button>
         </div>

@@ -136,11 +136,16 @@
 }
 
 .navIcon {
-  font-size: 18px;
   flex-shrink: 0;
   width: 22px;
-  text-align: center;
-  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+}
+
+.navLinkActive .navIcon {
+  opacity: 1;
 }
 
 .navText {
@@ -159,7 +164,7 @@
 }
 
 .collapsed .navIcon {
-  font-size: 18px;
+  opacity: 0.8;
 }
 
 .userSection {
