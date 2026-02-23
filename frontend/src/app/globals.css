@@ -44,12 +44,12 @@ body::after {
 }
 
 body.has-sidebar {
-  padding-left: 264px;
+  padding-left: 282px;
   transition: padding-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 body.has-sidebar.sidebar-collapsed {
-  padding-left: 88px;
+  padding-left: 96px;
 }
 
 @media (max-width: 768px) {

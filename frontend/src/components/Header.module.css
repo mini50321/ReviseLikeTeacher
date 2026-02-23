@@ -1,10 +1,10 @@
 .sidebar {
   position: fixed;
-  top: 12px;
-  left: 12px;
-  bottom: 12px;
-  width: 240px;
-  height: calc(100vh - 24px);
+  top: 20px;
+  left: 20px;
+  bottom: 20px;
+  width: 250px;
+  height: calc(100vh - 40px);
   background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
@@ -32,7 +32,7 @@
 }
 
 .logo {
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 700;
   color: #ffffff;
   text-decoration: none;
@@ -101,8 +101,8 @@
 }
 
 .sectionLabel {
-  padding: 12px 20px 4px;
-  font-size: 10px;
+  padding: 14px 20px 5px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1.2px;
@@ -114,10 +114,10 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 9px 16px;
+  padding: 10px 16px;
   color: rgba(255, 255, 255, 0.6);
   text-decoration: none;
-  font-size: 13.5px;
+  font-size: 15px;
   font-weight: 500;
   transition: all 0.15s;
   white-space: nowrap;
@@ -136,7 +136,7 @@
 }
 
 .navIcon {
-  font-size: 16px;
+  font-size: 18px;
   flex-shrink: 0;
   width: 22px;
   text-align: center;
@@ -169,7 +169,7 @@
 }
 
 .userEmail {
-  font-size: 12px;
+  font-size: 13px;
   color: rgba(255, 255, 255, 0.45);
   margin-bottom: 8px;
   white-space: nowrap;
@@ -190,7 +190,7 @@
   color: rgba(255, 255, 255, 0.6);
   cursor: pointer;
   transition: all 0.2s;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .logoutButton:hover {
@@ -273,7 +273,7 @@
 
 @media (max-width: 768px) {
   .sidebar {
-    transform: translateX(calc(-100% - 12px));
+    transform: translateX(calc(-100% - 20px));
     width: 260px;
     box-shadow: 4px 0 30px rgba(0, 0, 0, 0.5);
   }
