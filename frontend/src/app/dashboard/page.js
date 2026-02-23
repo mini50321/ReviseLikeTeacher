@@ -2,11 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '../../contexts/AuthContext';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import Header from '../../components/Header';
 import api from '../../lib/api';
 import styles from './dashboard.module.css';
+import {
+  Stethoscope, Brain, FileText, Shuffle, Activity, Zap, Search,
+  CalendarDays, GraduationCap, Package, Target, LinkIcon, Puzzle,
+  Clock, TrendingUp, BookOpen, CheckCircle, AlertTriangle, BarChart3,
+  ArrowRight, RefreshCw
+} from 'lucide-react';
 
 export default function DashboardPage() {
   const [data, setData] = useState(null);
@@ -17,12 +24,10 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (authLoading) return;
-    
     if (user?.role === 'admin') {
       window.location.href = '/admin/dashboard';
       return;
     }
-    
     fetchDashboardData();
   }, [user, authLoading]);
 
@@ -37,13 +42,53 @@ export default function DashboardPage() {
     }
   };
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  };
+
+  const getDaysUntilExam = (examDate) => {
+    if (!examDate) return null;
+    const diff = new Date(examDate) - new Date();
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'on_track': return '#34d399';
+      case 'borderline': return '#fbbf24';
+      case 'off_track': return '#f87171';
+      default: return 'rgba(255,255,255,0.5)';
+    }
+  };
+
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'on_track': return 'On Track';
+      case 'borderline': return 'Needs Attention';
+      case 'off_track': return 'Off Track';
+      default: return 'Unknown';
+    }
+  };
+
+  const getMasteryColor = (level) => {
+    if (level >= 85) return '#34d399';
+    if (level >= 60) return '#fbbf24';
+    return '#f87171';
+  };
+
   if (authLoading || (user?.role === 'admin')) {
     return (
       <ProtectedRoute>
         <div>
           <Header />
           <main className={styles.main}>
-            <div className={styles.loading}>Redirecting...</div>
+            <div className={styles.loadingScreen}>
+              <div className={styles.loadingSpinner} />
+              <p>Redirecting...</p>
+            </div>
           </main>
         </div>
       </ProtectedRoute>
@@ -56,7 +101,10 @@ export default function DashboardPage() {
         <div>
           <Header />
           <main className={styles.main}>
-            <div className={styles.loading}>Loading dashboard...</div>
+            <div className={styles.loadingScreen}>
+              <div className={styles.loadingSpinner} />
+              <p>Loading dashboard...</p>
+            </div>
           </main>
         </div>
       </ProtectedRoute>
@@ -65,25 +113,18 @@ export default function DashboardPage() {
 
   if (error) {
     if (error.includes('onboarding')) {
-      const { user } = useAuth();
-      if (user?.role === 'admin') {
-        router.push('/admin/dashboard');
-        return null;
-      }
       return (
         <ProtectedRoute>
           <div>
             <Header />
             <main className={styles.main}>
               <div className={styles.container}>
-                <div className={styles.card}>
-                  <h2>Complete Onboarding</h2>
-                  <p>Please complete your profile setup to access the dashboard.</p>
-                  <button 
-                    className={styles.button}
-                    onClick={() => router.push('/onboarding')}
-                  >
-                    Go to Onboarding
+                <div className={styles.onboardingCard}>
+                  <div className={styles.onboardingIcon}><BookOpen size={32} /></div>
+                  <h2 className={styles.onboardingTitle}>Complete Your Profile</h2>
+                  <p className={styles.onboardingDesc}>Set up your learning preferences to unlock the full adaptive mastery experience.</p>
+                  <button className={styles.onboardingBtn} onClick={() => router.push('/onboarding')}>
+                    Get Started <ArrowRight size={16} />
                   </button>
                 </div>
               </div>
@@ -97,7 +138,7 @@ export default function DashboardPage() {
         <div>
           <Header />
           <main className={styles.main}>
-            <div className={styles.error}>{error}</div>
+            <div className={styles.errorBanner}><AlertTriangle size={16} /> {error}</div>
           </main>
         </div>
       </ProtectedRoute>
@@ -110,7 +151,7 @@ export default function DashboardPage() {
         <div>
           <Header />
           <main className={styles.main}>
-            <div className={styles.error}>No data available</div>
+            <div className={styles.errorBanner}>No data available</div>
           </main>
         </div>
       </ProtectedRoute>
@@ -118,24 +159,16 @@ export default function DashboardPage() {
   }
 
   const { profile, readiness, todaySchedule, sevenDaySchedule, topicMastery, recentSessions } = data;
+  const daysLeft = getDaysUntilExam(profile?.exam_date);
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'on_track': return '#4caf50';
-      case 'borderline': return '#ff9800';
-      case 'off_track': return '#f44336';
-      default: return '#999';
-    }
-  };
-
-  const getStatusText = (status) => {
-    switch (status) {
-      case 'on_track': return 'On Track';
-      case 'borderline': return 'Borderline';
-      case 'off_track': return 'Off Track';
-      default: return 'Unknown';
-    }
-  };
+  const quickLinks = [
+    { href: '/diagnostic', icon: Stethoscope, label: 'Diagnostic', color: '#4361ee' },
+    { href: '/practice?mode=balanced', icon: Shuffle, label: 'Practice', color: '#7c3aed' },
+    { href: '/misconceptions', icon: Brain, label: 'Misconceptions', color: '#ec4899' },
+    { href: '/exam-notes', icon: FileText, label: 'Exam Notes', color: '#f59e0b' },
+    { href: '/daily-plan', icon: CalendarDays, label: 'Daily Plan', color: '#06b6d4' },
+    { href: '/mock-tests', icon: GraduationCap, label: 'Mock Tests', color: '#8b5cf6' },
+  ];
 
   return (
     <ProtectedRoute>
@@ -143,274 +176,243 @@ export default function DashboardPage() {
         <Header />
         <main className={styles.main}>
           <div className={styles.container}>
-            <h1 className={styles.title}>Dashboard</h1>
 
-            <div className={styles.profileSection}>
-              <div className={styles.card}>
-                <h2 className={styles.cardTitle}>Target Exam</h2>
-                <div className={styles.profileGrid}>
-                  <div className={styles.profileItem}>
-                    <span className={styles.label}>Exam:</span>
-                    <span className={styles.value}>{profile.target_exam || 'Not set'}</span>
-                  </div>
-                  <div className={styles.profileItem}>
-                    <span className={styles.label}>Exam Date:</span>
-                    <span className={styles.value}>
-                      {profile.exam_date ? new Date(profile.exam_date).toLocaleDateString() : 'Not set'}
+            <div className={styles.headerRow}>
+              <div className={styles.greeting}>
+                <h1 className={styles.greetingText}>{getGreeting()}, {user?.email?.split('@')[0] || 'Student'}</h1>
+                <p className={styles.greetingSub}>
+                  {profile?.target_exam || 'NEET PG'} Preparation
+                  {daysLeft !== null && <span className={styles.examCountdown}> · {daysLeft} days remaining</span>}
+                </p>
+              </div>
+              <button className={styles.refreshBtn} onClick={fetchDashboardData} title="Refresh">
+                <RefreshCw size={18} />
+              </button>
+            </div>
+
+            <div className={styles.topRow}>
+              <div className={styles.readinessCard}>
+                <div className={styles.readinessHeader}>
+                  <span className={styles.readinessLabel}>Readiness Score</span>
+                  <span
+                    className={styles.readinessBadge}
+                    style={{ background: `${getStatusColor(readiness?.status)}20`, color: getStatusColor(readiness?.status) }}
+                  >
+                    {getStatusLabel(readiness?.status)}
+                  </span>
+                </div>
+                <div className={styles.readinessBody}>
+                  <div className={styles.readinessScore}>
+                    <span className={styles.readinessValue} style={{ color: getStatusColor(readiness?.status) }}>
+                      {(readiness?.percentage || 0).toFixed(0)}
                     </span>
+                    <span className={styles.readinessPercent}>%</span>
                   </div>
-                  <div className={styles.profileItem}>
-                    <span className={styles.label}>Target Score:</span>
-                    <span className={styles.value}>{profile.target_score_band || 'Not set'}</span>
-                  </div>
-                  <div className={styles.profileItem}>
-                    <span className={styles.label}>Study Capacity:</span>
-                    <span className={styles.value}>
-                      {profile.daily_study_minutes} min/day, {profile.weekly_question_target} questions/week
-                    </span>
+                  <div className={styles.readinessRing}>
+                    <svg viewBox="0 0 100 100" className={styles.ringSvg}>
+                      <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="6" />
+                      <circle
+                        cx="50" cy="50" r="42" fill="none"
+                        stroke={getStatusColor(readiness?.status)}
+                        strokeWidth="6"
+                        strokeLinecap="round"
+                        strokeDasharray={`${(readiness?.percentage || 0) * 2.64} 264`}
+                        transform="rotate(-90 50 50)"
+                        style={{ transition: 'stroke-dasharray 1s ease' }}
+                      />
+                    </svg>
                   </div>
                 </div>
               </div>
 
-              <div className={styles.card}>
-                <h2 className={styles.cardTitle}>Readiness Status</h2>
-                <div className={styles.readinessContent}>
-                  <div className={styles.readinessCircle}>
-                    <div 
-                      className={styles.readinessPercentage}
-                      style={{ color: getStatusColor(readiness.status) }}
-                    >
-                      {(readiness.percentage || 0).toFixed(0)}%
-                    </div>
-                    <div 
-                      className={styles.readinessStatus}
-                      style={{ color: getStatusColor(readiness.status) }}
-                    >
-                      {getStatusText(readiness.status)}
-                    </div>
+              <div className={styles.infoCards}>
+                <div className={styles.infoCard}>
+                  <div className={styles.infoIconWrap} style={{ background: 'rgba(67,97,238,0.12)' }}>
+                    <Target size={18} style={{ color: '#93a8f8' }} />
                   </div>
-                  <p className={styles.readinessMessage}>
-                    {readiness.status === 'on_track' && 'You are on track to achieve your target score. Keep up the good work!'}
-                    {readiness.status === 'borderline' && 'You are making progress but need to increase your study pace to meet your target.'}
-                    {readiness.status === 'off_track' && 'You need to significantly increase your study time and focus to meet your target.'}
-                  </p>
+                  <div className={styles.infoContent}>
+                    <span className={styles.infoValue}>{profile?.target_score_band || '—'}</span>
+                    <span className={styles.infoLabel}>Target Score</span>
+                  </div>
+                </div>
+                <div className={styles.infoCard}>
+                  <div className={styles.infoIconWrap} style={{ background: 'rgba(52,211,153,0.12)' }}>
+                    <Clock size={18} style={{ color: '#34d399' }} />
+                  </div>
+                  <div className={styles.infoContent}>
+                    <span className={styles.infoValue}>{profile?.daily_study_minutes || 0}<small>min</small></span>
+                    <span className={styles.infoLabel}>Daily Study</span>
+                  </div>
+                </div>
+                <div className={styles.infoCard}>
+                  <div className={styles.infoIconWrap} style={{ background: 'rgba(251,191,36,0.12)' }}>
+                    <BarChart3 size={18} style={{ color: '#fbbf24' }} />
+                  </div>
+                  <div className={styles.infoContent}>
+                    <span className={styles.infoValue}>{profile?.weekly_question_target || 0}</span>
+                    <span className={styles.infoLabel}>Weekly Goal</span>
+                  </div>
+                </div>
+                <div className={styles.infoCard}>
+                  <div className={styles.infoIconWrap} style={{ background: 'rgba(139,92,246,0.12)' }}>
+                    <TrendingUp size={18} style={{ color: '#a78bfa' }} />
+                  </div>
+                  <div className={styles.infoContent}>
+                    <span className={styles.infoValue}>{topicMastery?.length || 0}</span>
+                    <span className={styles.infoLabel}>Topics Tracked</span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className={styles.quickStartSection}>
-              <h2 className={styles.sectionTitle}>Adaptive Mastery</h2>
-              <div className={styles.quickStartButtons}>
-                <button 
-                  className={styles.quickStartButton}
-                  onClick={() => router.push('/diagnostic')}
-                >
-                  Diagnostic Assessment
-                </button>
-                <button 
-                  className={styles.quickStartButton}
-                  onClick={() => router.push('/misconceptions')}
-                >
-                  Misconception Tracker
-                </button>
-                <button
-                  className={styles.quickStartButton}
-                  onClick={() => router.push('/exam-notes')}
-                >
-                  Exam Trigger Notes
-                </button>
-                <button 
-                  className={styles.quickStartButton}
-                  onClick={() => router.push('/practice?mode=balanced')}
-                >
-                  Balanced Mix
-                </button>
-                <button 
-                  className={styles.quickStartButton}
-                  onClick={() => router.push('/practice?mode=clinical')}
-                >
-                  More Clinical
-                </button>
-                <button 
-                  className={styles.quickStartButton}
-                  onClick={() => router.push('/practice?mode=rapid')}
-                >
-                  Rapid-Fire
-                </button>
-                <button 
-                  className={styles.quickStartButton}
-                  onClick={() => router.push('/distractor-lab')}
-                >
-                  Distractor Lab
-                </button>
-                <button 
-                  className={styles.quickStartButton}
-                  onClick={() => router.push('/daily-plan')}
-                >
-                  Daily Plan
-                </button>
-                <button 
-                  className={styles.quickStartButton}
-                  onClick={() => router.push('/mock-tests')}
-                >
-                  Mock Tests
-                </button>
-                <button 
-                  className={styles.quickStartButton}
-                  onClick={() => router.push('/crash-packs')}
-                >
-                  Crash Packs
-                </button>
-                <button 
-                  className={styles.quickStartButton}
-                  onClick={() => router.push('/last30')}
-                >
-                  Last 30 Days
-                </button>
-                <button 
-                  className={styles.quickStartButton}
-                  onClick={() => router.push('/integration-tags')}
-                >
-                  Integration Tags
-                </button>
-                <button 
-                  className={styles.quickStartButton}
-                  onClick={() => router.push('/concept-clusters')}
-                >
-                  Concept Clusters
-                </button>
+            <div className={styles.quickLinksSection}>
+              <h2 className={styles.sectionTitle}>Quick Access</h2>
+              <div className={styles.quickLinksGrid}>
+                {quickLinks.map((ql, i) => (
+                  <Link key={i} href={ql.href} className={styles.quickLinkCard}>
+                    <div className={styles.qlIcon} style={{ background: `${ql.color}18` }}>
+                      <ql.icon size={20} style={{ color: ql.color }} />
+                    </div>
+                    <span className={styles.qlLabel}>{ql.label}</span>
+                    <ArrowRight size={14} className={styles.qlArrow} />
+                  </Link>
+                ))}
               </div>
             </div>
 
-            <div className={styles.scheduleSection}>
-              <div className={styles.card}>
-                <h2 className={styles.cardTitle}>Today's Revision Plan</h2>
-                {todaySchedule ? (
-                  <div className={styles.todaySchedule}>
-                    <div className={styles.scheduleItem}>
-                      <span className={styles.scheduleLabel}>Questions:</span>
-                      <span className={styles.scheduleValue}>{todaySchedule.planned_questions}</span>
-                    </div>
-                    <div className={styles.scheduleItem}>
-                      <span className={styles.scheduleLabel}>Time:</span>
-                      <span className={styles.scheduleValue}>{todaySchedule.planned_minutes} minutes</span>
-                    </div>
-                    <div className={styles.scheduleItem}>
-                      <span className={styles.scheduleLabel}>Subjects:</span>
-                      <span className={styles.scheduleValue}>
-                        {(() => {
-                          const subjects = todaySchedule.subjects;
-                          if (!subjects) return 'None';
-                          if (Array.isArray(subjects)) return subjects.join(', ');
-                          if (typeof subjects === 'string') {
-                            try {
-                              const parsed = JSON.parse(subjects);
-                              return Array.isArray(parsed) ? parsed.join(', ') : subjects;
-                            } catch {
-                              return subjects;
-                            }
-                          }
-                          return 'None';
-                        })()}
-                      </span>
-                    </div>
-                    <div className={styles.scheduleItem}>
-                      <span className={styles.scheduleLabel}>Status:</span>
-                      <span 
-                        className={styles.scheduleValue}
-                        style={{ color: getStatusColor(todaySchedule.status) }}
-                      >
-                        {todaySchedule.status}
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <p className={styles.noSchedule}>No schedule for today. Complete onboarding to generate your revision plan.</p>
-                )}
-              </div>
-
-              <div className={styles.card}>
-                <h2 className={styles.cardTitle}>7-Day Schedule</h2>
-                {sevenDaySchedule && sevenDaySchedule.length > 0 ? (
-                  <div className={styles.sevenDaySchedule}>
-                    {sevenDaySchedule.filter(day => day && day.date).map((day) => (
-                      <div key={day.date || `day-${day.date}`} className={styles.scheduleDay}>
-                        <div className={styles.dayDate}>
-                          {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                        </div>
-                        <div className={styles.dayDetails}>
-                          <span>{day.planned_questions} questions</span>
-                          <span 
-                            className={styles.dayStatus}
-                            style={{ color: getStatusColor(day.status) }}
-                          >
-                            {day.status}
-                          </span>
-                        </div>
+            <div className={styles.contentGrid}>
+              <div className={styles.panel}>
+                <div className={styles.panelHeader}>
+                  <h2 className={styles.panelTitle}><CalendarDays size={16} /> Today's Plan</h2>
+                </div>
+                <div className={styles.panelBody}>
+                  {todaySchedule ? (
+                    <div className={styles.todayGrid}>
+                      <div className={styles.todayItem}>
+                        <span className={styles.todayValue}>{todaySchedule.planned_questions}</span>
+                        <span className={styles.todayLabel}>Questions</span>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className={styles.noSchedule}>No schedule available. Complete onboarding to generate your revision plan.</p>
-                )}
+                      <div className={styles.todayItem}>
+                        <span className={styles.todayValue}>{todaySchedule.planned_minutes}</span>
+                        <span className={styles.todayLabel}>Minutes</span>
+                      </div>
+                      <div className={styles.todayItem}>
+                        <span className={styles.todayValue} style={{ color: getStatusColor(todaySchedule.status), fontSize: '14px' }}>
+                          {todaySchedule.status || '—'}
+                        </span>
+                        <span className={styles.todayLabel}>Status</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className={styles.emptyState}>No plan for today</div>
+                  )}
+                </div>
               </div>
-            </div>
 
-            <div className={styles.statsSection}>
-              <div className={styles.card}>
-                <h2 className={styles.cardTitle}>Topic Mastery</h2>
-                {topicMastery && topicMastery.length > 0 ? (
-                  <div className={styles.topicMasteryList}>
-                    {topicMastery.filter(topic => topic && topic.topic).map((topic) => (
-                      <div key={`${topic.topic}-${topic.subject}` || `topic-${topic.topic}`} className={styles.topicItem}>
-                        <div className={styles.topicInfo}>
-                          <span className={styles.topicName}>{topic.topic}</span>
-                          <span className={styles.topicSubject}>{topic.subject}</span>
-                        </div>
-                        <div className={styles.topicProgress}>
-                          <div className={styles.progressBar}>
-                            <div 
-                              className={styles.progressFill}
-                              style={{ width: `${topic.mastery_level}%` }}
+              <div className={styles.panel}>
+                <div className={styles.panelHeader}>
+                  <h2 className={styles.panelTitle}><Clock size={16} /> 7-Day Schedule</h2>
+                </div>
+                <div className={styles.panelBody}>
+                  {sevenDaySchedule && sevenDaySchedule.length > 0 ? (
+                    <div className={styles.weekList}>
+                      {sevenDaySchedule.filter(d => d?.date).map((day) => (
+                        <div key={day.date} className={styles.weekRow}>
+                          <span className={styles.weekDay}>
+                            {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' })}
+                          </span>
+                          <div className={styles.weekBarWrap}>
+                            <div
+                              className={styles.weekBarFill}
+                              style={{
+                                width: `${Math.min(100, (day.planned_questions / Math.max(...sevenDaySchedule.map(d => d.planned_questions || 1))) * 100)}%`,
+                                background: getStatusColor(day.status)
+                              }}
                             />
                           </div>
-                          <span className={styles.masteryLevel}>{topic.mastery_level.toFixed(0)}%</span>
+                          <span className={styles.weekCount}>{day.planned_questions}q</span>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className={styles.noData}>Start practicing to see your topic mastery levels.</p>
-                )}
-              </div>
-
-              <div className={styles.card}>
-                <h2 className={styles.cardTitle}>Recent Sessions</h2>
-                {recentSessions && recentSessions.length > 0 ? (
-                  <div className={styles.sessionsList}>
-                    {recentSessions.filter(session => session && session.id).map((session) => (
-                      <div key={session.id || `session-${session.started_at}`} className={styles.sessionItem}>
-                        <div className={styles.sessionInfo}>
-                          <span className={styles.sessionType}>{session.session_type}</span>
-                          <span className={styles.sessionDate}>
-                            {new Date(session.started_at).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <div className={styles.sessionStats}>
-                          <span>{session.total_questions} questions</span>
-                          {session.average_score && (
-                            <span>Score: {session.average_score.toFixed(0)}%</span>
-                          )}
-                          <span className={styles.sessionStatus}>{session.status}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className={styles.noData}>No practice sessions yet. Start practicing to see your history.</p>
-                )}
+                      ))}
+                    </div>
+                  ) : (
+                    <div className={styles.emptyState}>No schedule available</div>
+                  )}
+                </div>
               </div>
             </div>
+
+            <div className={styles.contentGrid}>
+              <div className={styles.panel}>
+                <div className={styles.panelHeader}>
+                  <h2 className={styles.panelTitle}><TrendingUp size={16} /> Topic Mastery</h2>
+                  <span className={styles.panelBadge}>{topicMastery?.length || 0} topics</span>
+                </div>
+                <div className={styles.panelBody}>
+                  {topicMastery && topicMastery.length > 0 ? (
+                    <div className={styles.masteryList}>
+                      {topicMastery.filter(t => t?.topic).map((topic) => (
+                        <div key={`${topic.topic}-${topic.subject}`} className={styles.masteryRow}>
+                          <div className={styles.masteryInfo}>
+                            <span className={styles.masteryTopic}>{topic.topic}</span>
+                            <span className={styles.masterySubject}>{topic.subject}</span>
+                          </div>
+                          <div className={styles.masteryProgress}>
+                            <div className={styles.masteryBarWrap}>
+                              <div
+                                className={styles.masteryBarFill}
+                                style={{ width: `${topic.mastery_level}%`, background: getMasteryColor(topic.mastery_level) }}
+                              />
+                            </div>
+                            <span className={styles.masteryPercent} style={{ color: getMasteryColor(topic.mastery_level) }}>
+                              {topic.mastery_level.toFixed(0)}%
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className={styles.emptyState}>Start practicing to track mastery</div>
+                  )}
+                </div>
+              </div>
+
+              <div className={styles.panel}>
+                <div className={styles.panelHeader}>
+                  <h2 className={styles.panelTitle}><Activity size={16} /> Recent Sessions</h2>
+                </div>
+                <div className={styles.panelBody}>
+                  {recentSessions && recentSessions.length > 0 ? (
+                    <div className={styles.sessionsList}>
+                      {recentSessions.filter(s => s?.id).map((session) => (
+                        <div key={session.id} className={styles.sessionRow}>
+                          <div className={styles.sessionLeft}>
+                            <span className={styles.sessionType}>{session.session_type}</span>
+                            <span className={styles.sessionDate}>
+                              {new Date(session.started_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </span>
+                          </div>
+                          <div className={styles.sessionRight}>
+                            <span className={styles.sessionQCount}>{session.total_questions}q</span>
+                            {session.average_score != null && (
+                              <span className={styles.sessionScore} style={{ color: getMasteryColor(session.average_score) }}>
+                                {session.average_score.toFixed(0)}%
+                              </span>
+                            )}
+                            <span className={`${styles.sessionStatusBadge} ${session.status === 'completed' ? styles.statusDone : styles.statusActive}`}>
+                              {session.status === 'completed' ? <CheckCircle size={10} /> : <Activity size={10} />}
+                              {session.status}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className={styles.emptyState}>No sessions yet</div>
+                  )}
+                </div>
+              </div>
+            </div>
+
           </div>
         </main>
       </div>
