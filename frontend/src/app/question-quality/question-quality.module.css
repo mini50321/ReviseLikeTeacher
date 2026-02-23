@@ -1,6 +1,6 @@
 .main {
   min-height: 100vh;
-  background: #f8f9fa;
+  background: transparent;
   padding: 2rem 1rem;
 }
 
@@ -12,12 +12,12 @@
 .title {
   font-size: 2rem;
   font-weight: 700;
-  color: #1a1a2e;
+  color: #ffffff;
   margin-bottom: 0.25rem;
 }
 
 .subtitle {
-  color: #666;
+  color: rgba(255, 255, 255, 0.7);
   margin-bottom: 2rem;
   font-size: 1rem;
 }
@@ -28,7 +28,7 @@
   align-items: center;
   min-height: 60vh;
   font-size: 1.1rem;
-  color: #666;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .error {
@@ -55,7 +55,7 @@
   display: flex;
   gap: 0.25rem;
   margin-bottom: 1.5rem;
-  border-bottom: 2px solid #e0e0e0;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.15);
 }
 
 .tabButton {
@@ -64,15 +64,15 @@
   border: none;
   font-size: 0.95rem;
   font-weight: 500;
-  color: #666;
+  color: rgba(255, 255, 255, 0.6);
   cursor: pointer;
   border-bottom: 2px solid transparent;
   margin-bottom: -2px;
   transition: all 0.2s;
 }
 
-.tabButton:hover { color: #2d6a4f; }
-.activeTab { color: #2d6a4f; border-bottom-color: #2d6a4f; }
+.tabButton:hover { color: rgba(255, 255, 255, 0.9); }
+.activeTab { color: #ffffff; border-bottom-color: #2d6a4f; }
 
 .tabContent { min-height: 400px; }
 
