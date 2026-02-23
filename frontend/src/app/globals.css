@@ -43,6 +43,22 @@ body::after {
   pointer-events: none;
 }
 
+body.has-sidebar {
+  padding-left: 240px;
+  transition: padding-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.has-sidebar.sidebar-collapsed {
+  padding-left: 64px;
+}
+
+@media (max-width: 768px) {
+  body.has-sidebar,
+  body.has-sidebar.sidebar-collapsed {
+    padding-left: 0;
+  }
+}
+
 a {
   color: inherit;
   text-decoration: none;
