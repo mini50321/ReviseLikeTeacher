@@ -1,17 +1,20 @@
 .sidebar {
   position: fixed;
-  top: 0;
-  left: 0;
+  top: 12px;
+  left: 12px;
+  bottom: 12px;
   width: 240px;
-  height: 100vh;
+  height: calc(100vh - 24px);
   background: rgba(20, 20, 28, 0.97);
   backdrop-filter: blur(20px);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
   z-index: 1000;
   display: flex;
   flex-direction: column;
   transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 .sidebar.collapsed {
@@ -110,15 +113,15 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 9px 20px;
+  padding: 9px 16px;
   color: rgba(255, 255, 255, 0.6);
   text-decoration: none;
   font-size: 13.5px;
   font-weight: 500;
   transition: all 0.15s;
   white-space: nowrap;
-  border-left: 3px solid transparent;
-  margin: 1px 0;
+  margin: 1px 8px;
+  border-radius: 10px;
 }
 
 .navLink:hover {
@@ -128,8 +131,7 @@
 
 .navLinkActive {
   color: #ffffff;
-  background: rgba(67, 97, 238, 0.15);
-  border-left-color: #4361ee;
+  background: rgba(67, 97, 238, 0.18);
 }
 
 .navIcon {
@@ -148,13 +150,11 @@
 .collapsed .navLink {
   padding: 10px 0;
   justify-content: center;
-  border-left-color: transparent;
+  margin: 1px 6px;
 }
 
 .collapsed .navLinkActive {
   background: rgba(67, 97, 238, 0.2);
-  border-radius: 8px;
-  margin: 1px 8px;
 }
 
 .collapsed .navIcon {
@@ -272,7 +272,7 @@
 
 @media (max-width: 768px) {
   .sidebar {
-    transform: translateX(-100%);
+    transform: translateX(calc(-100% - 12px));
     width: 260px;
     box-shadow: 4px 0 30px rgba(0, 0, 0, 0.5);
   }
