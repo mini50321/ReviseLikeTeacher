@@ -1,10 +1,10 @@
 const express = require('express');
-const { authenticate, authorize } = require('../middleware/auth');
+const { authenticate, requireAdmin } = require('../middleware/auth');
 const progressService = require('../services/student-progress');
 const router = express.Router();
 
 router.use(authenticate);
-router.use(authorize(['admin']));
+router.use(requireAdmin);
 
 router.get('/overview', async (req, res) => {
   try {
