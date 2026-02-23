@@ -280,3 +280,100 @@
   cursor: not-allowed;
 }
 
+.questionVoice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 10px;
+}
+
+.questionVoiceIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.questionVoiceLabel {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: #c7d2fe;
+}
+
+.questionVoiceStop,
+.questionVoiceReplay {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  background: rgba(99, 102, 241, 0.15);
+  color: #c7d2fe;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.questionVoiceStop:hover,
+.questionVoiceReplay:hover {
+  background: rgba(99, 102, 241, 0.3);
+}
+
+.qLoadingDots {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+  justify-content: center;
+}
+
+.qLoadingDots span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #a5b4fc;
+  animation: qDotPulse 1.4s infinite ease-in-out;
+}
+
+.qLoadingDots span:nth-child(1) { animation-delay: 0s; }
+.qLoadingDots span:nth-child(2) { animation-delay: 0.2s; }
+.qLoadingDots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes qDotPulse {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+.qSoundWave {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  justify-content: center;
+  height: 20px;
+}
+
+.qSoundWave span {
+  width: 3px;
+  background: #a5b4fc;
+  border-radius: 2px;
+  animation: qWave 1s infinite ease-in-out;
+}
+
+.qSoundWave span:nth-child(1) { height: 6px; animation-delay: 0s; }
+.qSoundWave span:nth-child(2) { height: 12px; animation-delay: 0.1s; }
+.qSoundWave span:nth-child(3) { height: 18px; animation-delay: 0.2s; }
+.qSoundWave span:nth-child(4) { height: 12px; animation-delay: 0.3s; }
+.qSoundWave span:nth-child(5) { height: 6px; animation-delay: 0.4s; }
+
+@keyframes qWave {
+  0%, 100% { transform: scaleY(0.5); }
+  50% { transform: scaleY(1); }
+}
+

@@ -207,6 +207,43 @@ export default function QuestionForm({ question, onSave, onCancel }) {
           </div>
 
           <div className={styles.formGroup}>
+            <label>Explanation / Ideal Answer</label>
+            <textarea
+              name="ideal_answer"
+              value={formData.ideal_answer || ''}
+              onChange={handleChange}
+              rows={4}
+              placeholder={needsOptions
+                ? "Explain why the correct answer is right and why other options are wrong..."
+                : "Provide the model answer or explanation the AI will use to teach the student..."
+              }
+            />
+            <span className={styles.fieldHint}>
+              {needsOptions
+                ? "The AI will use this to explain the answer to students after they respond"
+                : "The AI will compare the student's answer against this and teach what they missed"
+              }
+            </span>
+          </div>
+
+          <div className={styles.formGroup}>
+            <label>Key Points</label>
+            <textarea
+              name="key_points_text"
+              value={Array.isArray(formData.key_points) ? formData.key_points.join('\n') : (formData.key_points || '')}
+              onChange={(e) => {
+                const points = e.target.value.split('\n').filter(p => p.trim());
+                setFormData(prev => ({ ...prev, key_points: points }));
+              }}
+              rows={3}
+              placeholder="Enter one key point per line..."
+            />
+            <span className={styles.fieldHint}>
+              Important points the student must cover (one per line)
+            </span>
+          </div>
+
+          <div className={styles.formGroup}>
             <label>Status</label>
             <select name="status" value={formData.status} onChange={handleChange}>
               <option value="active">Active</option>

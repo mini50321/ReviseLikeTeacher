@@ -16,10 +16,14 @@ export default function QuestionDisplay({ question, questionNumber, totalQuestio
   const [transcribing, setTranscribing] = useState(false);
   const [transcription, setTranscription] = useState('');
   const [transcriptionError, setTranscriptionError] = useState('');
+  const [questionAudioState, setQuestionAudioState] = useState('idle');
   const startTimeRef = useRef(Date.now());
   const voiceRecorderRef = useRef(null);
   const transcribeButtonRef = useRef(null);
   const transcriptionRef = useRef('');
+  const questionAudioRef = useRef(null);
+  const questionAudioUrlRef = useRef(null);
+  const spokenQuestionIdRef = useRef(null);
 
   let parsedOptions = null;
   if (question.options) {
@@ -45,6 +49,57 @@ export default function QuestionDisplay({ question, questionNumber, totalQuestio
     setTranscriptionError('');
     transcriptionRef.current = '';
     startTimeRef.current = Date.now();
+
+    if (questionAudioRef.current) {
+      questionAudioRef.current.pause();
+      questionAudioRef.current = null;
+    }
+    if (questionAudioUrlRef.current) {
+      URL.revokeObjectURL(questionAudioUrlRef.current);
+      questionAudioUrlRef.current = null;
+    }
+    setQuestionAudioState('idle');
+  }, [question.id]);
+
+  useEffect(() => {
+    if (!question.id || spokenQuestionIdRef.current === question.id) return;
+    spokenQuestionIdRef.current = question.id;
+
+    const questionText = question.stem || question.question_text || '';
+    if (!questionText) return;
+
+    let speakText = `Question ${questionNumber}. ${questionText}`;
+
+    if (parsedOptions) {
+      const optionEntries = Object.entries(parsedOptions).filter(([, v]) => v);
+      if (optionEntries.length > 0) {
+        speakText += '. Options: ';
+        speakText += optionEntries.map(([label, text]) => `${label}, ${text}`).join('. ');
+      }
+    }
+
+    setQuestionAudioState('loading');
+
+    voiceAPI.speak(speakText).then(blob => {
+      const url = URL.createObjectURL(blob);
+      questionAudioUrlRef.current = url;
+      const audio = new Audio(url);
+      questionAudioRef.current = audio;
+
+      audio.onplay = () => setQuestionAudioState('playing');
+      audio.onended = () => setQuestionAudioState('done');
+      audio.onerror = () => setQuestionAudioState('error');
+
+      audio.play().catch(() => setQuestionAudioState('done'));
+    }).catch(() => {
+      setQuestionAudioState('error');
+    });
+
+    return () => {
+      if (questionAudioRef.current) {
+        questionAudioRef.current.pause();
+      }
+    };
   }, [question.id]);
 
   useEffect(() => {
@@ -192,6 +247,53 @@ export default function QuestionDisplay({ question, questionNumber, totalQuestio
       </div>
 
       <div className={styles.questionCard}>
+        {(questionAudioState === 'loading' || questionAudioState === 'playing') && (
+          <div className={styles.questionVoice}>
+            <div className={styles.questionVoiceIcon}>
+              {questionAudioState === 'loading' && (
+                <div className={styles.qLoadingDots}><span></span><span></span><span></span></div>
+              )}
+              {questionAudioState === 'playing' && (
+                <div className={styles.qSoundWave}>
+                  <span></span><span></span><span></span><span></span><span></span>
+                </div>
+              )}
+            </div>
+            <span className={styles.questionVoiceLabel}>
+              {questionAudioState === 'loading' ? 'Reading question...' : 'Listening...'}
+            </span>
+            {questionAudioState === 'playing' && (
+              <button
+                className={styles.questionVoiceStop}
+                onClick={() => {
+                  if (questionAudioRef.current) {
+                    questionAudioRef.current.pause();
+                    setQuestionAudioState('done');
+                  }
+                }}
+              >
+                ⏹ Skip
+              </button>
+            )}
+          </div>
+        )}
+
+        {questionAudioState === 'done' && (
+          <div className={styles.questionVoice}>
+            <button
+              className={styles.questionVoiceReplay}
+              onClick={() => {
+                if (questionAudioRef.current) {
+                  questionAudioRef.current.currentTime = 0;
+                  questionAudioRef.current.play().catch(() => {});
+                }
+              }}
+            >
+              🔊 Replay Question
+            </button>
+          </div>
+        )}
+
         <h2 className={styles.questionText}>{question.stem || question.question_text}</h2>
 
         {isMCQ && parsedOptions && (

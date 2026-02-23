@@ -84,17 +84,34 @@ router.post('/', authenticate, async (req, res) => {
       const mult = difficultyMultiplier[question.difficulty] || 1.0;
       const delta = isCorrect ? round(0.15 * mult, 3) : round(-0.075 * mult, 3);
 
+      let keyPointsText = '';
+      if (question.key_points) {
+        try {
+          const kp = typeof question.key_points === 'string' ? JSON.parse(question.key_points) : question.key_points;
+          if (Array.isArray(kp) && kp.length > 0) {
+            keyPointsText = kp.join('. ');
+          }
+        } catch (e) {}
+      }
+
       let teacherResponse = '';
       if (isCorrect) {
         teacherResponse = `That's right, well done! The answer is ${question.correct_answer.trim().toUpperCase()}, ${correctText}. `;
         if (question.ideal_answer) {
-          teacherResponse += question.ideal_answer;
+          teacherResponse += question.ideal_answer + ' ';
+        }
+        if (keyPointsText) {
+          teacherResponse += `Remember these key points: ${keyPointsText}`;
         }
       } else {
         teacherResponse = `Not quite. You selected ${answer_text.trim().toUpperCase()}, ${selectedText}, but the correct answer is ${question.correct_answer.trim().toUpperCase()}, ${correctText}. `;
         if (question.ideal_answer) {
-          teacherResponse += `Here's why: ${question.ideal_answer}`;
-        } else {
+          teacherResponse += `Here's why: ${question.ideal_answer} `;
+        }
+        if (keyPointsText) {
+          teacherResponse += `The important points to remember are: ${keyPointsText}. `;
+        }
+        if (!question.ideal_answer && !keyPointsText) {
           teacherResponse += `Make sure to review this topic carefully to understand the reasoning.`;
         }
       }

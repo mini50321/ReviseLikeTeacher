@@ -7,8 +7,10 @@ import styles from './FeedbackDisplay.module.css';
 export default function FeedbackDisplay({ attempt, onNext, onEnd, isLastQuestion }) {
   const [audioState, setAudioState] = useState('idle');
   const [audioUrl, setAudioUrl] = useState(null);
+  const [autoAdvanceCountdown, setAutoAdvanceCountdown] = useState(null);
   const audioRef = useRef(null);
   const fetchedTextRef = useRef(null);
+  const countdownRef = useRef(null);
 
   const score = attempt?.score || 0;
   const feedbackData = attempt?.feedback || {};
@@ -27,6 +29,7 @@ export default function FeedbackDisplay({ attempt, onNext, onEnd, isLastQuestion
     } catch (error) {
       console.error('TTS fetch error:', error);
       setAudioState('error');
+      setAutoAdvanceCountdown(5);
     }
   }, []);
 
@@ -34,8 +37,10 @@ export default function FeedbackDisplay({ attempt, onNext, onEnd, isLastQuestion
     if (teacherResponse && fetchedTextRef.current !== teacherResponse) {
       fetchedTextRef.current = teacherResponse;
       fetchAudio(teacherResponse);
+    } else if (!teacherResponse && attempt) {
+      setAutoAdvanceCountdown(5);
     }
-  }, [teacherResponse, fetchAudio]);
+  }, [teacherResponse, fetchAudio, attempt]);
 
   useEffect(() => {
     if (!audioUrl || audioState !== 'ready') return;
@@ -44,11 +49,15 @@ export default function FeedbackDisplay({ attempt, onNext, onEnd, isLastQuestion
     audioRef.current = audio;
 
     audio.onplay = () => setAudioState('playing');
-    audio.onended = () => setAudioState('ready');
+    audio.onended = () => {
+      setAudioState('finished');
+      setAutoAdvanceCountdown(5);
+    };
     audio.onerror = () => setAudioState('error');
 
     audio.play().catch(() => {
-      setAudioState('ready');
+      setAudioState('finished');
+      setAutoAdvanceCountdown(5);
     });
 
     return () => {
@@ -59,13 +68,38 @@ export default function FeedbackDisplay({ attempt, onNext, onEnd, isLastQuestion
     };
   }, [audioUrl]);
 
+  useEffect(() => {
+    if (autoAdvanceCountdown === null) return;
+
+    if (autoAdvanceCountdown <= 0) {
+      if (isLastQuestion) {
+        onEnd();
+      } else {
+        onNext();
+      }
+      return;
+    }
+
+    countdownRef.current = setTimeout(() => {
+      setAutoAdvanceCountdown(prev => prev - 1);
+    }, 1000);
+
+    return () => clearTimeout(countdownRef.current);
+  }, [autoAdvanceCountdown, isLastQuestion, onNext, onEnd]);
+
+  const cancelAutoAdvance = () => {
+    setAutoAdvanceCountdown(null);
+    if (countdownRef.current) clearTimeout(countdownRef.current);
+  };
+
   const togglePlayback = () => {
     if (!audioRef.current) return;
 
     if (audioState === 'playing') {
       audioRef.current.pause();
-      setAudioState('ready');
-    } else if (audioState === 'ready') {
+      setAudioState('finished');
+    } else if (audioState === 'finished' || audioState === 'ready') {
+      cancelAutoAdvance();
       audioRef.current.currentTime = 0;
       audioRef.current.play().catch(() => {});
     }
@@ -130,7 +164,7 @@ export default function FeedbackDisplay({ attempt, onNext, onEnd, isLastQuestion
                     <span></span><span></span><span></span><span></span><span></span>
                   </div>
                 )}
-                {(audioState === 'ready' || audioState === 'idle') && (
+                {(audioState === 'ready' || audioState === 'idle' || audioState === 'finished') && (
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
                     <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
@@ -147,16 +181,22 @@ export default function FeedbackDisplay({ attempt, onNext, onEnd, isLastQuestion
                 )}
               </div>
               <div className={styles.voiceLabel}>
-                {audioState === 'loading' && 'Teacher is speaking...'}
-                {audioState === 'playing' && 'Listening to teacher...'}
+                {audioState === 'loading' && 'Teacher is preparing...'}
+                {audioState === 'playing' && 'Teacher is speaking...'}
                 {audioState === 'ready' && 'Click play to listen'}
+                {audioState === 'finished' && 'Teacher finished speaking'}
                 {audioState === 'idle' && 'Loading voice...'}
                 {audioState === 'error' && 'Voice unavailable'}
               </div>
               <div className={styles.voiceControls}>
-                {(audioState === 'ready' || audioState === 'playing') && (
+                {(audioState === 'finished' || audioState === 'playing') && (
                   <button onClick={togglePlayback} className={styles.playButton}>
-                    {audioState === 'playing' ? '⏸ Pause' : '▶ Play'}
+                    {audioState === 'playing' ? '⏸ Pause' : '▶ Replay'}
+                  </button>
+                )}
+                {audioState === 'ready' && (
+                  <button onClick={togglePlayback} className={styles.playButton}>
+                    ▶ Play
                   </button>
                 )}
                 {audioState === 'error' && (
@@ -204,13 +244,24 @@ export default function FeedbackDisplay({ attempt, onNext, onEnd, isLastQuestion
           </div>
         )}
 
+        {autoAdvanceCountdown !== null && autoAdvanceCountdown > 0 && (
+          <div className={styles.autoAdvance}>
+            <span className={styles.autoAdvanceText}>
+              {isLastQuestion ? 'Ending session' : 'Next question'} in {autoAdvanceCountdown}s...
+            </span>
+            <button onClick={cancelAutoAdvance} className={styles.autoAdvanceCancel}>
+              Cancel
+            </button>
+          </div>
+        )}
+
         <div className={styles.actions}>
           {isLastQuestion ? (
-            <button onClick={onEnd} className={styles.endButton}>
+            <button onClick={() => { cancelAutoAdvance(); onEnd(); }} className={styles.endButton}>
               End Session
             </button>
           ) : (
-            <button onClick={onNext} className={styles.nextButton}>
+            <button onClick={() => { cancelAutoAdvance(); onNext(); }} className={styles.nextButton}>
               Next Question
             </button>
           )}
