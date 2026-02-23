@@ -1,0 +1,552 @@
+.main {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a0f1c 0%, #1a1a2e 50%, #16213e 100%);
+  padding: 2rem;
+  color: #f5f5f5;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  color: #9e9e9e;
+  margin-bottom: 2rem;
+}
+
+.loading {
+  min-height: 100vh;
+  background: #0a0f1c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9e9e9e;
+}
+
+.error {
+  background: rgba(239, 83, 80, 0.1);
+  border: 1px solid rgba(239, 83, 80, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  color: #ef5350;
+  margin-bottom: 1.5rem;
+}
+
+.emptyText {
+  color: #9e9e9e;
+  text-align: center;
+  padding: 3rem;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tab {
+  padding: 0.75rem 1.5rem;
+  background: none;
+  border: none;
+  color: #9e9e9e;
+  font-size: 0.95rem;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.tab:hover { color: #e0e0e0; }
+
+.tabActive {
+  color: #42a5f5;
+  border-bottom-color: #42a5f5;
+}
+
+.cardTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.rankHero {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.rankGaugeWrap {
+  position: relative;
+  width: 240px;
+  height: 140px;
+  margin: 0 auto 1rem;
+}
+
+.rankGauge {
+  width: 100%;
+  height: 100%;
+}
+
+.rankScoreOverlay {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+}
+
+.rankScoreValue {
+  font-size: 3rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.rankScoreLabel {
+  font-size: 0.8rem;
+  color: #9e9e9e;
+  margin-top: 2px;
+}
+
+.rankPrediction {
+  margin-bottom: 1rem;
+}
+
+.rankTierBadge {
+  display: inline-block;
+  padding: 6px 20px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.rankRange {
+  font-size: 1rem;
+  color: #bdbdbd;
+}
+
+.goalTracker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.goalLabel {
+  font-size: 0.9rem;
+  color: #9e9e9e;
+}
+
+.goalStatus {
+  padding: 4px 14px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.goalOnTrack {
+  background: rgba(129, 199, 132, 0.15);
+  color: #81c784;
+}
+
+.goalOffTrack {
+  background: rgba(239, 83, 80, 0.15);
+  color: #ef5350;
+}
+
+.factorsCard {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.factorsList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.factorItem {}
+
+.factorHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.factorName {
+  flex: 1;
+  font-size: 0.9rem;
+  color: #e0e0e0;
+}
+
+.factorValue {
+  font-weight: 700;
+  font-size: 0.9rem;
+  min-width: 50px;
+  text-align: right;
+}
+
+.factorWeight {
+  font-size: 0.75rem;
+  color: #9e9e9e;
+  min-width: 30px;
+  text-align: right;
+}
+
+.factorBar {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.factorFill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s ease;
+}
+
+.statsRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.miniStat {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.miniStatValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #42a5f5;
+}
+
+.miniStatLabel {
+  font-size: 0.75rem;
+  color: #9e9e9e;
+  margin-top: 2px;
+}
+
+.heatmapSummary {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.heatmapStat {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.heatmapStatValue {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #42a5f5;
+}
+
+.heatmapStatLabel {
+  font-size: 0.75rem;
+  color: #9e9e9e;
+}
+
+.heatmapLegend {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+  justify-content: center;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #bdbdbd;
+}
+
+.legendDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.heatmapGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.heatmapSubject {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.heatmapSubjectHeader {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.heatmapSubjectHeader:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.heatmapSubjectInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.heatmapSubjectName {
+  display: block;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #e0e0e0;
+}
+
+.heatmapSubjectMeta {
+  font-size: 0.75rem;
+  color: #9e9e9e;
+}
+
+.heatmapSubjectBar {
+  width: 120px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 3px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.heatmapSubjectFill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.heatmapExpandIcon {
+  font-size: 0.7rem;
+  color: #9e9e9e;
+  flex-shrink: 0;
+}
+
+.heatmapTopics {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 0.5rem 1.25rem;
+}
+
+.heatmapTopicRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.heatmapTopicRow:last-child {
+  border-bottom: none;
+}
+
+.heatmapTopicDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.heatmapTopicInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.heatmapTopicName {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #e0e0e0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.heatmapTopicStatus {
+  font-size: 0.7rem;
+  color: #9e9e9e;
+  text-transform: capitalize;
+}
+
+.heatmapTopicScores {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  color: #bdbdbd;
+  flex-shrink: 0;
+}
+
+.heatmapRevDate {
+  font-size: 0.7rem;
+  color: #9e9e9e;
+  flex-shrink: 0;
+}
+
+.trendControls {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.trendPeriodBtn {
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  color: #9e9e9e;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.trendPeriodBtn:hover { color: #e0e0e0; }
+
+.trendPeriodActive {
+  background: rgba(66, 165, 245, 0.15);
+  border-color: rgba(66, 165, 245, 0.3);
+  color: #42a5f5;
+}
+
+.trendCard {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.trendChart {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 180px;
+  padding-top: 10px;
+}
+
+.trendBar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  min-width: 0;
+}
+
+.trendBarFill {
+  width: 100%;
+  border-radius: 3px 3px 0 0;
+  transition: height 0.4s ease;
+  min-height: 2px;
+}
+
+.trendBarLabel {
+  font-size: 0.6rem;
+  color: #9e9e9e;
+  margin-top: 4px;
+}
+
+.topicTrendList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.topicTrendItem {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+}
+
+.topicTrendInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.topicTrendName {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #e0e0e0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topicTrendSubject {
+  font-size: 0.75rem;
+  color: #9e9e9e;
+}
+
+.topicTrendScores {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.topicTrendDot {
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: all 0.3s;
+}
+
+.topicTrendDelta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  min-width: 50px;
+}
+
+.topicTrendDelta span:first-child {
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.topicTrendLatest {
+  font-size: 0.7rem;
+  color: #9e9e9e;
+}
+
+@media (max-width: 768px) {
+  .main { padding: 1rem; }
+  .statsRow { grid-template-columns: repeat(2, 1fr); }
+  .heatmapSummary { grid-template-columns: repeat(3, 1fr); }
+  .heatmapTopicScores { display: none; }
+  .rankGaugeWrap { width: 200px; height: 120px; }
+  .rankScoreValue { font-size: 2.5rem; }
+}
+

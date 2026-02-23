@@ -1,0 +1,443 @@
+.main {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a0f1c 0%, #1a1a2e 50%, #16213e 100%);
+  padding: 2rem;
+  color: #f5f5f5;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.subtitle {
+  color: #9e9e9e;
+  margin-bottom: 2rem;
+}
+
+.loading {
+  min-height: 100vh;
+  background: #0a0f1c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9e9e9e;
+}
+
+.error {
+  background: rgba(239, 83, 80, 0.1);
+  border: 1px solid rgba(239, 83, 80, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  color: #ef5350;
+  margin-bottom: 1.5rem;
+}
+
+.upgradeCard {
+  background: rgba(255, 215, 0, 0.06);
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  border-radius: 16px;
+  padding: 3rem 2rem;
+  text-align: center;
+}
+
+.upgradeTitle {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: #ffd700;
+}
+
+.upgradeText {
+  color: #9e9e9e;
+  margin-bottom: 1.5rem;
+}
+
+.upgradeBtn {
+  padding: 0.75rem 2rem;
+  background: linear-gradient(135deg, #ffd700, #ffb300);
+  color: #0a0f1c;
+  border: none;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.upgradeBtn:hover {
+  transform: scale(1.04);
+}
+
+.contextBar {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.contextPill {
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  font-size: 0.85rem;
+  color: #bdbdbd;
+}
+
+.contextPillUrgent {
+  border-color: rgba(239, 83, 80, 0.4);
+  color: #ef5350;
+  background: rgba(239, 83, 80, 0.08);
+}
+
+.contextPillHigh {
+  border-color: rgba(255, 183, 77, 0.4);
+  color: #ffb74d;
+  background: rgba(255, 183, 77, 0.08);
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.summaryCard {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.summaryValue {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #42a5f5;
+}
+
+.summaryLabel {
+  font-size: 0.75rem;
+  color: #9e9e9e;
+  margin-top: 2px;
+}
+
+.timelineHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.timelineTitle {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.progressText {
+  font-size: 0.85rem;
+  color: #9e9e9e;
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+}
+
+.timelineConnector {
+  position: absolute;
+  left: 22px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.block {
+  display: flex;
+  gap: 1rem;
+  position: relative;
+  z-index: 1;
+}
+
+.blockTimeline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 44px;
+  flex-shrink: 0;
+  padding-top: 1.2rem;
+}
+
+.blockDot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  background: #1a1a2e;
+  flex-shrink: 0;
+  transition: all 0.3s;
+}
+
+.blockDotCompleted {
+  background: #81c784;
+  border-color: #81c784;
+}
+
+.blockDotRevision {
+  border-color: #ef5350;
+}
+
+.blockDotLearning {
+  border-color: #42a5f5;
+}
+
+.blockDotPractice {
+  border-color: #ffb74d;
+}
+
+.blockDotDiagnostic {
+  border-color: #ce93d8;
+}
+
+.blockDotBreak {
+  border-color: #4dd0e1;
+}
+
+.blockLine {
+  flex: 1;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.blockCard {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.75rem;
+  transition: all 0.2s;
+}
+
+.blockCard:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.blockCardCompleted {
+  opacity: 0.6;
+  border-color: rgba(129, 199, 132, 0.3);
+}
+
+.blockHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.blockIcon {
+  font-size: 1.2rem;
+}
+
+.blockType {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.blockTypeRevision {
+  background: rgba(239, 83, 80, 0.15);
+  color: #ef5350;
+}
+
+.blockTypeLearning {
+  background: rgba(66, 165, 245, 0.15);
+  color: #42a5f5;
+}
+
+.blockTypePractice {
+  background: rgba(255, 183, 77, 0.15);
+  color: #ffb74d;
+}
+
+.blockTypeDiagnostic {
+  background: rgba(206, 147, 216, 0.15);
+  color: #ce93d8;
+}
+
+.blockTypeBreak {
+  background: rgba(77, 208, 225, 0.15);
+  color: #4dd0e1;
+}
+
+.blockDuration {
+  font-size: 0.8rem;
+  color: #9e9e9e;
+  margin-left: auto;
+}
+
+.blockDescription {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #e0e0e0;
+  margin-bottom: 0.5rem;
+}
+
+.blockMeta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.blockSubject {
+  font-size: 0.8rem;
+  color: #9e9e9e;
+}
+
+.blockPriority {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.blockPriorityHigh {
+  background: rgba(239, 83, 80, 0.12);
+  color: #ef5350;
+}
+
+.blockPriorityMedium {
+  background: rgba(255, 183, 77, 0.12);
+  color: #ffb74d;
+}
+
+.blockPriorityLow {
+  background: rgba(129, 199, 132, 0.12);
+  color: #81c784;
+}
+
+.blockActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.startBtn {
+  padding: 0.4rem 1rem;
+  background: rgba(66, 165, 245, 0.15);
+  border: 1px solid rgba(66, 165, 245, 0.3);
+  border-radius: 8px;
+  color: #42a5f5;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.startBtn:hover {
+  background: rgba(66, 165, 245, 0.25);
+}
+
+.completeBtn {
+  padding: 0.4rem 1rem;
+  background: rgba(129, 199, 132, 0.15);
+  border: 1px solid rgba(129, 199, 132, 0.3);
+  border-radius: 8px;
+  color: #81c784;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.completeBtn:hover {
+  background: rgba(129, 199, 132, 0.25);
+}
+
+.completedBadge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: #81c784;
+  font-weight: 600;
+}
+
+.distributionBar {
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.distributionSegment {
+  height: 100%;
+  transition: width 0.5s ease;
+}
+
+.distributionLegend {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: #bdbdbd;
+}
+
+.legendDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 3rem;
+  color: #9e9e9e;
+}
+
+.refreshBtn {
+  padding: 0.5rem 1.2rem;
+  background: rgba(66, 165, 245, 0.12);
+  border: 1px solid rgba(66, 165, 245, 0.25);
+  border-radius: 8px;
+  color: #42a5f5;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.refreshBtn:hover {
+  background: rgba(66, 165, 245, 0.2);
+}
+
+@media (max-width: 768px) {
+  .main { padding: 1rem; }
+  .summaryGrid { grid-template-columns: repeat(2, 1fr); }
+  .contextBar { gap: 0.5rem; }
+}
+

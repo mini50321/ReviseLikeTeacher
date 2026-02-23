@@ -1,0 +1,521 @@
+.main {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+  padding: 2rem;
+  color: #e0e0e0;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #64ffda;
+  margin-bottom: 0.25rem;
+}
+
+.subtitle {
+  color: #aaa;
+  margin-bottom: 2rem;
+  font-size: 1rem;
+}
+
+.loading {
+  text-align: center;
+  padding: 4rem;
+  color: #aaa;
+  font-size: 1.1rem;
+}
+
+.error {
+  background: rgba(244, 67, 54, 0.15);
+  border: 1px solid #f44336;
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  color: #ff8a80;
+  margin-bottom: 1.5rem;
+}
+
+.premiumRequired {
+  text-align: center;
+  padding: 6rem 2rem;
+  color: #e0e0e0;
+}
+
+.premiumTitle {
+  font-size: 2rem;
+  color: #ffd700;
+  margin-bottom: 1rem;
+}
+
+.premiumMessage {
+  color: #aaa;
+  margin-bottom: 2rem;
+  font-size: 1.1rem;
+}
+
+.button {
+  padding: 0.75rem 2rem;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.button:hover {
+  transform: translateY(-2px);
+}
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 0.5rem;
+}
+
+.tab {
+  padding: 0.6rem 1.4rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px 8px 0 0;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+
+.tab:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.activeTab {
+  background: rgba(100, 255, 218, 0.1);
+  border-color: rgba(100, 255, 218, 0.3);
+  color: #64ffda;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.statCard {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1.2rem;
+  text-align: center;
+}
+
+.statValue {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.statLabel {
+  font-size: 0.8rem;
+  color: #aaa;
+  margin-top: 0.25rem;
+}
+
+.statGreen { color: #64ffda; }
+.statOrange { color: #ff9800; }
+.statBlue { color: #42a5f5; }
+
+.card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.cardTitle {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 1rem;
+}
+
+.filterRow {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.filterSelect {
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: #e0e0e0;
+  font-size: 0.9rem;
+}
+
+.filterSelect option {
+  background: #1a1a2e;
+  color: #e0e0e0;
+}
+
+.typeDistribution {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.typeBadge {
+  padding: 0.4rem 1rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.typeCrossSubject { background: rgba(100, 255, 218, 0.15); color: #64ffda; border: 1px solid rgba(100, 255, 218, 0.3); }
+.typeCrossTopic { background: rgba(66, 165, 245, 0.15); color: #42a5f5; border: 1px solid rgba(66, 165, 245, 0.3); }
+.typeClinicalBridge { background: rgba(255, 152, 0, 0.15); color: #ffa726; border: 1px solid rgba(255, 152, 0, 0.3); }
+.typeMechanismLink { background: rgba(171, 71, 188, 0.15); color: #ce93d8; border: 1px solid rgba(171, 71, 188, 0.3); }
+.typePharma { background: rgba(76, 175, 80, 0.15); color: #66bb6a; border: 1px solid rgba(76, 175, 80, 0.3); }
+
+.typeCount {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.integrationList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.integrationItem {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 1.25rem;
+  transition: all 0.2s;
+}
+
+.integrationItem:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.integrationHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.integrationLabel {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.integrationTypePill {
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.integrationExplanation {
+  font-size: 0.9rem;
+  color: #aaa;
+  margin-bottom: 0.75rem;
+  line-height: 1.5;
+}
+
+.linkedBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.linkedBadge {
+  padding: 0.2rem 0.6rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  font-size: 0.75rem;
+  color: #bbb;
+}
+
+.questionCount {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.connectionsGraph {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.edgeCard {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  font-size: 0.85rem;
+}
+
+.edgeNode {
+  padding: 0.25rem 0.6rem;
+  background: rgba(100, 255, 218, 0.1);
+  border-radius: 6px;
+  color: #64ffda;
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.edgeArrow {
+  color: #666;
+  font-size: 1.1rem;
+}
+
+.edgeWeight {
+  color: #aaa;
+  font-size: 0.75rem;
+  min-width: 25px;
+  text-align: center;
+}
+
+.practiceSection {
+  margin-top: 1rem;
+}
+
+.questionCard {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.questionMeta {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.metaBadge {
+  padding: 0.15rem 0.5rem;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  font-size: 0.7rem;
+  color: #aaa;
+}
+
+.questionStem {
+  font-size: 1rem;
+  color: #e0e0e0;
+  margin-bottom: 0.75rem;
+  line-height: 1.6;
+}
+
+.optionsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.optionButton {
+  padding: 0.6rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #e0e0e0;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.optionButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.selectedOption {
+  background: rgba(100, 255, 218, 0.15);
+  border-color: #64ffda;
+  color: #64ffda;
+}
+
+.correctOption {
+  background: rgba(76, 175, 80, 0.2);
+  border-color: #4caf50;
+  color: #66bb6a;
+}
+
+.wrongOption {
+  background: rgba(244, 67, 54, 0.2);
+  border-color: #f44336;
+  color: #ff8a80;
+}
+
+.integrationHint {
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(100, 255, 218, 0.08);
+  border-left: 3px solid #64ffda;
+  border-radius: 0 8px 8px 0;
+  font-size: 0.85rem;
+  color: #aaa;
+}
+
+.integrationHintLabel {
+  color: #64ffda;
+  font-weight: 600;
+  font-size: 0.8rem;
+  margin-bottom: 0.25rem;
+}
+
+.practiceControls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1.5rem;
+}
+
+.navButtons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.controlButton {
+  padding: 0.5rem 1.25rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: #e0e0e0;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.controlButton:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.controlButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.checkButton {
+  padding: 0.5rem 1.5rem;
+  background: linear-gradient(135deg, #64ffda, #00bcd4);
+  border: none;
+  border-radius: 8px;
+  color: #0f0c29;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.emptyText {
+  color: #888;
+  text-align: center;
+  padding: 2rem;
+}
+
+.adminSection {
+  margin-top: 1rem;
+}
+
+.adminControls {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.adminButton {
+  padding: 0.5rem 1.25rem;
+  background: rgba(255, 152, 0, 0.15);
+  border: 1px solid rgba(255, 152, 0, 0.3);
+  border-radius: 8px;
+  color: #ffa726;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.adminButton:hover {
+  background: rgba(255, 152, 0, 0.25);
+}
+
+.adminButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.topLabels {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.topLabelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+}
+
+.topLabelText {
+  font-size: 0.9rem;
+  color: #e0e0e0;
+  flex: 1;
+}
+
+.topLabelType {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 10px;
+  margin-left: 0.5rem;
+}
+
+.topLabelCount {
+  font-size: 0.8rem;
+  color: #aaa;
+  min-width: 30px;
+  text-align: right;
+}
+
+@media (max-width: 768px) {
+  .optionsGrid {
+    grid-template-columns: 1fr;
+  }
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+

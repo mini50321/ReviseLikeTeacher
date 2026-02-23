@@ -1,0 +1,548 @@
+.main {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a0f1c 0%, #1a1a2e 50%, #16213e 100%);
+  padding: 2rem;
+  color: #f5f5f5;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  color: #9e9e9e;
+  margin-bottom: 2rem;
+  font-size: 1rem;
+}
+
+.loading {
+  min-height: 100vh;
+  background: #0a0f1c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9e9e9e;
+  font-size: 1.1rem;
+}
+
+.error {
+  background: rgba(239, 83, 80, 0.1);
+  border: 1px solid rgba(239, 83, 80, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  color: #ef5350;
+  margin-bottom: 1.5rem;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 0;
+}
+
+.tab {
+  padding: 0.75rem 1.5rem;
+  background: none;
+  border: none;
+  color: #9e9e9e;
+  font-size: 0.95rem;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.tab:hover {
+  color: #e0e0e0;
+}
+
+.tabActive {
+  color: #42a5f5;
+  border-bottom-color: #42a5f5;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.statCard {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.statValue {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #42a5f5;
+}
+
+.statLabel {
+  font-size: 0.85rem;
+  color: #9e9e9e;
+  margin-top: 0.25rem;
+}
+
+.breakdownCard,
+.vulnCard,
+.enrichCard {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.cardTitle {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.breakdownTable {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.breakdownHeader {
+  display: flex;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.8rem;
+  color: #9e9e9e;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.breakdownRow {
+  display: flex;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  font-size: 0.9rem;
+}
+
+.breakdownCol {
+  flex: 2;
+  min-width: 120px;
+}
+
+.breakdownColNum {
+  flex: 1;
+  min-width: 70px;
+  text-align: center;
+}
+
+.coverageBadge {
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.enrichDesc {
+  color: #9e9e9e;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+}
+
+.enrichControls {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.enrichField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.enrichLabel {
+  font-size: 0.8rem;
+  color: #9e9e9e;
+}
+
+.enrichSelect {
+  padding: 0.6rem 1rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: #f5f5f5;
+  font-size: 0.9rem;
+  min-width: 200px;
+}
+
+.enrichButton {
+  padding: 0.6rem 1.5rem;
+  background: linear-gradient(135deg, #42a5f5, #1e88e5);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.enrichButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(66, 165, 245, 0.3);
+}
+
+.enrichButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.enrichResult {
+  background: rgba(129, 199, 132, 0.08);
+  border: 1px solid rgba(129, 199, 132, 0.2);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.enrichResultHeader {
+  font-weight: 600;
+  color: #81c784;
+  margin-bottom: 0.75rem;
+}
+
+.enrichmentList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.enrichmentItem {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  padding: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.enrichmentSuccess {
+  border-left: 3px solid #81c784;
+}
+
+.enrichmentFallback {
+  border-left: 3px solid #ff9800;
+}
+
+.enrichmentId {
+  font-family: monospace;
+  color: #9e9e9e;
+  font-size: 0.85rem;
+}
+
+.enrichmentStatus {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.enrichmentTags {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.conceptTag {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  background: rgba(66, 165, 245, 0.15);
+  color: #42a5f5;
+  border-radius: 4px;
+}
+
+.trapBadge {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  background: rgba(236, 64, 122, 0.15);
+  color: #ec407a;
+  border-radius: 4px;
+}
+
+.vulnSummary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.errorTypeList {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.errorTypeItem {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.errorTypeHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.errorTypeIcon {
+  font-size: 1.2rem;
+}
+
+.errorTypeName {
+  font-weight: 600;
+  flex: 1;
+}
+
+.errorTypeCount {
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+
+.errorTypeBar {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.errorTypeFill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.errorExamples {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.errorExample {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding-left: 1rem;
+  border-left: 2px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.85rem;
+}
+
+.errorExSubject {
+  color: #9e9e9e;
+}
+
+.errorExMeaning {
+  color: #bdbdbd;
+  font-style: italic;
+}
+
+.trapVulnList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.trapVulnItem {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+}
+
+.trapVulnRank {
+  width: 28px;
+  height: 28px;
+  background: rgba(236, 64, 122, 0.15);
+  color: #ec407a;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.trapVulnPattern {
+  flex: 1;
+  font-size: 0.9rem;
+}
+
+.trapVulnCount {
+  font-weight: 700;
+  color: #ef5350;
+}
+
+.filterRow {
+  margin-bottom: 1.5rem;
+}
+
+.filterSelect {
+  padding: 0.6rem 1rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: #f5f5f5;
+  font-size: 0.9rem;
+  min-width: 200px;
+}
+
+.trapGroupList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.trapGroupCard {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.trapGroupHeader {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.trapGroupTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  flex: 1;
+  margin: 0;
+}
+
+.trapGroupSubject {
+  font-size: 0.8rem;
+  color: #42a5f5;
+  background: rgba(66, 165, 245, 0.12);
+  padding: 2px 10px;
+  border-radius: 4px;
+}
+
+.trapGroupCount {
+  font-size: 0.8rem;
+  color: #9e9e9e;
+}
+
+.trapPatternList {
+  padding: 0.75rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.trapPatternItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.trapPatternItem:last-child {
+  border-bottom: none;
+}
+
+.trapPatternText {
+  flex: 1;
+  font-size: 0.9rem;
+  color: #e0e0e0;
+}
+
+.trapPatternMeta {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.diffTag {
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  background: rgba(126, 87, 194, 0.15);
+  color: #b39ddb;
+  border-radius: 4px;
+  text-transform: capitalize;
+}
+
+.yieldTag {
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  background: rgba(255, 183, 77, 0.15);
+  color: #ffb74d;
+  border-radius: 4px;
+  text-transform: capitalize;
+}
+
+.emptyText {
+  color: #9e9e9e;
+  text-align: center;
+  padding: 3rem 1rem;
+}
+
+@media (max-width: 768px) {
+  .main {
+    padding: 1rem;
+  }
+
+  .statsGrid,
+  .vulnSummary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .enrichControls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .enrichSelect {
+    min-width: auto;
+    width: 100%;
+  }
+
+  .breakdownHeader,
+  .breakdownRow {
+    font-size: 0.8rem;
+  }
+
+  .breakdownCol {
+    min-width: 80px;
+  }
+
+  .breakdownColNum {
+    min-width: 50px;
+  }
+}
+

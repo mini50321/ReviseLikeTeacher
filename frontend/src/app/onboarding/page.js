@@ -13,6 +13,8 @@ export default function OnboardingPage() {
     target_exam: '',
     exam_date: '',
     target_score_band: '',
+    goal_tier: '',
+    student_category: '',
     selected_subjects: [],
     daily_study_minutes: 60,
     weekly_question_target: 50
@@ -22,12 +24,27 @@ export default function OnboardingPage() {
   const router = useRouter();
 
   const subjects = [
-    'Anatomy', 'Physiology', 'Biochemistry', 'Pathology', 
-    'Pharmacology', 'Microbiology', 'Forensic Medicine', 
-    'Community Medicine', 'Ophthalmology', 'ENT'
+    'Anatomy', 'Physiology', 'Biochemistry', 'Pathology',
+    'Pharmacology', 'Microbiology', 'Forensic Medicine',
+    'Community Medicine', 'Ophthalmology', 'ENT',
+    'General Medicine', 'General Surgery', 'Obstetrics & Gynaecology',
+    'Paediatrics', 'Orthopaedics', 'Dermatology',
+    'Psychiatry', 'Anaesthesia', 'Radiology'
   ];
 
   const scoreBands = ['600-650', '650-700', '700-750', '750+'];
+
+  const goalTiers = [
+    { value: 'top_rank', label: 'Top 100 Rank' },
+    { value: 'good_rank', label: 'Top 1000 Rank' },
+    { value: 'seat_only', label: 'Just Securing a Seat' }
+  ];
+
+  const studentCategories = [
+    { value: 'bright', label: 'Bright — I grasp concepts quickly' },
+    { value: 'average', label: 'Average — I need moderate practice' },
+    { value: 'weak', label: 'Weak — I need extra help and repetition' }
+  ];
 
   const handleSubjectToggle = (subject) => {
     setFormData(prev => ({
@@ -51,7 +68,15 @@ export default function OnboardingPage() {
       setError('Please select target score band');
       return;
     }
-    if (step === 4 && formData.selected_subjects.length === 0) {
+    if (step === 4 && !formData.goal_tier) {
+      setError('Please select your goal');
+      return;
+    }
+    if (step === 5 && !formData.student_category) {
+      setError('Please select your self-assessment');
+      return;
+    }
+    if (step === 6 && formData.selected_subjects.length === 0) {
       setError('Please select at least one subject');
       return;
     }
@@ -91,10 +116,10 @@ export default function OnboardingPage() {
               <div className={styles.progressBar}>
                 <div 
                   className={styles.progressFill}
-                  style={{ width: `${(step / 6) * 100}%` }}
+                  style={{ width: `${(step / 8) * 100}%` }}
                 />
               </div>
-              <span className={styles.progressText}>Step {step} of 6</span>
+              <span className={styles.progressText}>Step {step} of 8</span>
             </div>
 
             <div className={styles.card}>
@@ -164,6 +189,42 @@ export default function OnboardingPage() {
 
               {step === 4 && (
                 <div className={styles.step}>
+                  <h2 className={styles.stepTitle}>What is your goal?</h2>
+                  <div className={styles.options}>
+                    {goalTiers.map(tier => (
+                      <button
+                        key={tier.value}
+                        type="button"
+                        className={`${styles.option} ${formData.goal_tier === tier.value ? styles.selected : ''}`}
+                        onClick={() => setFormData({ ...formData, goal_tier: tier.value })}
+                      >
+                        {tier.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {step === 5 && (
+                <div className={styles.step}>
+                  <h2 className={styles.stepTitle}>How would you rate yourself?</h2>
+                  <div className={styles.options}>
+                    {studentCategories.map(cat => (
+                      <button
+                        key={cat.value}
+                        type="button"
+                        className={`${styles.option} ${formData.student_category === cat.value ? styles.selected : ''}`}
+                        onClick={() => setFormData({ ...formData, student_category: cat.value })}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {step === 6 && (
+                <div className={styles.step}>
                   <h2 className={styles.stepTitle}>Select Subjects</h2>
                   <div className={styles.subjectGrid}>
                     {subjects.map(subject => (
@@ -180,7 +241,7 @@ export default function OnboardingPage() {
                 </div>
               )}
 
-              {step === 5 && (
+              {step === 7 && (
                 <div className={styles.step}>
                   <h2 className={styles.stepTitle}>Daily Study Minutes</h2>
                   <input
@@ -195,7 +256,7 @@ export default function OnboardingPage() {
                 </div>
               )}
 
-              {step === 6 && (
+              {step === 8 && (
                 <div className={styles.step}>
                   <h2 className={styles.stepTitle}>Weekly Question Target</h2>
                   <input
@@ -220,7 +281,7 @@ export default function OnboardingPage() {
                     Back
                   </button>
                 )}
-                {step < 6 ? (
+                {step < 8 ? (
                   <button
                     type="button"
                     className={styles.nextButton}

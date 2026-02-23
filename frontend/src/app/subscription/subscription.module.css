@@ -1,0 +1,390 @@
+.main {
+  min-height: calc(100vh - 80px);
+  padding: 40px 24px;
+  background: transparent;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.headerSection {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.title {
+  font-size: 42px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.95);
+  margin-bottom: 12px;
+  letter-spacing: -1px;
+}
+
+.subtitle {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.5);
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.loading {
+  text-align: center;
+  padding: 60px 20px;
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.error {
+  background: rgba(239, 83, 80, 0.15);
+  border: 1px solid rgba(239, 83, 80, 0.3);
+  color: #ef5350;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.success {
+  background: rgba(129, 199, 132, 0.15);
+  border: 1px solid rgba(129, 199, 132, 0.3);
+  color: #81c784;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.currentPlanBanner {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  padding: 14px 24px;
+  background: rgba(100, 181, 246, 0.1);
+  border: 1px solid rgba(100, 181, 246, 0.25);
+  border-radius: 12px;
+  margin-bottom: 32px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.tiersGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-bottom: 60px;
+  align-items: start;
+}
+
+.tierCard {
+  position: relative;
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+}
+
+.tierCard:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+.tierCardActive {
+  border-color: var(--tier-color, rgba(100, 181, 246, 0.4));
+  box-shadow: 0 0 0 1px var(--tier-color, rgba(100, 181, 246, 0.4)),
+              0 8px 30px rgba(0, 0, 0, 0.2);
+}
+
+.tierCardPopular {
+  border-color: rgba(100, 181, 246, 0.3);
+  background: rgba(100, 181, 246, 0.05);
+}
+
+.popularBadge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #64b5f6, #42a5f5);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 5px 16px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.currentBadge {
+  position: absolute;
+  top: -12px;
+  right: 16px;
+  background: rgba(129, 199, 132, 0.2);
+  color: #81c784;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(129, 199, 132, 0.3);
+}
+
+.tierHeader {
+  text-align: center;
+  margin-bottom: 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tierName {
+  font-size: 24px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.95);
+  margin: 0 0 8px 0;
+}
+
+.tierDescription {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.45);
+  margin: 0 0 20px 0;
+  line-height: 1.4;
+}
+
+.tierPricing {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+}
+
+.tierPrice {
+  font-size: 36px;
+  font-weight: 900;
+  color: var(--tier-color, rgba(255, 255, 255, 0.95));
+}
+
+.tierPeriod {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 600;
+}
+
+.featureList {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 28px 0;
+  flex: 1;
+}
+
+.featureItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 7px 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.featureIncluded {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.featureExcluded {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.featureIcon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  margin-top: 1px;
+}
+
+.featureIncluded .featureIcon {
+  background: rgba(129, 199, 132, 0.2);
+  color: #81c784;
+}
+
+.featureExcluded .featureIcon {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.featureText {
+  flex: 1;
+}
+
+.tierActions {
+  margin-top: auto;
+}
+
+.upgradeButton {
+  width: 100%;
+  padding: 14px 24px;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.3px;
+}
+
+.upgradeButton:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.upgradeButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.currentPlanButton {
+  width: 100%;
+  padding: 14px 24px;
+  border: 1px solid rgba(129, 199, 132, 0.3);
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #81c784;
+  background: rgba(129, 199, 132, 0.1);
+  cursor: default;
+}
+
+.cancelButton {
+  width: 100%;
+  padding: 14px 24px;
+  border: 1px solid rgba(239, 83, 80, 0.3);
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(239, 83, 80, 0.8);
+  background: rgba(239, 83, 80, 0.08);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancelButton:hover:not(:disabled) {
+  background: rgba(239, 83, 80, 0.15);
+  border-color: rgba(239, 83, 80, 0.5);
+}
+
+.cancelButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.downgradeButton {
+  width: 100%;
+  padding: 14px 24px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.downgradeButton:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.downgradeButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.faqSection {
+  margin-top: 20px;
+  padding-top: 40px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.faqTitle {
+  font-size: 28px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.9);
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.faqGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.faqItem {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.faqQuestion {
+  font-size: 15px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0 0 10px 0;
+}
+
+.faqAnswer {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.6;
+  margin: 0;
+}
+
+@media (max-width: 1024px) {
+  .tiersGrid {
+    grid-template-columns: 1fr;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .main {
+    padding: 24px 16px;
+  }
+
+  .title {
+    font-size: 32px;
+  }
+
+  .faqGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .currentPlanBanner {
+    flex-direction: column;
+    gap: 4px;
+    text-align: center;
+  }
+}
+

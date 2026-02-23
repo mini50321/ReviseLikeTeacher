@@ -199,8 +199,26 @@ export default function DashboardPage() {
             </div>
 
             <div className={styles.quickStartSection}>
-              <h2 className={styles.sectionTitle}>Quick Start Practice</h2>
+              <h2 className={styles.sectionTitle}>Adaptive Mastery</h2>
               <div className={styles.quickStartButtons}>
+                <button 
+                  className={styles.quickStartButton}
+                  onClick={() => router.push('/diagnostic')}
+                >
+                  Diagnostic Assessment
+                </button>
+                <button 
+                  className={styles.quickStartButton}
+                  onClick={() => router.push('/misconceptions')}
+                >
+                  Misconception Tracker
+                </button>
+                <button
+                  className={styles.quickStartButton}
+                  onClick={() => router.push('/exam-notes')}
+                >
+                  Exam Trigger Notes
+                </button>
                 <button 
                   className={styles.quickStartButton}
                   onClick={() => router.push('/practice?mode=balanced')}
@@ -218,6 +236,48 @@ export default function DashboardPage() {
                   onClick={() => router.push('/practice?mode=rapid')}
                 >
                   Rapid-Fire
+                </button>
+                <button 
+                  className={styles.quickStartButton}
+                  onClick={() => router.push('/distractor-lab')}
+                >
+                  Distractor Lab
+                </button>
+                <button 
+                  className={styles.quickStartButton}
+                  onClick={() => router.push('/daily-plan')}
+                >
+                  Daily Plan
+                </button>
+                <button 
+                  className={styles.quickStartButton}
+                  onClick={() => router.push('/mock-tests')}
+                >
+                  Mock Tests
+                </button>
+                <button 
+                  className={styles.quickStartButton}
+                  onClick={() => router.push('/crash-packs')}
+                >
+                  Crash Packs
+                </button>
+                <button 
+                  className={styles.quickStartButton}
+                  onClick={() => router.push('/last30')}
+                >
+                  Last 30 Days
+                </button>
+                <button 
+                  className={styles.quickStartButton}
+                  onClick={() => router.push('/integration-tags')}
+                >
+                  Integration Tags
+                </button>
+                <button 
+                  className={styles.quickStartButton}
+                  onClick={() => router.push('/concept-clusters')}
+                >
+                  Concept Clusters
                 </button>
               </div>
             </div>

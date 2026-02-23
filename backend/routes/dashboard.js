@@ -63,7 +63,10 @@ router.get('/', authenticate, async (req, res) => {
         daily_study_minutes: profile.daily_study_minutes,
         weekly_question_target: profile.weekly_question_target,
         selected_subjects: profile.selected_subjects,
-        intelligence_level: profile.intelligence_level
+        intelligence_level: profile.intelligence_level,
+        goal_tier: profile.goal_tier || 'good_rank',
+        student_category: profile.student_category || 'average',
+        subscription_tier: profile.subscription_tier || 'free'
       },
       readiness: {
         percentage: readiness.readiness_percentage,

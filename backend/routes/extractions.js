@@ -55,6 +55,10 @@ router.put('/:id/review', authenticate, requireAdmin, async (req, res) => {
         options: extraction.extracted_options || null,
         correct_answer: extraction.extracted_correct_answer || null,
         image_path: extraction.extracted_image_path,
+        yield_category: extraction.yield_category || null,
+        distractor_analysis: extraction.detected_distractor_analysis || null,
+        concept_tags: extraction.detected_concept_tags || null,
+        trap_pattern: extraction.detected_trap_pattern || null,
         status: 'active'
       };
 
@@ -67,9 +71,10 @@ router.put('/:id/review', authenticate, requireAdmin, async (req, res) => {
         `INSERT INTO question
          (id, stem, type, subject, topic, subtopic, difficulty, importance,
           cognitive_focus, ideal_answer, key_points, previous_year_tags,
-          options, correct_answer,
+          options, correct_answer, yield_category, distractor_analysis,
+          concept_tags, trap_pattern,
           image_path, status, created_by, source_pdf_id, extracted_question_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`,
         [
           questionId,
           questionData.stem,
@@ -85,6 +90,10 @@ router.put('/:id/review', authenticate, requireAdmin, async (req, res) => {
           JSON.stringify(questionData.previous_year_tags || []),
           questionData.options || null,
           questionData.correct_answer || null,
+          questionData.yield_category || null,
+          questionData.distractor_analysis || null,
+          questionData.concept_tags || null,
+          questionData.trap_pattern || null,
           questionData.image_path || '',
           questionData.status || 'active',
           req.user.userId,

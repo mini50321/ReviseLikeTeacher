@@ -160,9 +160,10 @@ router.post('/:id/extract', authenticate, requireAdmin, async (req, res) => {
           detected_topic, detected_subtopic, detected_difficulty, detected_importance,
           detected_cognitive_focus, detected_key_points, detected_previous_year_tags,
           extracted_options, extracted_correct_answer, extracted_ideal_answer,
-          frequency_count, most_recent_year,
+          yield_category, detected_distractor_analysis, detected_concept_tags,
+          detected_trap_pattern, frequency_count, most_recent_year,
           confidence_score, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, 'draft')`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, 'draft')`,
         [
           eqId,
           id,
@@ -179,11 +180,43 @@ router.post('/:id/extract', authenticate, requireAdmin, async (req, res) => {
           q.options ? JSON.stringify(q.options) : null,
           q.correct_answer || null,
           q.ideal_answer || null,
+          q.yield_category || 'occasional',
+          typeof q.distractor_analysis === 'string' ? q.distractor_analysis : JSON.stringify(q.distractor_analysis || null),
+          typeof q.concept_tags === 'string' ? q.concept_tags : JSON.stringify(q.concept_tags || []),
+          q.trap_pattern || null,
           q.frequency_count || 1,
           q.most_recent_year || null,
           80
         ]
       );
+    }
+
+    const subtopicYield = result.subtopic_yield || [];
+    for (const sy of subtopicYield) {
+      const syId = db.generateUUID();
+      const existing = await db.query(
+        'SELECT id, pyq_count FROM subtopic_yield WHERE subject = $1 AND topic = $2 AND subtopic = $3',
+        [sy.subject, sy.topic, sy.subtopic]
+      );
+
+      if (existing.rows.length > 0) {
+        const newCount = existing.rows[0].pyq_count + sy.pyq_count;
+        const newCategory = newCount >= 10 ? 'core' : newCount >= 5 ? 'frequent' : newCount >= 2 ? 'occasional' : 'rare';
+        await db.query(
+          `UPDATE subtopic_yield SET pyq_count = $1, yield_category = $2,
+           years_appeared = $3, most_recent_year = $4 WHERE id = $5`,
+          [newCount, newCategory, JSON.stringify(sy.years_appeared || []),
+           sy.most_recent_year || null, existing.rows[0].id]
+        );
+      } else {
+        await db.query(
+          `INSERT INTO subtopic_yield (id, subject, topic, subtopic, pyq_count, yield_category, years_appeared, most_recent_year)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [syId, sy.subject, sy.topic, sy.subtopic, sy.pyq_count,
+           sy.yield_category, JSON.stringify(sy.years_appeared || []),
+           sy.most_recent_year || null]
+        );
+      }
     }
 
     await db.query(
@@ -195,6 +228,8 @@ router.post('/:id/extract', authenticate, requireAdmin, async (req, res) => {
       total_extracted: questions.length,
       summary: result.summary,
       importance_breakdown: result.importance_breakdown || {},
+      yield_breakdown: result.yield_breakdown || {},
+      subtopic_yield_count: subtopicYield.length,
       subjects: result.subjects || []
     });
   } catch (error) {
@@ -245,6 +280,10 @@ router.post('/:id/manual-question', authenticate, requireAdmin, async (req, res)
       cognitive_focus,
       key_points,
       previous_year_tags,
+      yield_category,
+      distractor_analysis,
+      concept_tags,
+      trap_pattern,
       image_path
     } = req.body;
 
@@ -256,13 +295,19 @@ router.post('/:id/manual-question', authenticate, requireAdmin, async (req, res)
       `INSERT INTO extractedquestion 
        (pdfupload_id, extracted_text, detected_type, detected_subject, detected_topic, 
         detected_subtopic, detected_difficulty, detected_importance, detected_cognitive_focus,
-        detected_key_points, detected_previous_year_tags, extracted_image_path, 
-        confidence_score, status) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 100, 'draft') 
+        detected_key_points, detected_previous_year_tags, yield_category,
+        detected_distractor_analysis, detected_concept_tags, detected_trap_pattern,
+        extracted_image_path, confidence_score, status) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 100, 'draft') 
        RETURNING *`,
       [id, extracted_text, type, subject, topic, subtopic, difficulty, importance, 
        cognitive_focus, JSON.stringify(key_points || []), 
-       JSON.stringify(previous_year_tags || []), image_path]
+       JSON.stringify(previous_year_tags || []),
+       yield_category || null,
+       distractor_analysis || null,
+       concept_tags ? (typeof concept_tags === 'string' ? concept_tags : JSON.stringify(concept_tags)) : null,
+       trap_pattern || null,
+       image_path]
     );
 
     res.status(201).json(extractedResult.rows[0]);

@@ -172,7 +172,8 @@
 .subject,
 .topic,
 .type,
-.difficulty {
+.difficulty,
+.yield {
   padding: 8px 16px;
   background: rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(10px);
@@ -182,6 +183,26 @@
   color: rgba(255, 255, 255, 0.95);
   text-transform: capitalize;
   border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.yield_core {
+  background: rgba(211, 47, 47, 0.35);
+  border-color: rgba(211, 47, 47, 0.6);
+}
+
+.yield_frequent {
+  background: rgba(245, 124, 0, 0.35);
+  border-color: rgba(245, 124, 0, 0.6);
+}
+
+.yield_occasional {
+  background: rgba(56, 142, 60, 0.35);
+  border-color: rgba(56, 142, 60, 0.6);
+}
+
+.yield_rare {
+  background: rgba(117, 117, 117, 0.35);
+  border-color: rgba(117, 117, 117, 0.6);
 }
 
 .status {

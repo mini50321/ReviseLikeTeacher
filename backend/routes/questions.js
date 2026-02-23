@@ -5,7 +5,7 @@ const { db } = require('../db');
 
 router.get('/', authenticate, async (req, res) => {
   try {
-    const { subject, topic, type, difficulty, limit = 20, offset = 0 } = req.query;
+    const { subject, topic, type, difficulty, yield_category, limit = 20, offset = 0 } = req.query;
 
     let query = 'SELECT * FROM question WHERE status = $1';
     const params = ['active'];
@@ -29,6 +29,11 @@ router.get('/', authenticate, async (req, res) => {
     if (difficulty) {
       query += ` AND difficulty = $${paramCount++}`;
       params.push(difficulty);
+    }
+
+    if (yield_category) {
+      query += ` AND yield_category = $${paramCount++}`;
+      params.push(yield_category);
     }
 
     query += ` ORDER BY created_at DESC LIMIT $${paramCount++} OFFSET $${paramCount++}`;
@@ -79,12 +84,16 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
       subtopic,
       difficulty = 'medium',
       importance = 'medium',
+      yield_category,
       cognitive_focus = 'factual',
       ideal_answer,
       key_points,
       previous_year_tags,
       options,
       correct_answer,
+      distractor_analysis,
+      concept_tags,
+      trap_pattern,
       image_path,
       status = 'active'
     } = req.body;
@@ -97,19 +106,28 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
       return res.status(400).json({ error: 'Correct answer is required for this question type' });
     }
 
+    if (yield_category && !['core', 'frequent', 'occasional', 'rare'].includes(yield_category)) {
+      return res.status(400).json({ error: 'yield_category must be core, frequent, occasional, or rare' });
+    }
+
     const questionId = db.generateUUID();
 
     const result = await db.query(
       `INSERT INTO question 
-       (id, stem, type, subject, topic, subtopic, difficulty, importance, 
+       (id, stem, type, subject, topic, subtopic, difficulty, importance, yield_category,
         cognitive_focus, ideal_answer, key_points, previous_year_tags, 
-        options, correct_answer, image_path, status, created_by) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) 
+        options, correct_answer, distractor_analysis, concept_tags, trap_pattern,
+        image_path, status, created_by) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) 
        RETURNING *`,
-      [questionId, stem, type, subject, topic, subtopic, difficulty, importance, 
+      [questionId, stem, type, subject, topic, subtopic, difficulty, importance,
+       yield_category || null,
        cognitive_focus, ideal_answer, JSON.stringify(key_points || []), 
        JSON.stringify(previous_year_tags || []), 
        options ? JSON.stringify(options) : null, correct_answer || null,
+       distractor_analysis ? (typeof distractor_analysis === 'string' ? distractor_analysis : JSON.stringify(distractor_analysis)) : null,
+       concept_tags ? (typeof concept_tags === 'string' ? concept_tags : JSON.stringify(concept_tags)) : null,
+       trap_pattern || null,
        image_path, status, req.user.userId]
     );
 
@@ -136,9 +154,10 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
     console.log('Updating question:', { id, updates });
 
     const allowedFields = ['stem', 'type', 'subject', 'topic', 'subtopic', 
-                           'difficulty', 'importance', 'cognitive_focus', 
+                           'difficulty', 'importance', 'yield_category', 'cognitive_focus', 
                            'ideal_answer', 'key_points', 'previous_year_tags',
-                           'options', 'correct_answer', 'image_path', 'status'];
+                           'options', 'correct_answer', 'distractor_analysis',
+                           'concept_tags', 'trap_pattern', 'image_path', 'status'];
     const updateFields = Object.keys(updates).filter(key => allowedFields.includes(key));
 
     if (updateFields.length === 0) {
@@ -149,8 +168,9 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
     const values = [id];
     let paramCount = 2;
 
+    const jsonFields = ['key_points', 'previous_year_tags', 'options', 'distractor_analysis', 'concept_tags'];
     updateFields.forEach(field => {
-      if (field === 'key_points' || field === 'previous_year_tags' || field === 'options') {
+      if (jsonFields.includes(field) && updates[field] !== null && typeof updates[field] !== 'string') {
         setParts.push(`${field} = $${paramCount++}`);
         values.push(JSON.stringify(updates[field]));
       } else {

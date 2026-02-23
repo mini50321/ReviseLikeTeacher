@@ -10,13 +10,18 @@ export default function QuestionForm({ question, onSave, onCancel }) {
     question_text: '',
     subject: '',
     topic: '',
+    subtopic: '',
     type: 'saq',
     difficulty: 'medium',
     importance: 'medium',
+    yield_category: '',
     cognitive_focus: 'factual',
     status: 'active',
     options: { A: '', B: '', C: '', D: '' },
-    correct_answer: ''
+    correct_answer: '',
+    distractor_analysis: '',
+    concept_tags: '',
+    trap_pattern: ''
   });
 
   useEffect(() => {
@@ -36,16 +41,21 @@ export default function QuestionForm({ question, onSave, onCancel }) {
         question_text: question.stem || question.question_text || '',
         subject: question.subject || '',
         topic: question.topic || '',
+        subtopic: question.subtopic || '',
         type: question.type || 'saq',
         difficulty: question.difficulty || 'medium',
         importance: question.importance || 'medium',
+        yield_category: question.yield_category || '',
         cognitive_focus: question.cognitive_focus || 'factual',
         status: question.status || 'active',
         ideal_answer: question.ideal_answer || '',
         key_points: question.key_points || [],
         previous_year_tags: question.previous_year_tags || [],
         options: parsedOptions,
-        correct_answer: question.correct_answer || ''
+        correct_answer: question.correct_answer || '',
+        distractor_analysis: question.distractor_analysis || '',
+        concept_tags: question.concept_tags || '',
+        trap_pattern: question.trap_pattern || ''
       });
     }
   }, [question]);
@@ -128,6 +138,28 @@ export default function QuestionForm({ question, onSave, onCancel }) {
                 value={formData.topic}
                 onChange={handleChange}
               />
+            </div>
+          </div>
+
+          <div className={styles.formRow}>
+            <div className={styles.formGroup}>
+              <label>Subtopic</label>
+              <input
+                name="subtopic"
+                value={formData.subtopic}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className={styles.formGroup}>
+              <label>Yield Category</label>
+              <select name="yield_category" value={formData.yield_category} onChange={handleChange}>
+                <option value="">Not set</option>
+                <option value="core">Core (≥10 PYQs)</option>
+                <option value="frequent">Frequent (5-9 PYQs)</option>
+                <option value="occasional">Occasional (2-4 PYQs)</option>
+                <option value="rare">Rare (1 PYQ)</option>
+              </select>
             </div>
           </div>
 
@@ -242,6 +274,50 @@ export default function QuestionForm({ question, onSave, onCancel }) {
               Important points the student must cover (one per line)
             </span>
           </div>
+
+          <div className={styles.formGroup}>
+            <label>Concept Tags</label>
+            <input
+              name="concept_tags"
+              value={formData.concept_tags || ''}
+              onChange={handleChange}
+              placeholder="e.g. acid-base balance, enzyme kinetics"
+            />
+            <span className={styles.fieldHint}>
+              Core medical concepts tested (comma-separated)
+            </span>
+          </div>
+
+          {needsOptions && (
+            <>
+              <div className={styles.formGroup}>
+                <label>Distractor Analysis</label>
+                <textarea
+                  name="distractor_analysis"
+                  value={formData.distractor_analysis || ''}
+                  onChange={handleChange}
+                  rows={3}
+                  placeholder="Why each wrong option is tempting..."
+                />
+                <span className={styles.fieldHint}>
+                  Explain the misconception each distractor exploits
+                </span>
+              </div>
+
+              <div className={styles.formGroup}>
+                <label>Trap Pattern</label>
+                <input
+                  name="trap_pattern"
+                  value={formData.trap_pattern || ''}
+                  onChange={handleChange}
+                  placeholder="e.g. Reversal of Type 1 vs Type 2"
+                />
+                <span className={styles.fieldHint}>
+                  Common trap or trick in this question
+                </span>
+              </div>
+            </>
+          )}
 
           <div className={styles.formGroup}>
             <label>Status</label>

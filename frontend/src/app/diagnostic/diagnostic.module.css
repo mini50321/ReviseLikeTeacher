@@ -1,0 +1,529 @@
+.main {
+  min-height: calc(100vh - 80px);
+  padding: 40px 24px;
+  background: transparent;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.title {
+  font-size: 40px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #ffffff 0%, #f0f0ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+  letter-spacing: -1.5px;
+}
+
+.subtitle {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 32px;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  margin-bottom: 24px;
+  animation: fadeInUp 0.6s ease backwards;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.sectionTitle {
+  font-size: 22px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.95);
+  margin-bottom: 20px;
+}
+
+.filterRow {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.filterButton {
+  padding: 10px 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.filterButton:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.filterActive {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.topicGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.topicCard {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.topicCard:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.topicName {
+  font-size: 16px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.95);
+  margin-bottom: 6px;
+}
+
+.topicSubject {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 12px;
+}
+
+.topicMeta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badgeCore {
+  background: rgba(76, 175, 80, 0.2);
+  color: #81c784;
+}
+
+.badgeFrequent {
+  background: rgba(33, 150, 243, 0.2);
+  color: #64b5f6;
+}
+
+.badgeStatus {
+  background: rgba(255, 152, 0, 0.2);
+  color: #ffb74d;
+}
+
+.badgeMastered {
+  background: rgba(76, 175, 80, 0.2);
+  color: #81c784;
+}
+
+.questionCard {
+  animation: fadeInUp 0.5s ease backwards;
+}
+
+.phaseIndicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.phaseTag {
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: rgba(156, 39, 176, 0.2);
+  color: #ce93d8;
+}
+
+.phaseStep {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.questionStem {
+  font-size: 20px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.answerArea {
+  margin-bottom: 20px;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 15px;
+  line-height: 1.6;
+  resize: vertical;
+  font-family: inherit;
+  transition: border-color 0.3s ease;
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.mcqOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.mcqOption {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mcqOption:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.mcqOptionSelected {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.mcqLabel {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  flex-shrink: 0;
+}
+
+.mcqLabelSelected {
+  background: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+.mcqText {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.submitButton {
+  padding: 14px 32px;
+  border-radius: 14px;
+  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.submitButton:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.submitButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.backButton {
+  padding: 14px 24px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.backButton:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.feedbackCard {
+  margin-top: 20px;
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  animation: fadeInUp 0.4s ease;
+}
+
+.feedbackScore {
+  font-size: 32px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.feedbackScoreGood {
+  color: #81c784;
+}
+
+.feedbackScoreMedium {
+  color: #ffb74d;
+}
+
+.feedbackScoreBad {
+  color: #ef5350;
+}
+
+.feedbackText {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+.feedbackTeacher {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.7;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  margin-top: 12px;
+  font-style: italic;
+}
+
+.resultsCard {
+  text-align: center;
+  animation: fadeInUp 0.6s ease;
+}
+
+.resultLevel {
+  font-size: 56px;
+  font-weight: 900;
+  margin-bottom: 4px;
+  text-transform: capitalize;
+}
+
+.resultLevelWeak { color: #ef5350; }
+.resultLevelAverage { color: #ffb74d; }
+.resultLevelGood { color: #64b5f6; }
+.resultLevelStrong { color: #81c784; }
+
+.resultScore {
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 24px;
+}
+
+.resultBuckets {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.bucketTag {
+  padding: 8px 18px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: capitalize;
+  background: rgba(156, 39, 176, 0.2);
+  color: #ce93d8;
+}
+
+.resultRecommendation {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.7;
+  max-width: 600px;
+  margin: 0 auto 24px;
+}
+
+.misconceptionList {
+  text-align: left;
+  margin-bottom: 24px;
+}
+
+.misconceptionTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 12px;
+}
+
+.misconceptionItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: rgba(239, 83, 80, 0.1);
+  border: 1px solid rgba(239, 83, 80, 0.2);
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.misconceptionDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef5350;
+  flex-shrink: 0;
+}
+
+.resultActions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.primaryButton {
+  padding: 16px 36px;
+  border-radius: 14px;
+  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.primaryButton:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.secondaryButton {
+  padding: 16px 36px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.secondaryButton:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.loading {
+  text-align: center;
+  padding: 80px 0;
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.error {
+  background: rgba(239, 83, 80, 0.15);
+  border: 1px solid rgba(239, 83, 80, 0.3);
+  border-radius: 12px;
+  padding: 16px 20px;
+  color: #ef9a9a;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 60px 20px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.emptyState h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 8px;
+}
+
+.emptyState p {
+  font-size: 15px;
+}
+
+.progressBar {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #ce93d8, #64b5f6);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+@media (max-width: 768px) {
+  .title { font-size: 28px; }
+  .topicGrid { grid-template-columns: 1fr; }
+  .resultActions { flex-direction: column; }
+  .card { padding: 24px; }
+}
+

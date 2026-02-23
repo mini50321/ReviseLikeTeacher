@@ -1,0 +1,633 @@
+.main {
+  min-height: calc(100vh - 80px);
+  padding: 40px 24px;
+  background: transparent;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.title {
+  font-size: 42px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.95);
+  margin-bottom: 8px;
+  letter-spacing: -1px;
+}
+
+.subtitle {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.45);
+  margin-bottom: 32px;
+}
+
+.loading {
+  text-align: center;
+  padding: 60px 20px;
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.error {
+  background: rgba(239, 83, 80, 0.15);
+  border: 1px solid rgba(239, 83, 80, 0.3);
+  color: #ef5350;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  margin-bottom: 24px;
+}
+
+.filterRow {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.filterSelect {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  cursor: pointer;
+  min-width: 200px;
+}
+
+.filterSelect:focus {
+  outline: none;
+  border-color: #64b5f6;
+}
+
+.topicGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.topicCard {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.topicCard:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.topicCardGenerated {
+  border-color: rgba(129, 199, 132, 0.2);
+}
+
+.topicCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+
+.topicCardTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+  flex: 1;
+}
+
+.generatedBadge {
+  background: rgba(129, 199, 132, 0.15);
+  color: #81c784;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.topicCardSubject {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 0 0 12px 0;
+}
+
+.topicCardStats {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 12px;
+}
+
+.coreTag {
+  background: rgba(100, 181, 246, 0.15);
+  color: #64b5f6;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.topicCardAction {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64b5f6;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 60px 20px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.emptyText {
+  text-align: center;
+  padding: 40px 20px;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 14px;
+}
+
+.generatingOverlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 40px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  margin-bottom: 24px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.generatingSpinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top-color: #64b5f6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.unitHeader {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+
+.backButton {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.7);
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.backButton:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.unitTitle {
+  font-size: 32px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.95);
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.unitSubject {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.45);
+  margin: 4px 0 0 0;
+}
+
+.regenerateButton {
+  margin-left: auto;
+  background: rgba(255, 183, 77, 0.15);
+  border: 1px solid rgba(255, 183, 77, 0.3);
+  color: #ffb74d;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.regenerateButton:hover:not(:disabled) {
+  background: rgba(255, 183, 77, 0.25);
+}
+
+.regenerateButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sectionTabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 28px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.sectionTab {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.sectionTab:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.sectionTabActive {
+  background: rgba(100, 181, 246, 0.15);
+  border-color: rgba(100, 181, 246, 0.3);
+  color: #64b5f6;
+}
+
+.sectionCount {
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+.sectionContent {
+  min-height: 300px;
+}
+
+.conceptGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.conceptCard {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 20px;
+  transition: all 0.2s ease;
+}
+
+.conceptCard:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.conceptHighYield {
+  border-left: 3px solid #ffb74d;
+}
+
+.conceptHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.conceptType {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.highYieldBadge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #ffb74d;
+  background: rgba(255, 183, 77, 0.15);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.conceptTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0 0 8px 0;
+}
+
+.conceptContent {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.tablesContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.comparisonTableCard {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  padding: 24px;
+  overflow: hidden;
+}
+
+.compTableTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0 0 16px 0;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.compTable {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 400px;
+}
+
+.compTh {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.compTd {
+  padding: 10px 14px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.compFeature {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.scenarioList {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.scenarioCard {
+  display: flex;
+  gap: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 24px;
+}
+
+.scenarioNumber {
+  background: rgba(100, 181, 246, 0.15);
+  color: #64b5f6;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 6px 12px;
+  border-radius: 8px;
+  height: fit-content;
+  white-space: nowrap;
+}
+
+.scenarioBody {
+  flex: 1;
+}
+
+.scenarioText {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.6;
+  margin: 0 0 16px 0;
+}
+
+.scenarioMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scenarioField {
+  display: flex;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.scenarioLabel {
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.scenarioValue {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.scenarioTeachingPoint {
+  background: rgba(129, 199, 132, 0.1);
+  border: 1px solid rgba(129, 199, 132, 0.2);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #81c784;
+  margin-top: 8px;
+}
+
+.tpIcon {
+  margin-right: 6px;
+}
+
+.recallGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.recallCard {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 20px;
+}
+
+.recallFact {
+  font-size: 15px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 8px;
+}
+
+.recallContext {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 10px;
+}
+
+.recallMnemonic {
+  background: rgba(156, 39, 176, 0.1);
+  border: 1px solid rgba(156, 39, 176, 0.2);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #ce93d8;
+}
+
+.mnemonicIcon {
+  margin-right: 6px;
+}
+
+.trapList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.trapCard {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 3px solid rgba(239, 83, 80, 0.5);
+  border-radius: 14px;
+  padding: 20px;
+}
+
+.trapHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.trapIcon {
+  font-size: 16px;
+}
+
+.trapSubtopic {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.trapDescription {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+
+.trapDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.trapDetail {
+  display: flex;
+  gap: 8px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.trapDetailLabel {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.4);
+  flex-shrink: 0;
+}
+
+.trapCorrect {
+  color: #81c784;
+}
+
+.generatedMeta {
+  text-align: center;
+  padding: 20px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.3);
+  margin-top: 32px;
+}
+
+@media (max-width: 768px) {
+  .main {
+    padding: 24px 16px;
+  }
+
+  .title {
+    font-size: 32px;
+  }
+
+  .unitHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .regenerateButton {
+    margin-left: 0;
+  }
+
+  .sectionTabs {
+    flex-wrap: nowrap;
+  }
+
+  .conceptGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .recallGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .scenarioCard {
+    flex-direction: column;
+  }
+
+  .topicGrid {
+    grid-template-columns: 1fr;
+  }
+}
+

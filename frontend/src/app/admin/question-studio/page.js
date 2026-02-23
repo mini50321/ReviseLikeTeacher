@@ -23,6 +23,7 @@ export default function QuestionStudioPage() {
     type: '',
     difficulty: '',
     importance: '',
+    yield_category: '',
     cognitive_focus: '',
     status: 'active'
   });
@@ -85,6 +86,9 @@ export default function QuestionStudioPage() {
     if (filters.importance) {
       filtered = filtered.filter(q => q.importance === filters.importance);
     }
+    if (filters.yield_category) {
+      filtered = filtered.filter(q => q.yield_category === filters.yield_category);
+    }
     if (filters.cognitive_focus) {
       filtered = filtered.filter(q => q.cognitive_focus === filters.cognitive_focus);
     }
@@ -133,12 +137,16 @@ export default function QuestionStudioPage() {
         subtopic: formData.subtopic || '',
         difficulty: formData.difficulty || 'medium',
         importance: formData.importance || 'medium',
+        yield_category: formData.yield_category || null,
         cognitive_focus: formData.cognitive_focus || 'factual',
         ideal_answer: formData.ideal_answer || '',
         key_points: formData.key_points || [],
         previous_year_tags: formData.previous_year_tags || [],
         options: formData.options || null,
         correct_answer: formData.correct_answer || null,
+        distractor_analysis: formData.distractor_analysis || null,
+        concept_tags: formData.concept_tags || null,
+        trap_pattern: formData.trap_pattern || null,
         status: formData.status || 'active'
       };
 
@@ -312,6 +320,20 @@ export default function QuestionStudioPage() {
               </div>
 
               <div className={styles.filterGroup}>
+                <label>Yield</label>
+                <select
+                  value={filters.yield_category}
+                  onChange={(e) => handleFilterChange('yield_category', e.target.value)}
+                >
+                  <option value="">All</option>
+                  <option value="core">Core</option>
+                  <option value="frequent">Frequent</option>
+                  <option value="occasional">Occasional</option>
+                  <option value="rare">Rare</option>
+                </select>
+              </div>
+
+              <div className={styles.filterGroup}>
                 <label>Cognitive Focus</label>
                 <select
                   value={filters.cognitive_focus}
@@ -355,6 +377,11 @@ export default function QuestionStudioPage() {
                           <span className={styles.topic}>{question.topic}</span>
                           <span className={styles.type}>{question.type}</span>
                           <span className={styles.difficulty}>{question.difficulty}</span>
+                          {question.yield_category && (
+                            <span className={`${styles.yield} ${styles[`yield_${question.yield_category}`] || ''}`}>
+                              {question.yield_category}
+                            </span>
+                          )}
                         </div>
                         <span className={`${styles.status} ${styles[question.status]}`}>
                           {question.status}

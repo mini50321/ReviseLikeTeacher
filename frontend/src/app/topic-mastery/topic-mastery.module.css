@@ -1,0 +1,857 @@
+.main {
+  min-height: calc(100vh - 80px);
+  padding: 40px 24px;
+  background: transparent;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.title {
+  font-size: 36px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #ffffff 0%, #f0f0ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+  letter-spacing: -1px;
+}
+
+.subtitle {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 32px;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  margin-bottom: 24px;
+  animation: fadeInUp 0.6s ease backwards;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.phaseTracker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+
+.phaseStep {
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.phaseActive {
+  background: rgba(156, 39, 176, 0.25);
+  color: #ce93d8;
+  border-color: rgba(156, 39, 176, 0.4);
+}
+
+.phaseDone {
+  background: rgba(76, 175, 80, 0.2);
+  color: #81c784;
+  border-color: rgba(76, 175, 80, 0.3);
+}
+
+.phaseArrow {
+  color: rgba(255, 255, 255, 0.2);
+  font-size: 14px;
+}
+
+.progressBar {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.progressConceptFix {
+  background: linear-gradient(90deg, #ce93d8, #ba68c8);
+}
+
+.progressLAQ {
+  background: linear-gradient(90deg, #64b5f6, #42a5f5);
+}
+
+.progressMCQ {
+  background: linear-gradient(90deg, #ffb74d, #ffa726);
+}
+
+.progressMastery {
+  background: linear-gradient(90deg, #81c784, #66bb6a);
+}
+
+.sectionTitle {
+  font-size: 20px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.95);
+  margin-bottom: 16px;
+}
+
+.questionStem {
+  font-size: 18px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.metaBadges {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.badgePurple {
+  background: rgba(156, 39, 176, 0.2);
+  color: #ce93d8;
+}
+
+.badgeBlue {
+  background: rgba(33, 150, 243, 0.2);
+  color: #64b5f6;
+}
+
+.badgeOrange {
+  background: rgba(255, 152, 0, 0.2);
+  color: #ffb74d;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 15px;
+  line-height: 1.6;
+  resize: vertical;
+  font-family: inherit;
+  transition: border-color 0.3s ease;
+  margin-bottom: 16px;
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.mcqOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.mcqOption {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mcqOption:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.mcqOptionSelected {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.mcqOptionCorrect {
+  background: rgba(76, 175, 80, 0.15);
+  border-color: rgba(76, 175, 80, 0.4);
+}
+
+.mcqOptionWrong {
+  background: rgba(239, 83, 80, 0.15);
+  border-color: rgba(239, 83, 80, 0.4);
+}
+
+.mcqLabel {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  flex-shrink: 0;
+}
+
+.mcqLabelSelected {
+  background: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+.mcqText {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.feedbackCard {
+  margin-top: 16px;
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  animation: fadeInUp 0.4s ease;
+}
+
+.feedbackScore {
+  font-size: 28px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.scoreGood { color: #81c784; }
+.scoreMedium { color: #ffb74d; }
+.scoreBad { color: #ef5350; }
+
+.feedbackText {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.6;
+  margin-bottom: 6px;
+}
+
+.feedbackTeacher {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.7;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  margin-top: 10px;
+  font-style: italic;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.primaryButton {
+  padding: 14px 32px;
+  border-radius: 14px;
+  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.primaryButton:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.primaryButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.secondaryButton {
+  padding: 14px 24px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.secondaryButton:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.skipButton {
+  padding: 10px 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.skipButton:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.resultsSection {
+  text-align: center;
+  animation: fadeInUp 0.6s ease;
+}
+
+.resultLevel {
+  font-size: 48px;
+  font-weight: 900;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.resultMastered { color: #81c784; }
+.resultRevision { color: #ffb74d; }
+.resultRelearn { color: #ef5350; }
+
+.competencyScore {
+  font-size: 64px;
+  font-weight: 900;
+  margin-bottom: 4px;
+}
+
+.competencyLabel {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 24px;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.statCard {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 20px;
+  text-align: center;
+}
+
+.statValue {
+  font-size: 28px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.95);
+  margin-bottom: 4px;
+}
+
+.statLabel {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.revisionSchedule {
+  margin-bottom: 24px;
+}
+
+.revisionTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 12px;
+}
+
+.revisionDates {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.revisionDate {
+  padding: 10px 20px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 600;
+}
+
+.resultActions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.loading {
+  text-align: center;
+  padding: 60px 0;
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.error {
+  background: rgba(239, 83, 80, 0.15);
+  border: 1px solid rgba(239, 83, 80, 0.3);
+  border-radius: 12px;
+  padding: 14px 18px;
+  color: #ef9a9a;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.emptyPhase {
+  text-align: center;
+  padding: 40px 20px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.emptyPhase p {
+  font-size: 15px;
+  margin-bottom: 16px;
+}
+
+.mcqCounter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.mcqCounterText {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.mcqCounterScore {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.adaptiveBadge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.adaptiveLabel {
+  padding: 6px 14px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(156, 39, 176, 0.15);
+  color: #ce93d8;
+  border: 1px solid rgba(156, 39, 176, 0.25);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.difficultyTag {
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.diff_easy {
+  background: rgba(76, 175, 80, 0.15);
+  color: #81c784;
+  border: 1px solid rgba(76, 175, 80, 0.25);
+}
+
+.diff_medium {
+  background: rgba(255, 152, 0, 0.15);
+  color: #ffb74d;
+  border: 1px solid rgba(255, 152, 0, 0.25);
+}
+
+.diff_hard {
+  background: rgba(239, 83, 80, 0.15);
+  color: #ef9a9a;
+  border: 1px solid rgba(239, 83, 80, 0.25);
+}
+
+.statusBanner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 16px;
+  margin-bottom: 20px;
+  animation: fadeInUp 0.4s ease;
+}
+
+.statusBanner[data-status="green"] {
+  background: rgba(76, 175, 80, 0.15);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.statusBanner[data-status="yellow"] {
+  background: rgba(255, 152, 0, 0.15);
+  border: 1px solid rgba(255, 152, 0, 0.3);
+}
+
+.statusBanner[data-status="red"] {
+  background: rgba(239, 83, 80, 0.15);
+  border: 1px solid rgba(239, 83, 80, 0.3);
+}
+
+.statusEmoji {
+  font-size: 28px;
+}
+
+.statusText {
+  font-size: 20px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.95);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.postCompletionOptions {
+  margin-bottom: 24px;
+}
+
+.optionsTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 16px;
+}
+
+.optionsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.optionCard {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.optionCard:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.optionDisabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.optionDisabled:hover {
+  transform: none;
+}
+
+.optionDone {
+  background: rgba(76, 175, 80, 0.1);
+  border-color: rgba(76, 175, 80, 0.25);
+}
+
+.optionIcon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.optionLabel {
+  font-size: 15px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.95);
+  margin-bottom: 4px;
+}
+
+.optionDesc {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.4;
+}
+
+.recSummary {
+  display: flex;
+  gap: 16px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 16px;
+}
+
+.recWeak {
+  color: #ef9a9a;
+}
+
+.recPrimary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 12px;
+}
+
+.recPrimary:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateX(4px);
+}
+
+.recPrimaryInfo {
+  flex: 1;
+}
+
+.recPrimaryTopic {
+  font-size: 17px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.recPrimarySubject {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.recPrimaryReason {
+  flex-shrink: 0;
+}
+
+.recArrow {
+  font-size: 22px;
+  color: rgba(255, 255, 255, 0.4);
+  flex-shrink: 0;
+}
+
+.recReasonBadge {
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.recReason_weakness {
+  background: rgba(239, 83, 80, 0.15);
+  color: #ef9a9a;
+}
+
+.recReason_high_yield {
+  background: rgba(255, 152, 0, 0.15);
+  color: #ffb74d;
+}
+
+.recReason_in_progress {
+  background: rgba(33, 150, 243, 0.15);
+  color: #64b5f6;
+}
+
+.recReason_same_subject {
+  background: rgba(156, 39, 176, 0.15);
+  color: #ce93d8;
+}
+
+.recAlternatives {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.recAltItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.recAltItem:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.recAltTopic {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  flex: 1;
+}
+
+.recAltSubject {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.progressRapidFire {
+  background: linear-gradient(90deg, #ffd54f, #ffca28);
+}
+
+.rfHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.rfScoreDisplay {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.rfDifficulty {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.rfQuestion {
+  font-size: 20px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.95);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.rfInput {
+  width: 100%;
+  padding: 16px;
+  border-radius: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 18px;
+  font-family: inherit;
+  transition: border-color 0.3s ease;
+  margin-bottom: 12px;
+}
+
+.rfInput:focus {
+  outline: none;
+  border-color: rgba(255, 213, 79, 0.5);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.rfHint {
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(255, 213, 79, 0.1);
+  border: 1px solid rgba(255, 213, 79, 0.2);
+  color: #ffd54f;
+  font-size: 14px;
+  margin-bottom: 12px;
+  font-style: italic;
+}
+
+.rfResultBanner {
+  padding: 16px;
+  border-radius: 14px;
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 12px;
+  animation: fadeInUp 0.3s ease;
+}
+
+.rfCorrect {
+  background: rgba(76, 175, 80, 0.15);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  color: #81c784;
+}
+
+.rfWrong {
+  background: rgba(239, 83, 80, 0.15);
+  border: 1px solid rgba(239, 83, 80, 0.3);
+  color: #ef9a9a;
+}
+
+.rfSummaryBanner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-radius: 12px;
+  background: rgba(255, 213, 79, 0.1);
+  border: 1px solid rgba(255, 213, 79, 0.2);
+  margin-bottom: 24px;
+}
+
+.rfSummaryLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+@media (max-width: 768px) {
+  .title { font-size: 28px; }
+  .phaseTracker { gap: 4px; }
+  .phaseStep { padding: 6px 10px; font-size: 10px; }
+  .statsGrid { grid-template-columns: 1fr; }
+  .resultActions { flex-direction: column; }
+  .card { padding: 24px; }
+  .optionsGrid { grid-template-columns: 1fr; }
+  .recPrimary { flex-direction: column; text-align: center; }
+}
+

@@ -2,7 +2,7 @@ const { db } = require('../db');
 
 const DECAY_CONSTANT = 0.05;
 const MIN_INTERVAL_DAYS = 1;
-const MAX_INTERVAL_DAYS = 30;
+const MAX_INTERVAL_DAYS = 60;
 
 function calculateDecay(daysSinceReview, masteryLevel) {
   const retention = Math.exp(-DECAY_CONSTANT * daysSinceReview / Math.max(masteryLevel / 100, 0.1));
@@ -15,6 +15,51 @@ function calculateNextInterval(mastery, revisionCount, intelligenceFactor) {
   const masteryBonus = (mastery / 100) * 2;
   const interval = base * factor * (1 + masteryBonus) * intelligenceFactor;
   return Math.max(MIN_INTERVAL_DAYS, Math.min(MAX_INTERVAL_DAYS, Math.round(interval)));
+}
+
+function getMasteryBasedInterval(masteryStatus, completedRevisions) {
+  const intervals = {
+    mastered: [7, 21, 45],
+    revision_required: [3, 10, 25],
+    relearn_core: [1, 5, 15]
+  };
+  const statusIntervals = intervals[masteryStatus] || intervals.revision_required;
+  const idx = Math.min(completedRevisions, statusIntervals.length - 1);
+  return statusIntervals[idx];
+}
+
+async function loadTuningIntervals() {
+  try {
+    const result = await db.query(
+      `SELECT parameter_name, parameter_value FROM system_tuning_parameters
+       WHERE parameter_name LIKE 'revision_interval_%'`
+    );
+    const tuning = {};
+    result.rows.forEach(r => { tuning[r.parameter_name] = parseFloat(r.parameter_value); });
+    return {
+      mastered: [
+        tuning.revision_interval_mastered_1 || 7,
+        tuning.revision_interval_mastered_2 || 21,
+        tuning.revision_interval_mastered_3 || 45
+      ],
+      revision_required: [
+        tuning.revision_interval_revision_1 || 3,
+        tuning.revision_interval_revision_2 || 10,
+        tuning.revision_interval_revision_3 || 25
+      ],
+      relearn_core: [
+        tuning.revision_interval_relearn_1 || 1,
+        tuning.revision_interval_relearn_2 || 5,
+        tuning.revision_interval_relearn_3 || 15
+      ]
+    };
+  } catch (e) {
+    return {
+      mastered: [7, 21, 45],
+      revision_required: [3, 10, 25],
+      relearn_core: [1, 5, 15]
+    };
+  }
 }
 
 function prioritizeTopics(topics) {
@@ -191,15 +236,15 @@ async function generateSmartSchedule(userId) {
     });
   }
 
+  const tuningIntervals = await loadTuningIntervals();
+
   for (const topic of prioritized) {
-    if (topic.days_since_review !== undefined) {
-      const interval = calculateNextInterval(
-        topic.mastery_level || 0,
-        topic.revision_count || 0,
-        intelligenceFactor
-      );
+    if (!topic.next_revision_date && topic.mastery_status && topic.mastery_status !== 'not_started') {
+      const statusIntervals = tuningIntervals[topic.mastery_status] || tuningIntervals.revision_required;
+      const roundIdx = Math.min(topic.completed_revisions || 0, statusIntervals.length - 1);
+      const intervalDays = statusIntervals[roundIdx];
       const nextDate = new Date();
-      nextDate.setDate(nextDate.getDate() + interval);
+      nextDate.setDate(nextDate.getDate() + intervalDays);
       const nextDateString = nextDate.toISOString().split('T')[0];
 
       await db.query(
@@ -230,6 +275,8 @@ module.exports = {
   getTopicPriorities,
   calculateDecay,
   calculateNextInterval,
+  getMasteryBasedInterval,
+  loadTuningIntervals,
   prioritizeTopics
 };
 

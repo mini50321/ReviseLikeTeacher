@@ -39,11 +39,35 @@ export default function Header() {
               <Link href="/admin/analytics" className={styles.navLink}>
                 Analytics
               </Link>
+              <Link href="/distractor-lab" className={styles.navLink}>
+                Distractors
+              </Link>
+              <Link href="/integration-tags" className={styles.navLink}>
+                Integration
+              </Link>
+              <Link href="/concept-clusters" className={styles.navLink}>
+                Clusters
+              </Link>
+              <Link href="/saq-converter" className={styles.navLink}>
+                SAQ Converter
+              </Link>
+              <Link href="/laq-generator" className={styles.navLink}>
+                LAQ Generator
+              </Link>
+              <Link href="/question-quality" className={styles.navLink}>
+                Quality
+              </Link>
+              <Link href="/student-progress" className={styles.navLink}>
+                Progress
+              </Link>
             </>
           ) : (
             <>
               <Link href="/dashboard" className={styles.navLink}>
                 Dashboard
+              </Link>
+              <Link href="/diagnostic" className={styles.navLink}>
+                Diagnostic
               </Link>
               <Link href="/practice" className={styles.navLink}>
                 Practice
@@ -51,8 +75,44 @@ export default function Header() {
               <Link href="/schedule" className={styles.navLink}>
                 Schedule
               </Link>
+              <Link href="/misconceptions" className={styles.navLink}>
+                Misconceptions
+              </Link>
+              <Link href="/exam-notes" className={styles.navLink}>
+                Exam Notes
+              </Link>
+              <Link href="/teaching-units" className={styles.navLink}>
+                Teaching Units
+              </Link>
+              <Link href="/distractor-lab" className={styles.navLink}>
+                Distractors
+              </Link>
               <Link href="/metrics-lab" className={styles.navLink}>
                 Analytics
+              </Link>
+              <Link href="/advanced-analytics" className={styles.navLink}>
+                Rank
+              </Link>
+              <Link href="/daily-plan" className={styles.navLink}>
+                Daily Plan
+              </Link>
+              <Link href="/mock-tests" className={styles.navLink}>
+                Mock Tests
+              </Link>
+              <Link href="/crash-packs" className={styles.navLink}>
+                Crash Packs
+              </Link>
+              <Link href="/last30" className={styles.navLink}>
+                Last 30 Days
+              </Link>
+              <Link href="/integration-tags" className={styles.navLink}>
+                Integration
+              </Link>
+              <Link href="/concept-clusters" className={styles.navLink}>
+                Clusters
+              </Link>
+              <Link href="/subscription" className={styles.navLink}>
+                Plans
               </Link>
             </>
           )}

@@ -433,4 +433,142 @@ router.get('/platform-stats', authenticate, requireAdmin, async (req, res) => {
   }
 });
 
+router.get('/yield', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { subject, topic, yield_category } = req.query;
+
+    let query = 'SELECT * FROM subtopic_yield WHERE 1=1';
+    const params = [];
+    let paramCount = 1;
+
+    if (subject) {
+      query += ` AND subject = $${paramCount++}`;
+      params.push(subject);
+    }
+    if (topic) {
+      query += ` AND topic = $${paramCount++}`;
+      params.push(topic);
+    }
+    if (yield_category) {
+      query += ` AND yield_category = $${paramCount++}`;
+      params.push(yield_category);
+    }
+
+    query += ' ORDER BY pyq_count DESC';
+
+    const result = await db.query(query, params);
+
+    const summary = {
+      core: 0,
+      frequent: 0,
+      occasional: 0,
+      rare: 0,
+      total: result.rows.length
+    };
+    result.rows.forEach(row => {
+      if (summary[row.yield_category] !== undefined) {
+        summary[row.yield_category]++;
+      }
+    });
+
+    res.json({ subtopic_yield: result.rows, summary });
+  } catch (error) {
+    console.error('Get yield data error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/yield/recalculate', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const subtopicData = await db.query(
+      `SELECT subject, topic, subtopic, COUNT(*) as pyq_count,
+              previous_year_tags
+       FROM question
+       WHERE status = 'active' AND subtopic IS NOT NULL AND subtopic != ''
+       GROUP BY subject, topic, subtopic`
+    );
+
+    let updated = 0;
+    let inserted = 0;
+
+    for (const row of subtopicData.rows) {
+      const pyqCount = parseInt(row.pyq_count);
+      let yieldCategory;
+      if (pyqCount >= 10) yieldCategory = 'core';
+      else if (pyqCount >= 5) yieldCategory = 'frequent';
+      else if (pyqCount >= 2) yieldCategory = 'occasional';
+      else yieldCategory = 'rare';
+
+      let yearsSet = new Set();
+      let mostRecentYear = null;
+
+      const tagsQuestions = await db.query(
+        `SELECT previous_year_tags FROM question
+         WHERE subject = $1 AND topic = $2 AND subtopic = $3 AND status = 'active'`,
+        [row.subject, row.topic, row.subtopic]
+      );
+
+      for (const tq of tagsQuestions.rows) {
+        try {
+          const tags = typeof tq.previous_year_tags === 'string'
+            ? JSON.parse(tq.previous_year_tags)
+            : tq.previous_year_tags;
+          if (Array.isArray(tags)) {
+            for (const tag of tags) {
+              const yearMatches = String(tag).match(/\d{4}/g);
+              if (yearMatches) {
+                yearMatches.forEach(y => {
+                  const yr = parseInt(y);
+                  if (yr >= 2000 && yr <= 2030) yearsSet.add(yr);
+                });
+              }
+            }
+          }
+        } catch (e) {}
+      }
+
+      const yearsArr = sorted(yearsSet);
+      if (yearsArr.length > 0) mostRecentYear = yearsArr[yearsArr.length - 1];
+
+      const existing = await db.query(
+        'SELECT id FROM subtopic_yield WHERE subject = $1 AND topic = $2 AND subtopic = $3',
+        [row.subject, row.topic, row.subtopic]
+      );
+
+      if (existing.rows.length > 0) {
+        await db.query(
+          `UPDATE subtopic_yield SET pyq_count = $1, yield_category = $2,
+           years_appeared = $3, most_recent_year = $4 WHERE id = $5`,
+          [pyqCount, yieldCategory, JSON.stringify(yearsArr),
+           mostRecentYear, existing.rows[0].id]
+        );
+        updated++;
+      } else {
+        const syId = db.generateUUID();
+        await db.query(
+          `INSERT INTO subtopic_yield (id, subject, topic, subtopic, pyq_count, yield_category, years_appeared, most_recent_year)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [syId, row.subject, row.topic, row.subtopic, pyqCount,
+           yieldCategory, JSON.stringify(yearsArr), mostRecentYear]
+        );
+        inserted++;
+      }
+    }
+
+    res.json({
+      message: 'Yield classification recalculated',
+      updated,
+      inserted,
+      total: updated + inserted
+    });
+  } catch (error) {
+    console.error('Recalculate yield error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+function sorted(set) {
+  return Array.from(set).sort((a, b) => a - b);
+}
+
 module.exports = router;
