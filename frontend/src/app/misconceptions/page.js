@@ -5,54 +5,65 @@ import { useRouter } from 'next/navigation';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import Header from '../../components/Header';
 import api from '../../lib/api';
+import {
+  Brain,
+  RefreshCw,
+  Zap,
+  MessageCircleWarning,
+  Microscope,
+  Waves,
+  ShieldAlert,
+  HelpCircle,
+  BookOpen
+} from 'lucide-react';
 import styles from './misconceptions.module.css';
 
 const TYPE_META = {
   concept_missing: {
     label: 'Concept Missing',
-    icon: '🧠',
+    icon: Brain,
     desc: 'Core concept not understood or absent from knowledge',
     iconClass: styles.typeIconConceptMissing,
     fillClass: styles.fillConceptMissing
   },
   confusion_pair: {
     label: 'Confusion Pair',
-    icon: '🔄',
+    icon: RefreshCw,
     desc: 'Two similar concepts mixed up repeatedly',
     iconClass: styles.typeIconConfusionPair,
     fillClass: styles.fillConfusionPair
   },
   rule_exception_failure: {
     label: 'Rule Exception',
-    icon: '⚡',
+    icon: Zap,
     desc: 'Failed to recognize exception to a general rule',
     iconClass: styles.typeIconRuleException,
     fillClass: styles.fillRuleException
   },
   memory_slip: {
     label: 'Memory Slip',
-    icon: '💭',
+    icon: MessageCircleWarning,
     desc: 'Knew concept but recalled incorrectly under pressure',
     iconClass: styles.typeIconMemorySlip,
     fillClass: styles.fillMemorySlip
   },
   application_failure: {
     label: 'Application Failure',
-    icon: '🔬',
+    icon: Microscope,
     desc: 'Cannot apply known concept to clinical scenario',
     iconClass: styles.typeIconApplicationFailure,
     fillClass: styles.fillApplicationFailure
   },
   overgeneralization: {
     label: 'Overgeneralization',
-    icon: '🌊',
+    icon: Waves,
     desc: 'Applied a rule too broadly without considering specifics',
     iconClass: styles.typeIconOvergeneralization,
     fillClass: styles.fillOvergeneralization
   },
   trap_susceptibility: {
     label: 'Trap Susceptibility',
-    icon: '🪤',
+    icon: ShieldAlert,
     desc: 'Fell for exam-style distractor traps',
     iconClass: styles.typeIconTrapSusceptibility,
     fillClass: styles.fillTrapSusceptibility
@@ -159,11 +170,20 @@ function MisconceptionsContent() {
           {analytics.by_type?.length > 0 ? (
             <div className={styles.typeGrid}>
               {analytics.by_type.map((item) => {
-                const meta = TYPE_META[item.type] || { label: item.type, icon: '❓', desc: '', iconClass: '', fillClass: '' };
+                const meta = TYPE_META[item.type] || {
+                  label: item.type,
+                  icon: HelpCircle,
+                  desc: '',
+                  iconClass: '',
+                  fillClass: ''
+                };
+                const Icon = meta.icon;
                 return (
                   <div key={item.type} className={styles.typeCard}>
                     <div className={styles.typeHeader}>
-                      <div className={`${styles.typeIcon} ${meta.iconClass}`}>{meta.icon}</div>
+                      <div className={`${styles.typeIcon} ${meta.iconClass}`}>
+                        <Icon size={20} strokeWidth={2} />
+                      </div>
                       <div className={styles.typeCount}>{item.count}</div>
                     </div>
                     <div className={styles.typeName}>{meta.label}</div>
@@ -210,7 +230,9 @@ function MisconceptionsContent() {
               const subTotal = Object.values(types).reduce((s, v) => s + v, 0);
               return (
                 <div key={subject} className={styles.historyItem} style={{ cursor: 'pointer' }}>
-                  <div className={styles.historyIcon} style={{ background: 'rgba(156, 39, 176, 0.2)' }}>📚</div>
+                  <div className={styles.historyIcon} style={{ background: 'rgba(156, 39, 176, 0.2)' }}>
+                    <BookOpen size={18} strokeWidth={2} />
+                  </div>
                   <div className={styles.historyContent}>
                     <div className={styles.historyQuestion}>{subject}</div>
                     <div className={styles.historyMeta}>
@@ -359,10 +381,17 @@ function MisconceptionsContent() {
       <div className={styles.sectionTitle}>Recent Misconceptions</div>
       {history.length > 0 ? (
         history.map((item) => {
-          const meta = TYPE_META[item.misconception_type] || { label: item.misconception_type, icon: '❓', iconClass: '' };
+          const meta = TYPE_META[item.misconception_type] || {
+            label: item.misconception_type,
+            icon: HelpCircle,
+            iconClass: ''
+          };
+          const Icon = meta.icon;
           return (
             <div key={item.id} className={styles.historyItem}>
-              <div className={`${styles.historyIcon} ${meta.iconClass}`}>{meta.icon}</div>
+              <div className={`${styles.historyIcon} ${meta.iconClass}`}>
+                <Icon size={18} strokeWidth={2} />
+              </div>
               <div className={styles.historyContent}>
                 <div className={styles.historyQuestion}>{item.stem}</div>
                 <div className={styles.historyMeta}>

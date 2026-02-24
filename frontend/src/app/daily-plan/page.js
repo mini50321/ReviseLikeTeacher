@@ -5,14 +5,15 @@ import { useRouter } from 'next/navigation';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import Header from '../../components/Header';
 import api from '../../lib/api';
+import { RefreshCw, BookOpen, PencilLine, Stethoscope, Coffee, CircleCheckBig } from 'lucide-react';
 import styles from './daily-plan.module.css';
 
 const TYPE_CONFIG = {
-  revision: { icon: '🔄', label: 'Revision', color: '#ef5350' },
-  learning: { icon: '📖', label: 'Learning', color: '#42a5f5' },
-  practice: { icon: '✏️', label: 'Practice', color: '#ffb74d' },
-  diagnostic: { icon: '🔬', label: 'New Topic', color: '#ce93d8' },
-  break: { icon: '☕', label: 'Break', color: '#4dd0e1' }
+  revision: { icon: RefreshCw, label: 'Revision', color: '#ef5350' },
+  learning: { icon: BookOpen, label: 'Learning', color: '#42a5f5' },
+  practice: { icon: PencilLine, label: 'Practice', color: '#ffb74d' },
+  diagnostic: { icon: Stethoscope, label: 'New Topic', color: '#ce93d8' },
+  break: { icon: Coffee, label: 'Break', color: '#4dd0e1' }
 };
 
 function DailyPlanContent() {
@@ -238,7 +239,9 @@ function DailyPlanContent() {
                 </div>
                 <div className={`${styles.blockCard} ${isDone ? styles.blockCardCompleted : ''}`}>
                   <div className={styles.blockHeader}>
-                    <span className={styles.blockIcon}>{config.icon}</span>
+                    <span className={styles.blockIcon}>
+                      <config.icon size={18} strokeWidth={2} style={{ color: config.color }} />
+                    </span>
                     <span className={`${styles.blockType} ${typeClass}`}>{config.label}</span>
                     <span className={styles.blockDuration}>{block.duration_minutes} min</span>
                   </div>
@@ -260,7 +263,10 @@ function DailyPlanContent() {
                   </div>
                   <div className={styles.blockActions}>
                     {isDone ? (
-                      <span className={styles.completedBadge}>✓ Done</span>
+                      <span className={styles.completedBadge}>
+                        <CircleCheckBig size={14} strokeWidth={2.2} />
+                        Done
+                      </span>
                     ) : (
                       <>
                         {block.action_url && (

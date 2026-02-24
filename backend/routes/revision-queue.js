@@ -110,9 +110,9 @@ router.post('/:id/start-revision', authenticate, async (req, res) => {
 
     const sessionId = db.generateUUID();
     await db.query(
-      `INSERT INTO session (id, user_id, subject, session_type, status)
-       VALUES ($1, $2, $3, 'revision', 'active')`,
-      [sessionId, userId, topic.subject]
+      `INSERT INTO session (id, user_id, session_type, configuration, status)
+       VALUES ($1, $2, 'revision', $3, 'in_progress')`,
+      [sessionId, userId, JSON.stringify({ subject: topic.subject, topic: topic.topic, source: 'revision_queue' })]
     );
 
     const tlsId = db.generateUUID();
