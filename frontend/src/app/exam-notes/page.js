@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import ProtectedRoute from '../../components/ProtectedRoute';
+import Header from '../../components/Header';
 import styles from './exam-notes.module.css';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
@@ -118,21 +120,26 @@ export default function ExamNotesPage() {
 
   if (loading) {
     return (
-      <main className={styles.main}>
-        <div className={styles.container}>
-          <div className={styles.loading}>Loading exam trigger notes...</div>
-        </div>
-      </main>
+      <ProtectedRoute>
+        <Header />
+        <main className={styles.main}>
+          <div className={styles.container}>
+            <div className={styles.loading}>Loading exam trigger notes...</div>
+          </div>
+        </main>
+      </ProtectedRoute>
     );
   }
 
   if (selectedNote) {
     return (
-      <main className={styles.main}>
-        <div className={styles.container}>
-          <button className={styles.backButton} onClick={() => setSelectedNote(null)}>
-            &larr; Back to all notes
-          </button>
+      <ProtectedRoute>
+        <Header />
+        <main className={styles.main}>
+          <div className={styles.container}>
+            <button className={styles.backButton} onClick={() => setSelectedNote(null)}>
+              &larr; Back to all notes
+            </button>
 
           {error && <div className={styles.error}>{error}</div>}
 
@@ -225,32 +232,35 @@ export default function ExamNotesPage() {
             )}
           </div>
 
-          <div className={styles.card} style={{ animationDelay: '0.3s' }}>
-            <div className={styles.sectionTitle}>
-              <span className={styles.sectionIcon} style={{ background: 'rgba(239, 83, 80, 0.2)', color: '#ef9a9a' }}>
-                🎯
-              </span>
-              Last-Minute Recall Bullets
-            </div>
-            {(selectedNote.recall_bullets || []).map((bullet, idx) => (
-              <div key={idx} className={styles.recallBullet}>
-                <span className={styles.recallIcon}>★</span>
-                <span className={styles.recallText}>{bullet}</span>
+            <div className={styles.card} style={{ animationDelay: '0.3s' }}>
+              <div className={styles.sectionTitle}>
+                <span className={styles.sectionIcon} style={{ background: 'rgba(239, 83, 80, 0.2)', color: '#ef9a9a' }}>
+                  🎯
+                </span>
+                Last-Minute Recall Bullets
               </div>
-            ))}
+              {(selectedNote.recall_bullets || []).map((bullet, idx) => (
+                <div key={idx} className={styles.recallBullet}>
+                  <span className={styles.recallIcon}>★</span>
+                  <span className={styles.recallText}>{bullet}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </main>
+        </main>
+      </ProtectedRoute>
     );
   }
 
   return (
-    <main className={styles.main}>
-      <div className={styles.container}>
-        <h1 className={styles.title}>Exam Trigger Notes</h1>
-        <p className={styles.subtitle}>
-          AI-generated high-yield revision sheets for rapid recall before exams
-        </p>
+    <ProtectedRoute>
+      <Header />
+      <main className={styles.main}>
+        <div className={styles.container}>
+          <h1 className={styles.title}>Exam Trigger Notes</h1>
+          <p className={styles.subtitle}>
+            AI-generated high-yield revision sheets for rapid recall before exams
+          </p>
 
         {error && <div className={styles.error}>{error}</div>}
 
@@ -269,51 +279,52 @@ export default function ExamNotesPage() {
           </div>
         )}
 
-        {notes.length === 0 ? (
-          <div className={styles.card}>
-            <div className={styles.emptyState}>
-              <h3>No Exam Trigger Notes Yet</h3>
-              <p>
-                Complete a topic mastery session to auto-generate exam trigger notes,
-                or generate them manually from the dashboard.
-              </p>
-              <button
-                className={styles.generateButton}
-                onClick={() => router.push('/dashboard')}
-              >
-                Go to Dashboard
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className={styles.notesList}>
-            {notes.map(note => (
-              <div
-                key={note.id}
-                className={styles.notesListItem}
-                onClick={() => setSelectedNote(note)}
-              >
-                <div className={styles.notesListTopic}>{note.topic}</div>
-                <div className={styles.notesListSubject}>{note.subject}</div>
-                <div className={styles.notesListMeta}>
-                  <span className={styles.notesListBadge}>
-                    {(note.trigger_lines || []).length} triggers
-                  </span>
-                  <span className={styles.notesListBadge}>
-                    {(note.recall_bullets || []).length} bullets
-                  </span>
-                  {note.generated_at && (
-                    <span className={styles.notesListBadge}>
-                      {new Date(note.generated_at).toLocaleDateString()}
-                    </span>
-                  )}
-                </div>
+          {notes.length === 0 ? (
+            <div className={styles.card}>
+              <div className={styles.emptyState}>
+                <h3>No Exam Trigger Notes Yet</h3>
+                <p>
+                  Complete a topic mastery session to auto-generate exam trigger notes,
+                  or generate them manually from the dashboard.
+                </p>
+                <button
+                  className={styles.generateButton}
+                  onClick={() => router.push('/dashboard')}
+                >
+                  Go to Dashboard
+                </button>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </main>
+            </div>
+          ) : (
+            <div className={styles.notesList}>
+              {notes.map(note => (
+                <div
+                  key={note.id}
+                  className={styles.notesListItem}
+                  onClick={() => setSelectedNote(note)}
+                >
+                  <div className={styles.notesListTopic}>{note.topic}</div>
+                  <div className={styles.notesListSubject}>{note.subject}</div>
+                  <div className={styles.notesListMeta}>
+                    <span className={styles.notesListBadge}>
+                      {(note.trigger_lines || []).length} triggers
+                    </span>
+                    <span className={styles.notesListBadge}>
+                      {(note.recall_bullets || []).length} bullets
+                    </span>
+                    {note.generated_at && (
+                      <span className={styles.notesListBadge}>
+                        {new Date(note.generated_at).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </main>
+    </ProtectedRoute>
   );
 }
 
