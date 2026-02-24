@@ -125,6 +125,7 @@ export default function Header() {
     {
       label: 'Account',
       links: [
+        { href: '/onboarding', icon: <PenSquare {...iconProps} />, text: 'Onboarding' },
         { href: '/subscription', icon: <CreditCard {...iconProps} />, text: 'Plans' },
       ]
     }
