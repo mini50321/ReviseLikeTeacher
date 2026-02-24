@@ -707,7 +707,15 @@ router.post('/:id/mastery-check', authenticate, async (req, res) => {
       await db.query(
         `INSERT INTO topicmastery
          (id, user_id, topic, subject, mastery_level, mastery_status, competency_score, mcq_accuracy, core_coverage)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         ON CONFLICT (user_id, topic, subject)
+         DO UPDATE SET
+           mastery_level = excluded.mastery_level,
+           mastery_status = excluded.mastery_status,
+           competency_score = excluded.competency_score,
+           mcq_accuracy = excluded.mcq_accuracy,
+           core_coverage = excluded.core_coverage,
+           updated_at = CURRENT_TIMESTAMP`,
         [db.generateUUID(), userId, tls.topic, tls.subject,
          competencyScore, masteryStatus, competencyScore, mcqAccuracy, coreCoverage]
       );

@@ -76,7 +76,23 @@ function DiagnosticContent() {
     const question = questions[currentIndex];
     if (!question) return;
 
-    const isMCQ = ['mcq', 'true_false', 'assertion_reason'].includes(question.type);
+    // Keep submit logic consistent with the rendered UI: if options are missing/invalid,
+    // treat the question as text-answer even when type is MCQ-like.
+    let parsedOptions = null;
+    if (question.options) {
+      try {
+        parsedOptions = typeof question.options === 'string'
+          ? JSON.parse(question.options)
+          : question.options;
+        if (parsedOptions && !Object.values(parsedOptions).some(v => v)) {
+          parsedOptions = null;
+        }
+      } catch (e) {
+        parsedOptions = null;
+      }
+    }
+
+    const isMCQ = ['mcq', 'true_false', 'assertion_reason'].includes(question.type) && parsedOptions;
     const answer = isMCQ ? selectedOption : answerText;
 
     if (!answer || !answer.trim()) {

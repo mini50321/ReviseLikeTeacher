@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import Header from '../../components/Header';
 import api from '../../lib/api';
+import { FileText, Zap, CalendarPlus, Stethoscope, CircleCheckBig, TriangleAlert, ShieldAlert } from 'lucide-react';
 import styles from './topic-mastery.module.css';
 
 const PHASES = ['diagnostic', 'concept_fixing', 'laq', 'mcq_consolidation', 'mastery_check'];
@@ -46,6 +47,21 @@ function TopicMasteryContent() {
   const [revisionAdded, setRevisionAdded] = useState(false);
   const [completionSummary, setCompletionSummary] = useState(null);
   const startTimeRef = useRef(Date.now());
+
+  const getParsedOptions = (question) => {
+    if (!question?.options) return null;
+    try {
+      const parsed = typeof question.options === 'string'
+        ? JSON.parse(question.options)
+        : question.options;
+      if (parsed && Object.values(parsed).some(v => v)) {
+        return parsed;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  };
 
   useEffect(() => {
     if (tlsId) {
@@ -184,7 +200,8 @@ function TopicMasteryContent() {
 
   const submitConceptFixingAnswer = async () => {
     const question = questions[currentIndex];
-    const isMCQ = ['mcq', 'true_false', 'assertion_reason'].includes(question.type) && question.options;
+    const parsedOptions = getParsedOptions(question);
+    const isMCQ = ['mcq', 'true_false', 'assertion_reason'].includes(question.type) && parsedOptions;
     const answer = isMCQ ? selectedOption : answerText;
     if (!answer || !answer.trim()) { setError('Please provide an answer'); return; }
 
@@ -232,7 +249,13 @@ function TopicMasteryContent() {
 
   const submitMCQAnswer = async () => {
     const question = questions[currentIndex];
-    if (!selectedOption) { setError('Please select an option'); return; }
+    const parsedOptions = getParsedOptions(question);
+    const isMCQ = ['mcq', 'true_false', 'assertion_reason'].includes(question.type) && parsedOptions;
+    const answer = isMCQ ? selectedOption : answerText;
+    if (!answer || !answer.trim()) {
+      setError(isMCQ ? 'Please select an option' : 'Please provide an answer');
+      return;
+    }
 
     setSubmitting(true);
     setError('');
@@ -241,7 +264,7 @@ function TopicMasteryContent() {
     try {
       const response = await api.post(`/topic-mastery/${tlsId}/mcq/answer`, {
         question_id: question.id,
-        answer_text: selectedOption,
+        answer_text: answer.trim(),
         time_spent_seconds: timeSpent
       });
       setFeedback(response.data);
@@ -397,14 +420,7 @@ function TopicMasteryContent() {
   );
 
   const renderQuestion = (question, submitFn, phaseLabel) => {
-    let parsedOptions = null;
-    if (question.options) {
-      try {
-        parsedOptions = typeof question.options === 'string'
-          ? JSON.parse(question.options) : question.options;
-        if (parsedOptions && !Object.values(parsedOptions).some(v => v)) parsedOptions = null;
-      } catch (e) { parsedOptions = null; }
-    }
+    const parsedOptions = getParsedOptions(question);
     const isMCQ = ['mcq', 'true_false', 'assertion_reason'].includes(question.type) && parsedOptions;
 
     return (
@@ -690,7 +706,11 @@ function TopicMasteryContent() {
       : r.mastery_result === 'revision_required' ? 'yellow' : 'red';
 
     const statusLabels = { green: 'Competency Achieved', yellow: 'Revision Required', red: 'Relearn Core' };
-    const statusEmoji = { green: '🟢', yellow: '🟡', red: '🔴' };
+    const statusIcon = {
+      green: <CircleCheckBig size={24} strokeWidth={2.2} />,
+      yellow: <TriangleAlert size={24} strokeWidth={2.2} />,
+      red: <ShieldAlert size={24} strokeWidth={2.2} />
+    };
 
     const resultClass = r.mastery_result === 'mastered' ? styles.resultMastered
       : r.mastery_result === 'revision_required' ? styles.resultRevision
@@ -705,7 +725,7 @@ function TopicMasteryContent() {
         {renderPhaseTracker()}
 
         <div className={styles.statusBanner} data-status={topicStatus}>
-          <span className={styles.statusEmoji}>{statusEmoji[topicStatus]}</span>
+          <span className={styles.statusEmoji}>{statusIcon[topicStatus]}</span>
           <span className={styles.statusText}>{statusLabels[topicStatus]}</span>
         </div>
 
@@ -785,13 +805,15 @@ function TopicMasteryContent() {
 
           <div className={styles.optionsGrid}>
             <div className={styles.optionCard} onClick={completeSession}>
-              <div className={styles.optionIcon}>📝</div>
+              <div className={styles.optionIcon}><FileText size={32} strokeWidth={2.1} /></div>
               <div className={styles.optionLabel}>Generate Exam Notes</div>
               <div className={styles.optionDesc}>15 trigger lines + diff table + recall bullets</div>
             </div>
 
             <div className={`${styles.optionCard} ${rfLoading ? styles.optionDisabled : ''}`} onClick={!rfLoading ? startRapidFire : undefined}>
-              <div className={styles.optionIcon}>{rfLoading ? '⏳' : '⚡'}</div>
+              <div className={styles.optionIcon}>
+                {rfLoading ? <span>...</span> : <Zap size={32} strokeWidth={2.1} />}
+              </div>
               <div className={styles.optionLabel}>{rfLoading ? 'Generating...' : 'Rapid-Fire Recall'}</div>
               <div className={styles.optionDesc}>10 quick recall questions to test retention</div>
             </div>
@@ -800,7 +822,13 @@ function TopicMasteryContent() {
               className={`${styles.optionCard} ${revisionAdded ? styles.optionDone : ''}`}
               onClick={!revisionAdded && !addingRevision ? addToRevision : undefined}
             >
-              <div className={styles.optionIcon}>{revisionAdded ? '✅' : addingRevision ? '⏳' : '📅'}</div>
+              <div className={styles.optionIcon}>
+                {revisionAdded
+                  ? <CircleCheckBig size={32} strokeWidth={2.1} />
+                  : addingRevision
+                    ? <span>...</span>
+                    : <CalendarPlus size={32} strokeWidth={2.1} />}
+              </div>
               <div className={styles.optionLabel}>
                 {revisionAdded ? 'Added to Schedule' : addingRevision ? 'Adding...' : 'Add to Revision Queue'}
               </div>
@@ -810,7 +838,7 @@ function TopicMasteryContent() {
             </div>
 
             <div className={styles.optionCard} onClick={() => router.push('/diagnostic')}>
-              <div className={styles.optionIcon}>🔬</div>
+              <div className={styles.optionIcon}><Stethoscope size={32} strokeWidth={2.1} /></div>
               <div className={styles.optionLabel}>Diagnose Another Topic</div>
               <div className={styles.optionDesc}>Start a new diagnostic assessment</div>
             </div>

@@ -46,6 +46,19 @@ export default function OnboardingPage() {
     { value: 'weak', label: 'Weak — I need extra help and repetition' }
   ];
 
+  const stepMeta = [
+    { title: 'Target exam', description: 'Pick the exam you are preparing for.' },
+    { title: 'Exam timeline', description: 'Set your expected exam date.' },
+    { title: 'Score ambition', description: 'Choose the score band you want to target.' },
+    { title: 'Goal level', description: 'Define the outcome you are aiming for.' },
+    { title: 'Self assessment', description: 'Tell us your current learning comfort level.' },
+    { title: 'Subjects', description: 'Choose subjects to prioritize in your plan.' },
+    { title: 'Daily commitment', description: 'Set realistic daily study minutes.' },
+    { title: 'Weekly output', description: 'Set your weekly question practice goal.' }
+  ];
+
+  const currentStepMeta = stepMeta[step - 1];
+
   const handleSubjectToggle = (subject) => {
     setFormData(prev => ({
       ...prev,
@@ -123,7 +136,13 @@ export default function OnboardingPage() {
             </div>
 
             <div className={styles.card}>
-              <h1 className={styles.title}>Complete Your Profile</h1>
+              <div className={styles.cardHeader}>
+                <span className={styles.stepBadge}>Step {step} / 8</span>
+                <h1 className={styles.title}>Complete Your Profile</h1>
+                <p className={styles.stepDescription}>
+                  {currentStepMeta?.title} - {currentStepMeta?.description}
+                </p>
+              </div>
 
               {error && <div className={styles.error}>{error}</div>}
 
@@ -225,7 +244,12 @@ export default function OnboardingPage() {
 
               {step === 6 && (
                 <div className={styles.step}>
-                  <h2 className={styles.stepTitle}>Select Subjects</h2>
+                  <div className={styles.stepTitleRow}>
+                    <h2 className={styles.stepTitle}>Select Subjects</h2>
+                    <span className={styles.selectionCount}>
+                      {formData.selected_subjects.length} selected
+                    </span>
+                  </div>
                   <div className={styles.subjectGrid}>
                     {subjects.map(subject => (
                       <button
@@ -252,6 +276,10 @@ export default function OnboardingPage() {
                     min={15}
                     max={480}
                   />
+                  <div className={styles.rangeMeta}>
+                    <span>Min 15</span>
+                    <span>Max 480</span>
+                  </div>
                   <p className={styles.hint}>Recommended: 60-180 minutes per day</p>
                 </div>
               )}
@@ -267,6 +295,10 @@ export default function OnboardingPage() {
                     min={5}
                     max={500}
                   />
+                  <div className={styles.rangeMeta}>
+                    <span>Min 5</span>
+                    <span>Max 500</span>
+                  </div>
                   <p className={styles.hint}>Recommended: 50-100 questions per week</p>
                 </div>
               )}

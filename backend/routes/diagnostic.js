@@ -14,7 +14,9 @@ router.get('/topics', authenticate, async (req, res) => {
              SUM(CASE WHEN yield_category = 'core' THEN 1 ELSE 0 END) as core_count,
              SUM(CASE WHEN yield_category = 'frequent' THEN 1 ELSE 0 END) as frequent_count,
              SUM(CASE WHEN type = 'saq' THEN 1 ELSE 0 END) as saq_count
-      FROM question WHERE status = 'active'`;
+      FROM question
+      WHERE status = 'active'
+        AND type IN ('saq', 'mcq', 'case_based', 'true_false', 'assertion_reason')`;
     const params = [];
     let paramCount = 1;
 
@@ -98,7 +100,7 @@ router.post('/start', authenticate, requireDailyLimit('daily_diagnostic_limit'),
       const allQuestions = await db.query(
         `SELECT * FROM question
          WHERE subject = $1 AND topic = $2 AND status = 'active'
-           AND type IN ('saq', 'mcq', 'case_based')
+           AND type IN ('saq', 'mcq', 'case_based', 'true_false', 'assertion_reason')
          ORDER BY CASE type WHEN 'saq' THEN 1 WHEN 'case_based' THEN 2 ELSE 3 END,
                   RANDOM()
          LIMIT 4`,
@@ -126,7 +128,7 @@ router.post('/start', authenticate, requireDailyLimit('daily_diagnostic_limit'),
     const sessionId = db.generateUUID();
     await db.query(
       `INSERT INTO session (id, user_id, session_type, configuration, status)
-       VALUES ($1, $2, 'adaptive_mastery', $3, 'in_progress')`,
+       VALUES ($1, $2, 'practice', $3, 'in_progress')`,
       [sessionId, userId, JSON.stringify({ type: 'diagnostic', subject, topic, diagnostic_id: diagnosticId })]
     );
 
