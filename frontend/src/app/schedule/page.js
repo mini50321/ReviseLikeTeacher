@@ -21,6 +21,7 @@ function ScheduleContent() {
   const [generating, setGenerating] = useState(false);
   const [generatingPlan, setGeneratingPlan] = useState(false);
   const [hasProfile, setHasProfile] = useState(false);
+  const [studyPlanGate, setStudyPlanGate] = useState(null);
 
   useEffect(() => {
     loadAll();
@@ -403,9 +404,18 @@ function ScheduleContent() {
     try {
       setGeneratingPlan(true);
       setError('');
+      setStudyPlanGate(null);
       const res = await api.post('/subject-plan/generate');
       setStudyPlan(res.data);
     } catch (err) {
+      const responseData = err.response?.data;
+      if (err.response?.status === 403 && responseData?.upgrade_required) {
+        setStudyPlanGate({
+          reason: responseData.reason || 'Study plan requires Standard plan or higher.',
+          currentTier: responseData.current_tier || 'free'
+        });
+        return;
+      }
       setError(err.response?.data?.error || 'Failed to generate study plan');
     } finally {
       setGeneratingPlan(false);
@@ -418,6 +428,29 @@ function ScheduleContent() {
   };
 
   const renderStudyPlan = () => {
+    if (studyPlanGate && !studyPlan) {
+      return (
+        <div className={styles.emptyState}>
+          <p>{studyPlanGate.reason}</p>
+          <p>Current plan: {studyPlanGate.currentTier}</p>
+          <div className={styles.actions}>
+            <button
+              className={styles.button}
+              onClick={() => router.push('/subscription')}
+            >
+              Upgrade Plan
+            </button>
+            <button
+              className={styles.secondaryButton}
+              onClick={() => setStudyPlanGate(null)}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     if (!studyPlan) {
       return (
         <div className={styles.emptyState}>
