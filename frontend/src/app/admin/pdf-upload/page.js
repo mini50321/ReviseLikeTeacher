@@ -195,19 +195,20 @@ export default function PDFUploadPage() {
         <Header />
         <main className={styles.main}>
           <div className={styles.container}>
-            <div className={styles.header}>
-              <h1 className={styles.title}>PDF Upload & Extract</h1>
-              <div className={styles.actions}>
-                <label className={styles.uploadButton}>
-                  Upload PDF
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    onChange={handleFileUpload}
-                    style={{ display: 'none' }}
-                  />
-                </label>
+            <div className={styles.topBar}>
+              <div className={styles.titleGroup}>
+                <h1 className={styles.pageTitle}>PDF Upload & Extract</h1>
+                <p className={styles.pageSubtitle}>Upload source files, run AI extraction, and review generated questions in one workspace.</p>
               </div>
+              <label className={styles.uploadButton}>
+                Upload PDF
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={handleFileUpload}
+                  style={{ display: 'none' }}
+                />
+              </label>
             </div>
 
             {error && <div className={styles.error}>{error}</div>}
@@ -219,13 +220,13 @@ export default function PDFUploadPage() {
                 {extractionResult.importance_breakdown && (
                   <div className={styles.importanceBreakdown}>
                     <span className={styles.importanceChip} style={getImportanceStyle('high')}>
-                      🔴 High: {extractionResult.importance_breakdown.high || 0}
+                      High: {extractionResult.importance_breakdown.high || 0}
                     </span>
                     <span className={styles.importanceChip} style={getImportanceStyle('medium')}>
-                      🟡 Medium: {extractionResult.importance_breakdown.medium || 0}
+                      Medium: {extractionResult.importance_breakdown.medium || 0}
                     </span>
                     <span className={styles.importanceChip} style={getImportanceStyle('low')}>
-                      ⚪ Low: {extractionResult.importance_breakdown.low || 0}
+                      Low: {extractionResult.importance_breakdown.low || 0}
                     </span>
                   </div>
                 )}
@@ -233,8 +234,11 @@ export default function PDFUploadPage() {
             )}
 
             <div className={styles.content}>
-              <div className={styles.pdfList}>
-                <h2 className={styles.sectionTitle}>Uploaded PDFs</h2>
+              <aside className={styles.leftPanel}>
+                <div className={styles.panelHeader}>
+                  <h2 className={styles.sectionTitle}>Uploaded PDFs</h2>
+                  <span className={styles.pdfCount}>{pdfs.length}</span>
+                </div>
                 {loading ? (
                   <div className={styles.loading}>Loading...</div>
                 ) : pdfs.length === 0 ? (
@@ -272,21 +276,24 @@ export default function PDFUploadPage() {
                     ))}
                   </div>
                 )}
-              </div>
+              </aside>
 
-              <div className={styles.extractions}>
-                <div className={styles.extractionsHeader}>
-                  <h2 className={styles.sectionTitle}>
-                    {selectedPdf ? `Questions from: ${selectedPdf.file_name}` : 'Questions'}
-                  </h2>
+              <section className={styles.rightPanel}>
+                <div className={styles.workspaceHeader}>
+                  <div>
+                    <h2 className={styles.workspaceTitle}>{selectedPdf ? selectedPdf.file_name : 'Select a PDF to begin'}</h2>
+                    <p className={styles.workspaceSubTitle}>
+                      {selectedPdf ? 'Run extraction or add questions manually for this document.' : 'Choose one document from the left panel.'}
+                    </p>
+                  </div>
                   {selectedPdf && (
-                    <div className={styles.actions}>
+                    <div className={styles.workspaceActions}>
                       <button
                         className={styles.extractButton}
                         onClick={handleExtractQuestions}
                         disabled={extracting}
                       >
-                        {extracting ? 'Extracting with AI...' : '🤖 Extract Questions'}
+                        {extracting ? 'Extracting with AI...' : 'Extract Questions'}
                       </button>
                       <button
                         className={styles.addButton}
@@ -327,9 +334,7 @@ export default function PDFUploadPage() {
                               className={styles.importanceBadge}
                               style={getImportanceStyle(extraction.detected_importance)}
                             >
-                              {extraction.detected_importance === 'high' ? '🔴' :
-                               extraction.detected_importance === 'medium' ? '🟡' : '⚪'}
-                              {' '}{extraction.detected_importance || 'medium'}
+                              {extraction.detected_importance || 'medium'}
                             </span>
                             {extraction.frequency_count > 1 && (
                               <span className={styles.badge} style={{ background: 'rgba(139, 92, 246, 0.25)', border: '1px solid rgba(139, 92, 246, 0.5)' }}>
@@ -362,7 +367,7 @@ export default function PDFUploadPage() {
                     ))}
                   </div>
                 )}
-              </div>
+              </section>
             </div>
           </div>
         </main>
