@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import Header from '../../components/Header';
 import api from '../../lib/api';
+import { Zap, Table2, Target, Star } from 'lucide-react';
 import styles from './exam-notes.module.css';
 
 export default function ExamNotesPage() {
@@ -17,6 +18,7 @@ export default function ExamNotesPage() {
   const [error, setError] = useState('');
   const [subjectFilter, setSubjectFilter] = useState('');
   const [subjects, setSubjects] = useState([]);
+  const autoGenerateTriggeredRef = useRef(false);
 
   const paramSubject = searchParams.get('subject');
   const paramTopic = searchParams.get('topic');
@@ -45,7 +47,8 @@ export default function ExamNotesPage() {
   }, [fetchNotes]);
 
   useEffect(() => {
-    if (paramSubject && paramTopic && paramGenerate === 'true' && !generating) {
+    if (paramSubject && paramTopic && paramGenerate === 'true' && !generating && !autoGenerateTriggeredRef.current) {
+      autoGenerateTriggeredRef.current = true;
       handleGenerate(paramSubject, paramTopic, paramSessionId);
     } else if (paramSubject && paramTopic && notes.length > 0) {
       const match = notes.find(n => n.subject === paramSubject && n.topic === paramTopic);
@@ -65,6 +68,13 @@ export default function ExamNotesPage() {
       const data = res.data;
       setSelectedNote(data.notes);
       await fetchNotes();
+
+      // Prevent URL-driven auto-generation from retriggering on re-renders.
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('generate');
+      params.delete('session_id');
+      const nextQuery = params.toString();
+      router.replace(nextQuery ? `/exam-notes?${nextQuery}` : '/exam-notes');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to generate notes');
     } finally {
@@ -150,7 +160,7 @@ export default function ExamNotesPage() {
           <div className={styles.card} style={{ animationDelay: '0.1s' }}>
             <div className={styles.sectionTitle}>
               <span className={styles.sectionIcon} style={{ background: 'rgba(255, 152, 0, 0.2)', color: '#ffb74d' }}>
-                ⚡
+                <Zap size={16} strokeWidth={2.2} />
               </span>
               Exam Trigger Lines
             </div>
@@ -165,7 +175,7 @@ export default function ExamNotesPage() {
           <div className={styles.card} style={{ animationDelay: '0.2s' }}>
             <div className={styles.sectionTitle}>
               <span className={styles.sectionIcon} style={{ background: 'rgba(33, 150, 243, 0.2)', color: '#90caf9' }}>
-                📊
+                <Table2 size={16} strokeWidth={2.2} />
               </span>
               High-Yield Differentiation Table
             </div>
@@ -218,13 +228,15 @@ export default function ExamNotesPage() {
             <div className={styles.card} style={{ animationDelay: '0.3s' }}>
               <div className={styles.sectionTitle}>
                 <span className={styles.sectionIcon} style={{ background: 'rgba(239, 83, 80, 0.2)', color: '#ef9a9a' }}>
-                  🎯
+                  <Target size={16} strokeWidth={2.2} />
                 </span>
                 Last-Minute Recall Bullets
               </div>
               {(selectedNote.recall_bullets || []).map((bullet, idx) => (
                 <div key={idx} className={styles.recallBullet}>
-                  <span className={styles.recallIcon}>★</span>
+                  <span className={styles.recallIcon}>
+                    <Star size={13} strokeWidth={2.2} />
+                  </span>
                   <span className={styles.recallText}>{bullet}</span>
                 </div>
               ))}

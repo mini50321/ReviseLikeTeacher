@@ -5,6 +5,16 @@ import ProtectedRoute from '../../components/ProtectedRoute';
 import Header from '../../components/Header';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../lib/api';
+import {
+  Brain,
+  RefreshCw,
+  Zap,
+  MessageCircleWarning,
+  Microscope,
+  Waves,
+  ShieldAlert,
+  HelpCircle
+} from 'lucide-react';
 import styles from './distractor-lab.module.css';
 
 function DistractorLabContent() {
@@ -81,13 +91,13 @@ function DistractorLabContent() {
   };
 
   const ERROR_TYPE_META = {
-    concept_missing: { label: 'Concept Missing', color: '#ef5350', icon: '🧠' },
-    confusion_pair: { label: 'Confusion Pair', color: '#ff9800', icon: '🔄' },
-    rule_exception_failure: { label: 'Rule Exception', color: '#ab47bc', icon: '⚡' },
-    memory_slip: { label: 'Memory Slip', color: '#42a5f5', icon: '💭' },
-    application_failure: { label: 'Application Failure', color: '#26a69a', icon: '🔬' },
-    overgeneralization: { label: 'Overgeneralization', color: '#7e57c2', icon: '🌊' },
-    trap_susceptibility: { label: 'Trap Susceptibility', color: '#ec407a', icon: '🪤' }
+    concept_missing: { label: 'Concept Missing', color: '#ef5350', icon: Brain },
+    confusion_pair: { label: 'Confusion Pair', color: '#ff9800', icon: RefreshCw },
+    rule_exception_failure: { label: 'Rule Exception', color: '#ab47bc', icon: Zap },
+    memory_slip: { label: 'Memory Slip', color: '#42a5f5', icon: MessageCircleWarning },
+    application_failure: { label: 'Application Failure', color: '#26a69a', icon: Microscope },
+    overgeneralization: { label: 'Overgeneralization', color: '#7e57c2', icon: Waves },
+    trap_susceptibility: { label: 'Trap Susceptibility', color: '#ec407a', icon: ShieldAlert }
   };
 
   const renderStats = () => {
@@ -252,12 +262,15 @@ function DistractorLabContent() {
             <h3 className={styles.cardTitle}>Your Error Profile</h3>
             <div className={styles.errorTypeList}>
               {vulnerability.error_type_summary.map(et => {
-                const meta = ERROR_TYPE_META[et.type] || { label: et.type, color: '#9e9e9e', icon: '❓' };
+                const meta = ERROR_TYPE_META[et.type] || { label: et.type, color: '#9e9e9e', icon: HelpCircle };
+                const Icon = meta.icon;
                 const maxCount = Math.max(...vulnerability.error_type_summary.map(x => x.total));
                 return (
                   <div key={et.type} className={styles.errorTypeItem}>
                     <div className={styles.errorTypeHeader}>
-                      <span className={styles.errorTypeIcon}>{meta.icon}</span>
+                      <span className={styles.errorTypeIcon}>
+                        <Icon size={18} strokeWidth={2.1} />
+                      </span>
                       <span className={styles.errorTypeName}>{meta.label}</span>
                       <span className={styles.errorTypeCount} style={{ color: meta.color }}>{et.total}</span>
                     </div>
