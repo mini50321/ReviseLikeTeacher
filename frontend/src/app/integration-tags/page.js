@@ -58,7 +58,7 @@ function IntegrationTagsContent() {
     setLoading(true);
     try {
       if (!isAdmin) {
-        const subRes = await api.get('/subscription/info');
+        const subRes = await api.get('/subscription');
         setIsPremium(subRes.data.features.integration_tagging);
         if (!subRes.data.features.integration_tagging) {
           setLoading(false);

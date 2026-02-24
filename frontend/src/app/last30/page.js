@@ -23,7 +23,7 @@ function Last30Content() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const subRes = await api.get('/subscription/info');
+      const subRes = await api.get('/subscription');
       const hasPremium = subRes.data.features.last_30_days_mode;
       setIsPremium(hasPremium);
 
