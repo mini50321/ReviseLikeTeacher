@@ -57,6 +57,11 @@
   min-width: 200px;
 }
 
+.filterSelect option {
+  background: #1a1a2e;
+  color: #ffffff;
+}
+
 .filterSelect:focus {
   outline: none;
   border-color: #64b5f6;

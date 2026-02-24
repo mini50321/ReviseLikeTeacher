@@ -360,6 +360,11 @@
   color: #fff;
 }
 
+.filterSelect option {
+  background: #1a1a2e;
+  color: #ffffff;
+}
+
 .filterCount {
   font-size: 0.85rem;
   color: rgba(255, 255, 255, 0.4);

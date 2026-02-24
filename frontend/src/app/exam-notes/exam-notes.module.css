@@ -381,8 +381,8 @@
 }
 
 .filterSelect option {
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
+  background: #1a1a2e;
+  color: #ffffff;
 }
 
 @media (max-width: 768px) {

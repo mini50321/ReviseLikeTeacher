@@ -252,6 +252,11 @@
   min-width: 140px;
 }
 
+.filterSelect option {
+  background: #1a1a2e;
+  color: #ffffff;
+}
+
 .actionBar {
   display: flex;
   align-items: center;
@@ -614,6 +619,11 @@
   font-size: 0.85rem;
   background: rgba(255, 255, 255, 0.06);
   color: #fff;
+}
+
+.editSelect option {
+  background: #1a1a2e;
+  color: #ffffff;
 }
 
 .editActions {
