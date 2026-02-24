@@ -23,8 +23,13 @@ async function autoDetectIntegrations(questionIds) {
     correct_answer: q.correct_answer
   }));
 
-  const response = await axios.post(`${AI_SERVICE_URL}/detect-integration`, { questions });
-  const results = response.data.results || [];
+  let results = [];
+  try {
+    const response = await axios.post(`${AI_SERVICE_URL}/detect-integration`, { questions });
+    results = response.data.results || [];
+  } catch (error) {
+    return { tagged: 0, errors: [{ error: 'Integration AI service unavailable' }] };
+  }
 
   let tagged = 0;
   const errors = [];

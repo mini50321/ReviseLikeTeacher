@@ -36,8 +36,13 @@ async function runClusterDetection(subject, topic) {
     previous_year_tags: q.previous_year_tags || ''
   }));
 
-  const response = await axios.post(`${AI_SERVICE_URL}/detect-clusters`, { questions });
-  const clusters = response.data.clusters || [];
+  let clusters = [];
+  try {
+    const response = await axios.post(`${AI_SERVICE_URL}/detect-clusters`, { questions });
+    clusters = response.data.clusters || [];
+  } catch (error) {
+    clusters = buildFallbackConceptClusters(questions);
+  }
 
   let saved = 0;
   for (const cluster of clusters) {
@@ -89,6 +94,45 @@ async function runClusterDetection(subject, topic) {
   }
 
   return { clusters_found: clusters.length, clusters_saved: saved };
+}
+
+function buildFallbackConceptClusters(questions) {
+  const grouped = new Map();
+  for (const q of questions) {
+    const key = `${q.subject || ''}||${q.topic || ''}`;
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(q);
+  }
+
+  const clusters = [];
+  for (const [key, items] of grouped.entries()) {
+    if (items.length < 2) continue;
+    const [subject, topic] = key.split('||');
+    const subtopicCounts = {};
+    for (const item of items) {
+      const sub = item.subtopic || '';
+      subtopicCounts[sub] = (subtopicCounts[sub] || 0) + 1;
+    }
+    const topSubtopic = Object.entries(subtopicCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+    const uniqueSubtopics = Object.keys(subtopicCounts).filter(Boolean);
+    const clusterName = topic ? `${topic} Concept Cluster` : `${subject} Concept Cluster`;
+    const coreConcept = topic || subject || 'Related Concept';
+    const framingVariants = [];
+    if (uniqueSubtopics.length > 0) framingVariants.push(...uniqueSubtopics.slice(0, 5).map(s => `Subtopic focus: ${s}`));
+    if (framingVariants.length === 0) framingVariants.push('Similar subject-topic framing');
+    clusters.push({
+      cluster_name: clusterName,
+      core_concept: coreConcept,
+      question_ids: items.map(i => i.id),
+      framing_variants: framingVariants,
+      concept_summary: `${items.length} questions grouped by shared subject-topic pattern.`,
+      subject: subject || '',
+      topic: topic || '',
+      subtopic: topSubtopic || ''
+    });
+  }
+
+  return clusters;
 }
 
 async function getClusterStats() {

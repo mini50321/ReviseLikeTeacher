@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { AlertTriangle, AlertCircle, ClipboardList, User } from 'lucide-react';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import Header from '../../components/Header';
 import api from '../../lib/api';
@@ -25,7 +26,7 @@ function StudentProgressContent() {
   const fetchOverview = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/api/student-progress/overview');
+      const res = await api.get('/student-progress/overview');
       setOverview(res.data);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to load overview');
@@ -36,7 +37,7 @@ function StudentProgressContent() {
 
   const fetchAlerts = async () => {
     try {
-      const res = await api.get('/api/student-progress/alerts');
+      const res = await api.get('/student-progress/alerts');
       setAlerts(res.data);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to load alerts');
@@ -46,7 +47,7 @@ function StudentProgressContent() {
   const fetchStudents = async (search = '') => {
     try {
       const params = search ? `?search=${encodeURIComponent(search)}` : '';
-      const res = await api.get(`/api/student-progress/students${params}`);
+      const res = await api.get(`/student-progress/students${params}`);
       setStudents(res.data.students || []);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to load students');
@@ -56,7 +57,7 @@ function StudentProgressContent() {
   const fetchStudentDetail = async (userId) => {
     setDetailLoading(true);
     try {
-      const res = await api.get(`/api/student-progress/students/${userId}`);
+      const res = await api.get(`/student-progress/students/${userId}`);
       setStudentDetail(res.data);
       setSelectedStudent(userId);
     } catch (err) {
@@ -239,7 +240,7 @@ function StudentProgressContent() {
         <div className={styles.alertsContainer}>
           <div className={styles.alertCard}>
             <div className={styles.alertTitle}>
-              <span className={styles.alertIcon}>⚠️</span> Inactive Students
+              <span className={styles.alertIcon}><AlertTriangle size={18} strokeWidth={2} /></span> Inactive Students
             </div>
             <div className={styles.alertList}>
               {(alerts.inactive || []).map((s, i) => (
@@ -256,7 +257,7 @@ function StudentProgressContent() {
 
           <div className={styles.alertCard}>
             <div className={styles.alertTitle}>
-              <span className={styles.alertIcon}>🔴</span> Struggling Students
+              <span className={styles.alertIcon}><AlertCircle size={18} strokeWidth={2} /></span> Struggling Students
             </div>
             <div className={styles.alertList}>
               {(alerts.struggling || []).map((s, i) => (
@@ -271,7 +272,7 @@ function StudentProgressContent() {
 
           <div className={styles.alertCard}>
             <div className={styles.alertTitle}>
-              <span className={styles.alertIcon}>📋</span> Overdue Revisions
+              <span className={styles.alertIcon}><ClipboardList size={18} strokeWidth={2} /></span> Overdue Revisions
             </div>
             <div className={styles.alertList}>
               {(alerts.overdue_revisions || []).map((s, i) => (
@@ -286,7 +287,7 @@ function StudentProgressContent() {
 
           <div className={styles.alertCard}>
             <div className={styles.alertTitle}>
-              <span className={styles.alertIcon}>👤</span> Never Started
+              <span className={styles.alertIcon}><User size={18} strokeWidth={2} /></span> Never Started
             </div>
             <div className={styles.alertList}>
               {(alerts.never_started || []).map((s, i) => (

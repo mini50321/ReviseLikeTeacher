@@ -3,6 +3,11 @@ const { checkFeatureAccess, checkDailyLimit } = require('../services/subscriptio
 function requireFeature(featureName) {
   return async (req, res, next) => {
     try {
+      if (req.user?.role === 'admin') {
+        req.subscriptionTier = 'admin';
+        return next();
+      }
+
       const userId = req.user.userId;
       const result = await checkFeatureAccess(userId, featureName);
 
@@ -28,6 +33,12 @@ function requireFeature(featureName) {
 function requireDailyLimit(limitType) {
   return async (req, res, next) => {
     try {
+      if (req.user?.role === 'admin') {
+        req.subscriptionTier = 'admin';
+        req.dailyLimitInfo = { allowed: true, tier: 'admin', used: 0, limit: null, remaining: null };
+        return next();
+      }
+
       const userId = req.user.userId;
       const result = await checkDailyLimit(userId, limitType);
 

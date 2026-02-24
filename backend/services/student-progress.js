@@ -6,22 +6,22 @@ async function getStudentList(filters = {}) {
   let idx = 1;
 
   if (filters.search) {
-    whereClause += ` AND (u.email LIKE $${idx} OR up.full_name LIKE $${idx})`;
+    whereClause += ` AND u.email LIKE $${idx}`;
     params.push(`%${filters.search}%`);
     idx++;
   }
 
   const result = await db.query(
     `SELECT u.id, u.email, u.created_at as joined_at,
-       up.full_name, up.goal_tier, up.student_category, up.subscription_tier,
-       up.exam_date, up.daily_study_hours,
+      NULL as full_name, up.goal_tier, up.student_category, up.subscription_tier,
+      up.exam_date, ROUND(COALESCE(up.daily_study_minutes, 0) / 60.0, 1) as daily_study_hours,
        (SELECT COUNT(*) FROM attempt a WHERE a.user_id = u.id) as total_attempts,
-       (SELECT COUNT(*) FROM attempt a WHERE a.user_id = u.id AND a.is_correct = 1) as correct_attempts,
+      (SELECT COUNT(*) FROM attempt a WHERE a.user_id = u.id AND a.ai_score >= 70) as correct_attempts,
        (SELECT COUNT(DISTINCT subject || '|' || topic) FROM topicmastery tm WHERE tm.user_id = u.id AND tm.mastery_status = 'mastered') as mastered_topics,
        (SELECT COUNT(DISTINCT subject || '|' || topic) FROM topicmastery tm WHERE tm.user_id = u.id) as total_topics_touched,
        (SELECT COUNT(*) FROM diagnostic_assessment da WHERE da.user_id = u.id) as diagnostics_done,
        (SELECT COUNT(*) FROM topic_learning_session tls WHERE tls.user_id = u.id AND tls.current_phase = 'completed') as sessions_completed,
-       (SELECT MAX(a.created_at) FROM attempt a WHERE a.user_id = u.id) as last_activity
+      (SELECT MAX(a.submitted_at) FROM attempt a WHERE a.user_id = u.id) as last_activity
      FROM users u
      LEFT JOIN userprofile up ON up.user_id = u.id
      WHERE ${whereClause}
@@ -70,8 +70,8 @@ async function getStudentList(filters = {}) {
 async function getStudentDetail(userId) {
   const user = await db.query(
     `SELECT u.id, u.email, u.created_at as joined_at,
-       up.full_name, up.goal_tier, up.student_category, up.subscription_tier,
-       up.exam_date, up.daily_study_hours, up.target_subjects
+      NULL as full_name, up.goal_tier, up.student_category, up.subscription_tier,
+      up.exam_date, ROUND(COALESCE(up.daily_study_minutes, 0) / 60.0, 1) as daily_study_hours, up.selected_subjects as target_subjects
      FROM users u
      LEFT JOIN userprofile up ON up.user_id = u.id
      WHERE u.id = $1`,
@@ -97,20 +97,24 @@ async function getStudentDetail(userId) {
   const attemptStats = await db.query(
     `SELECT
        COUNT(*) as total,
-       SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END) as correct,
-       COUNT(DISTINCT subject) as subjects_practiced,
-       MIN(created_at) as first_attempt,
-       MAX(created_at) as last_attempt
-     FROM attempt WHERE user_id = $1`,
+      SUM(CASE WHEN ai_score >= 70 THEN 1 ELSE 0 END) as correct,
+       COUNT(DISTINCT q.subject) as subjects_practiced,
+      MIN(submitted_at) as first_attempt,
+      MAX(submitted_at) as last_attempt
+     FROM attempt a
+     LEFT JOIN question q ON q.id = a.question_id
+     WHERE a.user_id = $1`,
     [userId]
   );
 
   const subjectBreakdown = await db.query(
-    `SELECT subject,
+    `SELECT q.subject as subject,
        COUNT(*) as attempts,
-       SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END) as correct
-     FROM attempt WHERE user_id = $1
-     GROUP BY subject ORDER BY attempts DESC`,
+      SUM(CASE WHEN a.ai_score >= 70 THEN 1 ELSE 0 END) as correct
+     FROM attempt a
+     JOIN question q ON q.id = a.question_id
+     WHERE a.user_id = $1
+     GROUP BY q.subject ORDER BY attempts DESC`,
     [userId]
   );
 
@@ -123,8 +127,8 @@ async function getStudentDetail(userId) {
 
   const revisionResult = await db.query(
     `SELECT COUNT(*) as total,
-       SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
-       SUM(CASE WHEN status = 'pending' AND scheduled_date < date('now') THEN 1 ELSE 0 END) as overdue
+      SUM(CASE WHEN status = 'complete' THEN 1 ELSE 0 END) as completed,
+      SUM(CASE WHEN status = 'scheduled' AND date < date('now') THEN 1 ELSE 0 END) as overdue
      FROM revisionschedule WHERE user_id = $1`,
     [userId]
   );
@@ -201,12 +205,12 @@ async function getPlatformOverview() {
 
   const activeStudents = await db.query(
     `SELECT COUNT(DISTINCT user_id) as count FROM attempt
-     WHERE created_at > datetime('now', '-7 days')`
+     WHERE submitted_at > datetime('now', '-7 days')`
   );
 
   const totalAttempts = await db.query(
     `SELECT COUNT(*) as total,
-       SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END) as correct
+      SUM(CASE WHEN ai_score >= 70 THEN 1 ELSE 0 END) as correct
      FROM attempt`
   );
 
@@ -231,9 +235,9 @@ async function getPlatformOverview() {
   );
 
   const weeklyActivity = await db.query(
-    `SELECT date(created_at) as day, COUNT(*) as attempts, COUNT(DISTINCT user_id) as users
+    `SELECT date(submitted_at) as day, COUNT(*) as attempts, COUNT(DISTINCT user_id) as users
      FROM attempt
-     WHERE created_at > datetime('now', '-14 days')
+     WHERE submitted_at > datetime('now', '-14 days')
      GROUP BY day ORDER BY day`
   );
 
@@ -247,11 +251,12 @@ async function getPlatformOverview() {
   );
 
   const avgAccuracyBySubject = await db.query(
-    `SELECT subject,
+    `SELECT q.subject as subject,
        COUNT(*) as attempts,
-       ROUND(AVG(CASE WHEN is_correct = 1 THEN 100.0 ELSE 0 END), 1) as avg_accuracy
-     FROM attempt
-     GROUP BY subject
+      ROUND(AVG(a.ai_score), 1) as avg_accuracy
+     FROM attempt a
+     JOIN question q ON q.id = a.question_id
+     GROUP BY q.subject
      ORDER BY avg_accuracy ASC
      LIMIT 15`
   );
@@ -283,10 +288,9 @@ async function getPlatformOverview() {
 
 async function getAlerts() {
   const inactive = await db.query(
-    `SELECT u.id, u.email, up.full_name,
-       MAX(a.created_at) as last_activity
+    `SELECT u.id, u.email, NULL as full_name,
+      MAX(a.submitted_at) as last_activity
      FROM users u
-     LEFT JOIN userprofile up ON up.user_id = u.id
      LEFT JOIN attempt a ON a.user_id = u.id
      WHERE u.role = 'student'
      GROUP BY u.id
@@ -296,11 +300,10 @@ async function getAlerts() {
   );
 
   const struggling = await db.query(
-    `SELECT u.id, u.email, up.full_name,
+    `SELECT u.id, u.email, NULL as full_name,
        COUNT(a.id) as total_attempts,
-       ROUND(AVG(CASE WHEN a.is_correct = 1 THEN 100.0 ELSE 0 END), 1) as accuracy
+      ROUND(AVG(a.ai_score), 1) as accuracy
      FROM users u
-     LEFT JOIN userprofile up ON up.user_id = u.id
      JOIN attempt a ON a.user_id = u.id
      WHERE u.role = 'student'
      GROUP BY u.id
@@ -310,11 +313,10 @@ async function getAlerts() {
   );
 
   const overdueRevisions = await db.query(
-    `SELECT u.id, u.email, up.full_name, COUNT(rs.id) as overdue_count
+    `SELECT u.id, u.email, NULL as full_name, COUNT(rs.id) as overdue_count
      FROM users u
-     LEFT JOIN userprofile up ON up.user_id = u.id
      JOIN revisionschedule rs ON rs.user_id = u.id
-     WHERE u.role = 'student' AND rs.status = 'pending' AND rs.date < date('now')
+     WHERE u.role = 'student' AND rs.status = 'scheduled' AND rs.date < date('now')
      GROUP BY u.id
      HAVING overdue_count >= 3
      ORDER BY overdue_count DESC
@@ -322,9 +324,8 @@ async function getAlerts() {
   );
 
   const neverStarted = await db.query(
-    `SELECT u.id, u.email, up.full_name, u.created_at as joined_at
+    `SELECT u.id, u.email, NULL as full_name, u.created_at as joined_at
      FROM users u
-     LEFT JOIN userprofile up ON up.user_id = u.id
      LEFT JOIN attempt a ON a.user_id = u.id
      WHERE u.role = 'student' AND a.id IS NULL
        AND u.created_at < datetime('now', '-2 days')

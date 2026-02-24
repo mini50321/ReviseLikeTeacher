@@ -384,7 +384,10 @@
 }
 
 .alertIcon {
-  font-size: 1.2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .alertList {
