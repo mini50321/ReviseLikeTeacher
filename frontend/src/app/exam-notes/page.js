@@ -4,9 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import Header from '../../components/Header';
+import api from '../../lib/api';
 import styles from './exam-notes.module.css';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 export default function ExamNotesPage() {
   const router = useRouter();
@@ -26,26 +25,20 @@ export default function ExamNotesPage() {
 
   const fetchNotes = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) { router.push('/login'); return; }
-
-      let url = `${API_URL}/api/exam-trigger-notes`;
-      if (subjectFilter) url += `?subject=${encodeURIComponent(subjectFilter)}`;
-
-      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-      if (!res.ok) throw new Error('Failed to fetch notes');
-
-      const data = await res.json();
+      const res = await api.get('/exam-trigger-notes', {
+        params: subjectFilter ? { subject: subjectFilter } : undefined
+      });
+      const data = res.data;
       setNotes(data.notes || []);
 
       const uniqueSubjects = [...new Set((data.notes || []).map(n => n.subject))];
       setSubjects(uniqueSubjects);
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.error || 'Failed to fetch notes');
     } finally {
       setLoading(false);
     }
-  }, [router, subjectFilter]);
+  }, [subjectFilter]);
 
   useEffect(() => {
     fetchNotes();
@@ -64,18 +57,16 @@ export default function ExamNotesPage() {
     setGenerating(true);
     setError('');
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/api/exam-trigger-notes/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ subject, topic, topic_learning_session_id: sessionId || null })
+      const res = await api.post('/exam-trigger-notes/generate', {
+        subject,
+        topic,
+        topic_learning_session_id: sessionId || null
       });
-      if (!res.ok) throw new Error('Failed to generate notes');
-      const data = await res.json();
+      const data = res.data;
       setSelectedNote(data.notes);
       await fetchNotes();
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.error || 'Failed to generate notes');
     } finally {
       setGenerating(false);
     }
@@ -86,18 +77,15 @@ export default function ExamNotesPage() {
     setGenerating(true);
     setError('');
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/api/exam-trigger-notes/regenerate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ subject: selectedNote.subject, topic: selectedNote.topic })
+      const res = await api.post('/exam-trigger-notes/regenerate', {
+        subject: selectedNote.subject,
+        topic: selectedNote.topic
       });
-      if (!res.ok) throw new Error('Failed to regenerate notes');
-      const data = await res.json();
+      const data = res.data;
       setSelectedNote(data.notes);
       await fetchNotes();
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.error || 'Failed to regenerate notes');
     } finally {
       setGenerating(false);
     }
@@ -105,16 +93,11 @@ export default function ExamNotesPage() {
 
   const handleDelete = async (noteId) => {
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/api/exam-trigger-notes/${noteId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error('Failed to delete notes');
+      await api.delete(`/exam-trigger-notes/${noteId}`);
       setSelectedNote(null);
       await fetchNotes();
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.error || 'Failed to delete notes');
     }
   };
 
