@@ -233,11 +233,14 @@ async function extractQuestionsFromPDF(pdfBuffer, filename = 'document.pdf') {
       });
 
       return response.data;
-    }, { maxRetries: 2, initialDelay: 5000, label: 'PDF extraction' });
+    }, { maxRetries: 4, initialDelay: 10000, label: 'PDF extraction' });
 
     return result;
   } catch (error) {
     console.error('PDF extraction error:', error.message || error);
+    if (error.response?.status === 503) {
+      throw new Error('AI service is waking up on Render. Please retry in 30-90 seconds.');
+    }
     throw new Error(`PDF extraction failed: ${error.message || 'Unknown error'}`);
   }
 }

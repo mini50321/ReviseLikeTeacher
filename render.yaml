@@ -1,5 +1,17 @@
 services:
   - type: web
+    name: reviseliketeacher-ai-service
+    env: python
+    buildCommand: cd ai-service && pip install --upgrade pip && pip install --upgrade setuptools wheel build && pip install -r requirements.txt
+    startCommand: cd ai-service && python main.py
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: NODE_ENV
+        value: production
+    healthCheckPath: /health
+
+  - type: web
     name: reviseliketeacher-backend
     env: node
     buildCommand: cd backend && npm install
@@ -11,6 +23,8 @@ services:
         value: 10000
       - key: JWT_SECRET
         generateValue: true
+      - key: AI_SERVICE_URL
+        value: https://reviseliketeacher-ai-service.onrender.com
     healthCheckPath: /health
 
   - type: web
