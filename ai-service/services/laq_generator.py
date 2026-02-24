@@ -2,10 +2,13 @@ import os
 import json
 from openai import AsyncOpenAI
 
-client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+api_key = os.getenv("OPENAI_API_KEY")
+client = AsyncOpenAI(api_key=api_key) if api_key else None
 
 
 async def generate_laq_vignette(subject: str, topic: str, high_yield_concepts: list, pyq_traps: list = None, difficulty: str = "medium"):
+    if client is None:
+        raise RuntimeError("OPENAI_API_KEY not configured")
     trap_context = ""
     if pyq_traps and len(pyq_traps) > 0:
         trap_context = f"\nDistractor traps observed in PYQs for this topic:\n{json.dumps(pyq_traps[:10])}"

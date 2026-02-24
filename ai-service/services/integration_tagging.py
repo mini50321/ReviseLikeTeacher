@@ -2,10 +2,19 @@ import os
 import json
 from openai import AsyncOpenAI
 
-client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+api_key = os.getenv("OPENAI_API_KEY")
+client = AsyncOpenAI(api_key=api_key) if api_key else None
 
 async def detect_integration_tags(questions: list) -> list:
     results = []
+    if client is None:
+        for q in questions:
+            results.append({
+                "question_id": q.get("id"),
+                "tags": [],
+                "error": "OPENAI_API_KEY not configured"
+            })
+        return results
 
     for q in questions:
         try:

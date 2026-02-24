@@ -2,6 +2,7 @@ import os
 import json
 import tempfile
 import asyncio
+import re
 from typing import Dict, Any, List
 from services.transcription import get_openai_client
 
@@ -32,6 +33,10 @@ def extract_text_from_pdf(pdf_bytes: bytes) -> str:
 
 
 async def parse_questions_from_text(text: str, filename: str = "") -> List[Dict[str, Any]]:
+    structured_questions = parse_structured_question_blocks(text, filename)
+    if len(text) > 120000 and structured_questions:
+        return structured_questions
+
     client = get_openai_client()
 
     max_chars = 12000
@@ -136,7 +141,109 @@ Return ONLY valid JSON array. No extra text."""
         except json.JSONDecodeError:
             print(f"Failed to parse JSON from chunk {i + 1}")
 
-    return all_questions
+    if all_questions:
+        return all_questions
+    return structured_questions
+
+
+def parse_structured_question_blocks(text: str, filename: str = "") -> List[Dict[str, Any]]:
+    header_subject = None
+    header_match = re.search(r"\(([A-Za-z\s]+QUESTIONS?)\)\s*DONE BY", text, re.IGNORECASE)
+    if header_match:
+        header_subject = header_match.group(1).strip().title()
+
+    block_pattern = re.compile(r"(?ms)^\s*(\d+)\)\s*\(([^)]+)\)\s*(.+?)(?=^\s*\d+\)\s*\(|\Z)")
+    option_pattern = re.compile(r"(?ms)^\s*([A-E])\.\s*(.+?)(?=^\s*[A-E]\.\s|^\s*PREFERRED RESPONSE|\Z)")
+    pref_pattern = re.compile(r"PREFERRED RESPONSE\s*▼\s*([1-5A-E])", re.IGNORECASE)
+
+    questions: List[Dict[str, Any]] = []
+    for match in block_pattern.finditer(text):
+        code = (match.group(2) or "").strip()
+        block = (match.group(3) or "").strip()
+        if not block:
+            continue
+
+        options = {}
+        first_option_start = None
+        option_matches = list(option_pattern.finditer(block))
+        for idx, opt_match in enumerate(option_matches):
+            if idx == 0:
+                first_option_start = opt_match.start()
+            letter = opt_match.group(1).strip().upper()
+            value = normalize_ws(opt_match.group(2))
+            options[letter] = value
+
+        if first_option_start is not None:
+            stem_text = block[:first_option_start].strip()
+        else:
+            split_pref = pref_pattern.search(block)
+            stem_text = block[:split_pref.start()].strip() if split_pref else block
+        stem_text = normalize_ws(stem_text)
+
+        pref_match = pref_pattern.search(block)
+        correct_answer = None
+        if pref_match:
+            raw = pref_match.group(1).strip().upper()
+            if raw.isdigit():
+                idx = int(raw) - 1
+                if 0 <= idx < 5:
+                    correct_answer = ["A", "B", "C", "D", "E"][idx]
+            elif raw in ["A", "B", "C", "D", "E"]:
+                correct_answer = raw
+
+        ideal_answer = None
+        if pref_match:
+            explanation = block[pref_match.end():].strip()
+            explanation = normalize_ws(explanation)
+            if explanation:
+                ideal_answer = explanation
+
+        q_type = "mcq" if len(options) >= 2 else "saq"
+        subject = infer_subject_from_stem(stem_text, header_subject, filename)
+        topic = "General"
+
+        question = {
+            "stem": stem_text,
+            "type": q_type,
+            "options": options if q_type == "mcq" else None,
+            "correct_answer": correct_answer if q_type == "mcq" else None,
+            "subject": subject,
+            "topic": topic,
+            "subtopic": None,
+            "difficulty": "medium",
+            "exam_tags": [code] if code else [],
+            "key_points": [],
+            "ideal_answer": ideal_answer,
+            "cognitive_focus": "conceptual",
+            "distractor_analysis": None,
+            "concept_tags": [],
+            "trap_pattern": None
+        }
+        if question["stem"]:
+            questions.append(question)
+
+    return questions
+
+
+def normalize_ws(value: str) -> str:
+    return re.sub(r"\s+", " ", (value or "")).strip()
+
+
+def infer_subject_from_stem(stem: str, header_subject: str, filename: str) -> str:
+    if header_subject:
+        if "HAND" in header_subject.upper():
+            return "Orthopedics"
+        return header_subject
+
+    upper_name = (filename or "").upper()
+    if "OB" in upper_name:
+        return "Orthopedics"
+
+    stem_upper = (stem or "").upper()
+    if "WRIST" in stem_upper or "FINGER" in stem_upper or "SCAPHOID" in stem_upper:
+        return "Orthopedics"
+
+    return "General Medicine"
 
 
 def classify_yield(pyq_count: int) -> str:
@@ -157,8 +264,11 @@ def analyze_importance(questions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     subtopic_years = {}
 
     for q in questions:
-        topic_key = f"{q.get('subject', '').lower()}|{q.get('topic', '').lower()}"
-        subtopic_key = f"{q.get('subject', '').lower()}|{q.get('topic', '').lower()}|{q.get('subtopic', '').lower()}"
+        subject_key = str(q.get('subject') or '').lower()
+        topic_key_part = str(q.get('topic') or '').lower()
+        subtopic_key_part = str(q.get('subtopic') or '').lower()
+        topic_key = f"{subject_key}|{topic_key_part}"
+        subtopic_key = f"{subject_key}|{topic_key_part}|{subtopic_key_part}"
 
         topic_frequency[topic_key] = topic_frequency.get(topic_key, 0) + 1
         subtopic_frequency[subtopic_key] = subtopic_frequency.get(subtopic_key, 0) + 1
@@ -179,8 +289,11 @@ def analyze_importance(questions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     current_year = 2026
 
     for q in questions:
-        topic_key = f"{q.get('subject', '').lower()}|{q.get('topic', '').lower()}"
-        subtopic_key = f"{q.get('subject', '').lower()}|{q.get('topic', '').lower()}|{q.get('subtopic', '').lower()}"
+        subject_key = str(q.get('subject') or '').lower()
+        topic_key_part = str(q.get('topic') or '').lower()
+        subtopic_key_part = str(q.get('subtopic') or '').lower()
+        topic_key = f"{subject_key}|{topic_key_part}"
+        subtopic_key = f"{subject_key}|{topic_key_part}|{subtopic_key_part}"
 
         topic_freq = topic_frequency.get(topic_key, 1)
         subtopic_freq = subtopic_frequency.get(subtopic_key, 1)

@@ -227,7 +227,7 @@ async function extractQuestionsFromPDF(pdfBuffer, filename = 'document.pdf') {
 
       const response = await axios.post(`${AI_SERVICE_URL}/extract-pdf`, formData, {
         headers: { ...formData.getHeaders() },
-        timeout: 300000,
+        timeout: 900000,
         maxContentLength: Infinity,
         maxBodyLength: Infinity
       });

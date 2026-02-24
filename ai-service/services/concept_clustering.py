@@ -2,10 +2,13 @@ import os
 import json
 from openai import AsyncOpenAI
 
-client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+api_key = os.getenv("OPENAI_API_KEY")
+client = AsyncOpenAI(api_key=api_key) if api_key else None
 
 async def detect_concept_clusters(questions: list) -> list:
     if not questions:
+        return []
+    if client is None:
         return []
 
     questions_text = ""
