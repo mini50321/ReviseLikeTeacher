@@ -15,19 +15,31 @@ except ImportError:
 def extract_text_from_pdf(pdf_bytes: bytes) -> str:
     if pdfplumber is None:
         raise ImportError("pdfplumber is not installed")
+    max_chars = int(os.getenv("PDF_MAX_TEXT_CHARS", "180000"))
+    max_pages = int(os.getenv("PDF_MAX_PAGES", "250"))
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
         tmp.write(pdf_bytes)
         tmp_path = tmp.name
 
     try:
-        full_text = ""
+        parts = []
+        total_chars = 0
         with pdfplumber.open(tmp_path) as pdf:
             for i, page in enumerate(pdf.pages):
+                if i >= max_pages or total_chars >= max_chars:
+                    break
                 page_text = page.extract_text()
                 if page_text:
-                    full_text += f"\n--- Page {i + 1} ---\n{page_text}"
-        return full_text.strip()
+                    chunk = f"\n--- Page {i + 1} ---\n{page_text}"
+                    remaining = max_chars - total_chars
+                    if remaining <= 0:
+                        break
+                    if len(chunk) > remaining:
+                        chunk = chunk[:remaining]
+                    parts.append(chunk)
+                    total_chars += len(chunk)
+        return "".join(parts).strip()
     finally:
         os.unlink(tmp_path)
 

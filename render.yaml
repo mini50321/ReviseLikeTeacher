@@ -9,6 +9,10 @@ services:
         sync: false
       - key: NODE_ENV
         value: production
+      - key: PDF_MAX_TEXT_CHARS
+        value: 180000
+      - key: PDF_MAX_PAGES
+        value: 250
     healthCheckPath: /health
 
   - type: web

@@ -6,19 +6,6 @@ from typing import Optional
 import os
 from dotenv import load_dotenv
 
-from services.transcription import transcribe_audio
-from services.evaluation import evaluate_answer
-from services.tts import generate_speech
-from services.pdf_extraction import extract_questions_from_pdf
-from services.exam_trigger_notes import generate_exam_trigger_notes
-from services.teaching_units import generate_teaching_unit
-from services.distractor_intelligence import enrich_distractor_data
-from services.rapid_fire import generate_rapid_fire_questions
-from services.integration_tagging import detect_integration_tags
-from services.concept_clustering import detect_concept_clusters
-from services.mcq_to_saq import convert_mcqs_to_saqs
-from services.laq_generator import generate_laq_vignette, generate_laq_batch
-
 env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
 load_dotenv(dotenv_path=env_path)
 load_dotenv()
@@ -47,6 +34,7 @@ async def transcribe(
     language: str = Form(...)
 ):
     try:
+        from services.transcription import transcribe_audio
         if language not in ["english", "hindi", "hinglish"]:
             raise HTTPException(status_code=400, detail="Language must be english, hindi, or hinglish")
         
@@ -73,6 +61,7 @@ async def transcribe(
 @app.post("/evaluate")
 async def evaluate(request: dict):
     try:
+        from services.evaluation import evaluate_answer
         question = request.get("question")
         student_answer = request.get("student_answer")
         current_mastery = request.get("current_mastery", 0)
@@ -98,6 +87,7 @@ async def evaluate(request: dict):
 @app.post("/tts")
 async def text_to_speech(request: dict):
     try:
+        from services.tts import generate_speech
         text = request.get("text")
         voice = request.get("voice", "nova")
         speed = request.get("speed", 1.0)
@@ -134,6 +124,7 @@ async def extract_pdf(
     filename: str = Form("")
 ):
     try:
+        from services.pdf_extraction import extract_questions_from_pdf
         pdf_content = await file.read()
 
         if len(pdf_content) == 0:
@@ -156,6 +147,7 @@ async def extract_pdf(
 @app.post("/generate-notes")
 async def generate_notes(request: dict):
     try:
+        from services.exam_trigger_notes import generate_exam_trigger_notes
         subject = request.get("subject")
         topic = request.get("topic")
 
@@ -183,6 +175,7 @@ async def generate_notes(request: dict):
 @app.post("/generate-rapid-fire")
 async def rapid_fire_endpoint(request: dict):
     try:
+        from services.rapid_fire import generate_rapid_fire_questions
         subject = request.get("subject")
         topic = request.get("topic")
         weak_subtopics = request.get("weak_subtopics")
@@ -212,6 +205,7 @@ async def rapid_fire_endpoint(request: dict):
 @app.post("/enrich-distractors")
 async def enrich_distractors_endpoint(request: dict):
     try:
+        from services.distractor_intelligence import enrich_distractor_data
         questions = request.get("questions", [])
 
         if not questions:
@@ -234,6 +228,7 @@ async def enrich_distractors_endpoint(request: dict):
 @app.post("/generate-teaching-unit")
 async def generate_teaching_unit_endpoint(request: dict):
     try:
+        from services.teaching_units import generate_teaching_unit
         subject = request.get("subject")
         topic = request.get("topic")
 
@@ -261,6 +256,7 @@ async def generate_teaching_unit_endpoint(request: dict):
 @app.post("/detect-clusters")
 async def detect_clusters_endpoint(request: dict):
     try:
+        from services.concept_clustering import detect_concept_clusters
         questions = request.get("questions", [])
 
         if not questions:
@@ -283,6 +279,7 @@ async def detect_clusters_endpoint(request: dict):
 @app.post("/detect-integration")
 async def detect_integration_endpoint(request: dict):
     try:
+        from services.integration_tagging import detect_integration_tags
         questions = request.get("questions", [])
 
         if not questions:
@@ -305,6 +302,7 @@ async def detect_integration_endpoint(request: dict):
 @app.post("/convert-mcq-to-saq")
 async def convert_mcq_to_saq_endpoint(request: dict):
     try:
+        from services.mcq_to_saq import convert_mcqs_to_saqs
         questions = request.get("questions", [])
 
         if not questions:
@@ -327,6 +325,7 @@ async def convert_mcq_to_saq_endpoint(request: dict):
 @app.post("/generate-laq")
 async def generate_laq_endpoint(request: dict):
     try:
+        from services.laq_generator import generate_laq_vignette
         subject = request.get("subject")
         topic = request.get("topic")
 
@@ -357,6 +356,7 @@ async def generate_laq_endpoint(request: dict):
 @app.post("/generate-laq-batch")
 async def generate_laq_batch_endpoint(request: dict):
     try:
+        from services.laq_generator import generate_laq_batch
         items = request.get("items", [])
 
         if not items:
