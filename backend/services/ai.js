@@ -245,6 +245,64 @@ async function extractQuestionsFromPDF(pdfBuffer, filename = 'document.pdf') {
   }
 }
 
+async function generateSaqAnchors({ subject, topic, count = 4, corePoints = [], pyqExamples = [] }) {
+  await ensureAIServiceReady();
+
+  try {
+    const result = await retryRequest(async () => {
+      const response = await axios.post(`${AI_SERVICE_URL}/generate-saq-anchors`, {
+        subject,
+        topic,
+        count,
+        core_points: corePoints,
+        pyq_examples: pyqExamples
+      }, {
+        timeout: 60000
+      });
+
+      if (!response.data || !Array.isArray(response.data.questions)) {
+        throw new Error('Invalid SAQ anchor generation response');
+      }
+
+      return response.data;
+    }, { maxRetries: 2, initialDelay: 3000, label: 'SAQ anchor generation' });
+
+    return result;
+  } catch (error) {
+    console.error('SAQ anchor generation error:', error.message || error);
+    return { generated: false, questions: [] };
+  }
+}
+
+async function generateMcqItems({ subject, topic, count = 4, corePoints = [], pyqExamples = [] }) {
+  await ensureAIServiceReady();
+
+  try {
+    const result = await retryRequest(async () => {
+      const response = await axios.post(`${AI_SERVICE_URL}/generate-mcq-items`, {
+        subject,
+        topic,
+        count,
+        core_points: corePoints,
+        pyq_examples: pyqExamples
+      }, {
+        timeout: 60000
+      });
+
+      if (!response.data || !Array.isArray(response.data.questions)) {
+        throw new Error('Invalid MCQ generation response');
+      }
+
+      return response.data;
+    }, { maxRetries: 2, initialDelay: 3000, label: 'MCQ generation' });
+
+    return result;
+  } catch (error) {
+    console.error('MCQ generation error:', error.message || error);
+    return { generated: false, questions: [] };
+  }
+}
+
 function startKeepAlive() {
   if (process.env.NODE_ENV !== 'production') return;
 
@@ -267,5 +325,7 @@ module.exports = {
   transcribeVoice,
   textToSpeech,
   extractQuestionsFromPDF,
+  generateSaqAnchors,
+  generateMcqItems,
   startKeepAlive
 };

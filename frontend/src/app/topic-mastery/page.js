@@ -13,7 +13,7 @@ const PHASE_LABELS = {
   diagnostic: 'Diagnostic',
   concept_fixing: 'Concept Fix',
   laq: 'LAQ',
-  mcq_consolidation: 'MCQ',
+  mcq_consolidation: 'Mixed',
   mastery_check: 'Mastery'
 };
 
@@ -30,6 +30,15 @@ function TopicMasteryContent() {
   const [selectedOption, setSelectedOption] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const [conceptState, setConceptState] = useState({
+    current: 1,
+    total: 1,
+    retry: 0,
+    phaseComplete: false,
+    nextAction: null,
+    nextQuestion: null,
+    followUp: null
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [masteryResults, setMasteryResults] = useState(null);
@@ -116,12 +125,21 @@ function TopicMasteryContent() {
       const data = response.data;
       if (data.adaptive) setAdaptiveInfo(data.adaptive);
       if (data.questions.length === 0) {
-        startLAQ();
+        startMCQ();
         return;
       }
       setQuestions(data.questions);
       setCurrentIndex(0);
       setFeedback(null);
+      setConceptState({
+        current: data.current_anchor_index || 1,
+        total: data.total_questions || data.questions.length || 1,
+        retry: 0,
+        phaseComplete: false,
+        nextAction: null,
+        nextQuestion: null,
+        followUp: null
+      });
       setAnswerText('');
       setSelectedOption('');
       setPhase('concept_fixing');
@@ -217,6 +235,16 @@ function TopicMasteryContent() {
         time_spent_seconds: timeSpent
       });
       setFeedback(response.data);
+      setConceptState(prev => ({
+        ...prev,
+        current: response.data.current_anchor_index || prev.current,
+        total: response.data.total_anchors || prev.total,
+        retry: response.data.retry_count || 0,
+        phaseComplete: !!response.data.phase_complete,
+        nextAction: response.data.next_action || null,
+        nextQuestion: response.data.next_question || null,
+        followUp: response.data.teaching_follow_up || null
+      }));
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to submit answer');
     } finally {
@@ -279,6 +307,28 @@ function TopicMasteryContent() {
   };
 
   const nextQuestion = () => {
+    if (phase === 'concept_fixing') {
+      if (conceptState.phaseComplete) {
+        startMCQ();
+        return;
+      }
+      if (conceptState.nextQuestion) {
+        setQuestions([conceptState.nextQuestion]);
+      }
+      setCurrentIndex(0);
+      setAnswerText('');
+      setSelectedOption('');
+      setFeedback(null);
+      setError('');
+      setConceptState(prev => ({
+        ...prev,
+        nextQuestion: null,
+        followUp: null
+      }));
+      startTimeRef.current = Date.now();
+      return;
+    }
+
     if (currentIndex < questions.length - 1) {
       setCurrentIndex(prev => prev + 1);
       setAnswerText('');
@@ -287,9 +337,7 @@ function TopicMasteryContent() {
       setError('');
       startTimeRef.current = Date.now();
     } else {
-      if (phase === 'concept_fixing') {
-        startLAQ();
-      } else if (phase === 'laq') {
+      if (phase === 'laq') {
         startMCQ();
       } else if (phase === 'mcq_consolidation') {
         runMasteryCheck();
@@ -308,7 +356,7 @@ function TopicMasteryContent() {
         router.push('/dashboard');
       }
     } catch (err) {
-      router.push('/dashboard');
+      setError(err.response?.data?.error || 'Competency threshold not achieved yet.');
     }
   };
 
@@ -485,6 +533,12 @@ function TopicMasteryContent() {
             {feedback.teacher_response && (
               <div className={styles.feedbackTeacher}>{feedback.teacher_response}</div>
             )}
+            {phase === 'concept_fixing' && conceptState.followUp && (
+              <div className={styles.feedbackText}>
+                {conceptState.followUp.hint}
+                {conceptState.followUp.subquestion ? ` ${conceptState.followUp.subquestion}` : ''}
+              </div>
+            )}
           </div>
         )}
 
@@ -501,7 +555,12 @@ function TopicMasteryContent() {
             <button className={styles.primaryButton} onClick={nextQuestion}>
               {currentIndex < questions.length - 1
                 ? 'Next Question'
-                : phase === 'concept_fixing' ? 'Continue to LAQ'
+                : phase === 'concept_fixing'
+                  ? (conceptState.phaseComplete
+                    ? 'Continue to Mixed Practice'
+                    : conceptState.nextAction === 'retry_same_anchor'
+                      ? 'Try This SAQ Again'
+                      : 'Next SAQ')
                 : phase === 'laq' ? 'Continue to MCQ'
                 : 'Check Mastery'}
             </button>
@@ -542,7 +601,9 @@ function TopicMasteryContent() {
   if (phase === 'concept_fixing') {
     const question = questions[currentIndex];
     if (!question) return null;
-    const progress = ((currentIndex + 1) / questions.length) * 100;
+    const conceptCurrent = Math.max(1, conceptState.current || 1);
+    const conceptTotal = Math.max(1, conceptState.total || 1);
+    const progress = (conceptCurrent / conceptTotal) * 100;
 
     return (
       <div>
@@ -551,12 +612,12 @@ function TopicMasteryContent() {
           <div className={`${styles.progressFill} ${styles.progressConceptFix}`} style={{ width: `${progress}%` }} />
         </div>
         <div className={styles.card}>
-          <div className={styles.sectionTitle}>Concept Fixing — Question {currentIndex + 1} of {questions.length}</div>
+          <div className={styles.sectionTitle}>Concept Fixing — SAQ {conceptCurrent} of {conceptTotal}</div>
           {error && <div className={styles.error}>{error}</div>}
           {renderQuestion(question, submitConceptFixingAnswer, 'Concept Fix')}
         </div>
         <div className={styles.actions}>
-          <button className={styles.skipButton} onClick={startLAQ}>Skip to LAQ →</button>
+          <button className={styles.skipButton} onClick={startMCQ}>Skip to Mixed Practice →</button>
         </div>
       </div>
     );
@@ -597,7 +658,7 @@ function TopicMasteryContent() {
         </div>
         <div className={styles.card}>
           <div className={styles.mcqCounter}>
-            <div className={styles.sectionTitle}>MCQ Consolidation — {currentIndex + 1} of {questions.length}</div>
+            <div className={styles.sectionTitle}>Mixed Practice (SAQ + MCQ) — {currentIndex + 1} of {questions.length}</div>
             <div className={styles.mcqCounterText}>
               <span className={`${styles.mcqCounterScore} ${getScoreClass(mcqProgress.total > 0 ? (mcqProgress.correct / mcqProgress.total) * 100 : 0)}`}>
                 {mcqProgress.correct}/{mcqProgress.completed}
@@ -698,9 +759,11 @@ function TopicMasteryContent() {
 
   if (phase === 'results' && masteryResults) {
     const r = masteryResults;
-    const isCompetencyAchieved = r.mastery_result === 'mastered'
+    const isCompetencyAchieved = r.can_exit_topic ?? (
+      r.mastery_result === 'mastered'
       && (r.competency_score || 0) >= 80
-      && (r.core_coverage || 0) >= 90;
+      && (r.core_coverage || 0) >= 90
+    );
 
     const topicStatus = isCompetencyAchieved ? 'green'
       : r.mastery_result === 'revision_required' ? 'yellow' : 'red';
@@ -800,6 +863,8 @@ function TopicMasteryContent() {
           </div>
         </div>
 
+        {error && <div className={styles.error}>{error}</div>}
+
         <div className={styles.postCompletionOptions}>
           <h3 className={styles.optionsTitle}>What's Next?</h3>
 
@@ -892,6 +957,11 @@ function TopicMasteryContent() {
         )}
 
         <div className={styles.resultActions}>
+          {!isCompetencyAchieved && (
+            <button className={styles.primaryButton} onClick={startMCQ}>
+              Continue Mixed Practice
+            </button>
+          )}
           <button className={styles.secondaryButton} onClick={() => router.push('/dashboard')}>
             Back to Dashboard
           </button>
@@ -911,7 +981,7 @@ export default function TopicMasteryPage() {
         <main className={styles.main}>
           <div className={styles.container}>
             <h1 className={styles.title}>Topic Mastery</h1>
-            <p className={styles.subtitle}>Structured learning: SAQ → LAQ → MCQ → Mastery Check</p>
+            <p className={styles.subtitle}>Structured learning: Guided SAQ mastery → Mixed SAQ + MCQ → Mastery Check</p>
             <TopicMasteryContent />
           </div>
         </main>

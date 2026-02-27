@@ -407,6 +407,10 @@ CREATE TABLE topic_learning_session (
     mastery_result TEXT CHECK (mastery_result IN ('mastered', 'revision_required', 'relearn_core')),
     adaptive_level TEXT CHECK (adaptive_level IN ('mastering_fast', 'progressing', 'struggling', 'needs_foundation', 'unknown')),
     difficulty_label TEXT,
+    concept_plan TEXT,
+    concept_anchor_index INTEGER DEFAULT 0,
+    concept_retry_count INTEGER DEFAULT 0,
+    concept_core_points TEXT,
     started_at TEXT DEFAULT CURRENT_TIMESTAMP,
     completed_at TEXT
 );

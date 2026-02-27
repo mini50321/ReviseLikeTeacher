@@ -244,6 +244,10 @@ const runMigrations = () => {
     createIndexIfMissing('idx_topic_learning_session_user_subject_topic', 'CREATE INDEX idx_topic_learning_session_user_subject_topic ON topic_learning_session(user_id, subject, topic)');
     addColumnIfMissing('topic_learning_session', 'adaptive_level', 'TEXT');
     addColumnIfMissing('topic_learning_session', 'difficulty_label', 'TEXT');
+    addColumnIfMissing('topic_learning_session', 'concept_plan', 'TEXT');
+    addColumnIfMissing('topic_learning_session', 'concept_anchor_index', 'INTEGER DEFAULT 0');
+    addColumnIfMissing('topic_learning_session', 'concept_retry_count', 'INTEGER DEFAULT 0');
+    addColumnIfMissing('topic_learning_session', 'concept_core_points', 'TEXT');
 
     createTableIfMissing('competency_score_log', `
       CREATE TABLE competency_score_log (

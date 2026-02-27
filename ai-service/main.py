@@ -376,6 +376,62 @@ async def generate_laq_batch_endpoint(request: dict):
         raise HTTPException(status_code=500, detail=f"LAQ batch generation failed: {str(e)}")
 
 
+@app.post("/generate-saq-anchors")
+async def generate_saq_anchors_endpoint(request: dict):
+    try:
+        from services.anchor_generation import generate_saq_anchors
+        subject = request.get("subject")
+        topic = request.get("topic")
+        count = request.get("count", 4)
+
+        if not subject or not topic:
+            raise HTTPException(status_code=400, detail="Subject and topic are required")
+
+        result = await generate_saq_anchors(
+            subject=subject,
+            topic=topic,
+            count=min(int(count), 6),
+            core_points=request.get("core_points", []),
+            pyq_examples=request.get("pyq_examples", [])
+        )
+        return JSONResponse(content=result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        print(f"SAQ anchor generation error: {str(e)}")
+        print(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"SAQ anchor generation failed: {str(e)}")
+
+
+@app.post("/generate-mcq-items")
+async def generate_mcq_items_endpoint(request: dict):
+    try:
+        from services.mcq_generation import generate_mcq_items
+        subject = request.get("subject")
+        topic = request.get("topic")
+        count = request.get("count", 4)
+
+        if not subject or not topic:
+            raise HTTPException(status_code=400, detail="Subject and topic are required")
+
+        result = await generate_mcq_items(
+            subject=subject,
+            topic=topic,
+            count=min(max(int(count), 1), 8),
+            core_points=request.get("core_points", []),
+            pyq_examples=request.get("pyq_examples", [])
+        )
+        return JSONResponse(content=result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        print(f"MCQ generation error: {str(e)}")
+        print(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"MCQ generation failed: {str(e)}")
+
+
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)

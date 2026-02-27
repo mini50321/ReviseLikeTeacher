@@ -96,24 +96,28 @@ router.post('/', authenticate, async (req, res) => {
 
       let teacherResponse = '';
       if (isCorrect) {
-        teacherResponse = `That's right, well done! The answer is ${question.correct_answer.trim().toUpperCase()}, ${correctText}. `;
+        teacherResponse = `Good job choosing ${question.correct_answer.trim().toUpperCase()}, ${correctText}. `;
+        teacherResponse += `Now lock in the why behind this option. `;
         if (question.ideal_answer) {
-          teacherResponse += question.ideal_answer + ' ';
+          teacherResponse += `${question.ideal_answer} `;
         }
         if (keyPointsText) {
-          teacherResponse += `Remember these key points: ${keyPointsText}`;
+          teacherResponse += `Focus on these high-yield points: ${keyPointsText}. `;
         }
+        teacherResponse += `Quick check: if one feature in the stem changes, would your option still stay the same?`;
       } else {
-        teacherResponse = `Not quite. You selected ${answer_text.trim().toUpperCase()}, ${selectedText}, but the correct answer is ${question.correct_answer.trim().toUpperCase()}, ${correctText}. `;
+        teacherResponse = `Good attempt. You chose ${answer_text.trim().toUpperCase()}, ${selectedText}, but the correct answer is ${question.correct_answer.trim().toUpperCase()}, ${correctText}. `;
+        teacherResponse += `Your main gap is the discriminator that separates these options. `;
         if (question.ideal_answer) {
-          teacherResponse += `Here's why: ${question.ideal_answer} `;
+          teacherResponse += `${question.ideal_answer} `;
         }
         if (keyPointsText) {
-          teacherResponse += `The important points to remember are: ${keyPointsText}. `;
+          teacherResponse += `Remember these high-yield points: ${keyPointsText}. `;
         }
         if (!question.ideal_answer && !keyPointsText) {
-          teacherResponse += `Make sure to review this topic carefully to understand the reasoning.`;
+          teacherResponse += `Review the core concept and compare it with why your chosen option is wrong. `;
         }
+        teacherResponse += `Quick check: what single clue in this stem most strongly points to ${question.correct_answer.trim().toUpperCase()}?`;
       }
 
       evaluation = {
@@ -152,7 +156,7 @@ router.post('/', authenticate, async (req, res) => {
             improvements: "Keep practicing to improve.",
             model_explanation: question.ideal_answer || "Review the topic for a complete answer."
           },
-          teacher_response: "Thank you for your answer. Keep practicing and reviewing the topic to strengthen your understanding.",
+          teacher_response: "You made a sincere attempt. Your main gap is concept precision. Rebuild the core idea first, then link it to the stem. What is the one clue that should guide your answer next time?",
           mastery_impact: {
             delta: 0
           }
@@ -169,7 +173,7 @@ router.post('/', authenticate, async (req, res) => {
             improvements: "Keep practicing to improve.",
             model_explanation: question.ideal_answer || "Review the topic for a complete answer."
           },
-          teacher_response: "Thank you for your answer. Keep practicing and reviewing the topic to strengthen your understanding.",
+          teacher_response: "You made a sincere attempt. Your main gap is concept precision. Rebuild the core idea first, then link it to the stem. What is the one clue that should guide your answer next time?",
           mastery_impact: {
             delta: 0
           }

@@ -47,7 +47,7 @@ async def evaluate_answer(
         
         key_points_text = "\n".join([f"- {point}" for point in key_points]) if key_points else "Not specified"
         
-        prompt = f"""You are a warm, knowledgeable medical teacher having a one-on-one conversation with your student. You are evaluating their answer to a NEET PG question.
+        prompt = f"""You are a warm, knowledgeable NEET PG tutor in an interactive one-on-one session.
 
 Question: {question_stem}
 Subject: {subject}
@@ -64,13 +64,20 @@ Student's Answer: {student_answer}
 Evaluate the student's answer and provide:
 1. A score from 0-100
 2. Structured feedback (strengths, improvements, model_explanation)
-3. A "teacher_response" — this is the most important part. Write it as if you are SPEAKING directly to the student in a warm, conversational tone. Like a teacher sitting across from them:
-   - Acknowledge what they got right
-   - Gently point out what they missed or got wrong
-   - Teach the key points they need to know
-   - Be encouraging but honest
-   - Keep it under 150 words, natural and spoken
-   - Do NOT use bullet points or formatting — write it as natural speech
+3. A "teacher_response" — this is the most important part. It must feel like active teaching, not a passive explanation.
+
+For teacher_response, follow this exact flow in one natural paragraph:
+- First 1 short sentence: acknowledge what the student did well.
+- Next 1 short sentence: name the biggest gap or misconception.
+- Next 2-3 short sentences: teach the core concept in simple, high-yield language.
+- Final 1 short sentence: ask a quick check question to make the student think and respond.
+
+Rules:
+- Keep it under 140 words.
+- Use direct second-person language ("you").
+- Be warm, specific, and encouraging.
+- Do not use bullet points or markdown.
+- Do not just repeat the ideal answer verbatim.
 
 Respond in JSON format:
 {{
@@ -89,7 +96,7 @@ Respond in JSON format:
             lambda: client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "You are an expert medical education evaluator. Always respond with valid JSON."},
+                    {"role": "system", "content": "You are an expert NEET PG tutor and evaluator. Prioritize active teaching with a short check question. Always respond with valid JSON only."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.4,
@@ -122,7 +129,7 @@ Respond in JSON format:
         
         teacher_response = result.get("teacher_response", "")
         if not teacher_response:
-            teacher_response = f"Thank you for your answer. {feedback.get('strengths', '')} {feedback.get('improvements', '')}"
+            teacher_response = "You made a good attempt. Your main gap is missing key concepts from this topic. Focus on the core mechanism and one clinical application now. Can you explain that mechanism in one line?"
 
         mastery_delta = calculate_mastery_delta(score, current_mastery, difficulty)
 
@@ -187,7 +194,7 @@ def get_fallback_evaluation(question: Dict[str, Any], student_answer: str, ideal
             "improvements": "Keep practicing to improve your answer quality.",
             "model_explanation": ideal_answer or "Review the topic for a complete answer."
         },
-        "teacher_response": "Thank you for your answer. Keep practicing and reviewing the topic to strengthen your understanding.",
+        "teacher_response": "You made a sincere attempt. The main gap is incomplete concept recall. Review the core idea and connect it to one clinical clue. What is the single most important takeaway from this topic?",
         "mastery_impact": {
             "delta": (score / 100) * 0.1
         }

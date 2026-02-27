@@ -3,9 +3,11 @@ const router = express.Router();
 const { authenticate } = require('../middleware/auth');
 const { requireFeature } = require('../middleware/subscription');
 const { db } = require('../db');
-const { evaluateAnswer } = require('../services/ai');
+const { evaluateAnswer, generateSaqAnchors, generateMcqItems } = require('../services/ai');
 const { detectMisconception } = require('../services/misconception');
 const { getStudentPerformanceProfile, buildAdaptiveMCQQuery, fetchAdaptiveMCQs, getAdaptiveSAQCount, getAdaptiveMCQLimit, getDifficultyLabel } = require('../services/difficulty-adapter');
+
+const MIN_ANCHOR_COMPETENCY_SCORE = 70;
 
 router.get('/:id', authenticate, async (req, res) => {
   try {
@@ -98,95 +100,91 @@ router.post('/:id/concept-fixing/start', authenticate, requireFeature('topic_mas
     const weakSubtopics = misconceptionTags.map(m => m.subtopic).filter(Boolean);
 
     const focusBuckets = tls.focus_buckets ? JSON.parse(tls.focus_buckets) : ['core'];
+    const existingPlanIds = parseJsonArray(tls.concept_plan);
+    const existingCorePoints = parseJsonArray(tls.concept_core_points);
 
-    let difficultyFilter = '';
-    if (profile.level === 'struggling' || profile.level === 'needs_foundation') {
-      difficultyFilter = "AND difficulty IN ('easy', 'medium')";
-    } else if (profile.level === 'mastering_fast') {
-      difficultyFilter = "AND difficulty IN ('medium', 'hard')";
+    if (existingPlanIds.length > 0 && (tls.concept_anchor_index || 0) < existingPlanIds.length) {
+      const currentPlanQuestionId = existingPlanIds[tls.concept_anchor_index || 0];
+      const existingQuestionResult = await db.query('SELECT * FROM question WHERE id = $1', [currentPlanQuestionId]);
+      if (existingQuestionResult.rows.length > 0) {
+        await db.query(
+          `UPDATE topic_learning_session SET current_phase = 'concept_fixing' WHERE id = $1`,
+          [id]
+        );
+
+        return res.json({
+          phase: 'concept_fixing',
+          questions: [serializeQuestionForClient(existingQuestionResult.rows[0])],
+          total_questions: existingPlanIds.length,
+          current_anchor_index: (tls.concept_anchor_index || 0) + 1,
+          learning_mode: 'guided_competency',
+          concept_core_points: existingCorePoints,
+          weak_subtopics: weakSubtopics,
+          focus_buckets: focusBuckets,
+          adaptive: {
+            level: profile.level,
+            difficulty_label: getDifficultyLabel(profile),
+            saq_count: existingPlanIds.length,
+            avg_score: profile.avgScore,
+            recommendation: profile.recommendation
+          }
+        });
+      }
     }
 
-    let questions;
-    if (weakSubtopics.length > 0) {
-      const placeholders = weakSubtopics.map((_, i) => `$${i + 4}`).join(', ');
-      questions = await db.query(
-        `SELECT * FROM question
-         WHERE subject = $1 AND topic = $2 AND status = 'active'
-           AND type IN ('saq', 'case_based')
-           AND subtopic IN (${placeholders})
-           ${difficultyFilter}
-         ORDER BY CASE yield_category WHEN 'core' THEN 1 WHEN 'frequent' THEN 2 ELSE 3 END,
-                  RANDOM()
-         LIMIT $3`,
-        [tls.subject, tls.topic, adaptiveSAQCount, ...weakSubtopics]
-      );
-    }
+    const teachingPlan = await buildConceptTeachingPlan({
+      tls,
+      userId,
+      profile,
+      weakSubtopics,
+      focusBuckets,
+      targetCount: Math.max(4, Math.min(5, adaptiveSAQCount))
+    });
 
-    if (!questions || questions.rows.length < 2) {
-      const bucketPlaceholders = focusBuckets.map((_, i) => `$${i + 4}`).join(', ');
-      questions = await db.query(
-        `SELECT * FROM question
-         WHERE subject = $1 AND topic = $2 AND status = 'active'
-           AND type IN ('saq', 'case_based')
-           AND yield_category IN (${bucketPlaceholders})
-           ${difficultyFilter}
-         ORDER BY RANDOM()
-         LIMIT $3`,
-        [tls.subject, tls.topic, adaptiveSAQCount, ...focusBuckets]
-      );
-    }
-
-    if (!questions || questions.rows.length < 2) {
-      const bucketPlaceholders = focusBuckets.map((_, i) => `$${i + 4}`).join(', ');
-      questions = await db.query(
-        `SELECT * FROM question
-         WHERE subject = $1 AND topic = $2 AND status = 'active'
-           AND type IN ('saq', 'case_based')
-           AND yield_category IN (${bucketPlaceholders})
-         ORDER BY RANDOM()
-         LIMIT $3`,
-        [tls.subject, tls.topic, adaptiveSAQCount, ...focusBuckets]
-      );
-    }
-
-    if (questions.rows.length === 0) {
-      questions = await db.query(
+    if (teachingPlan.anchorQuestions.length === 0) {
+      const fallbackQuestions = await db.query(
         `SELECT * FROM question
          WHERE subject = $1 AND topic = $2 AND status = 'active'
            AND type IN ('saq', 'case_based', 'mcq')
          ORDER BY RANDOM()
-         LIMIT $3`,
-        [tls.subject, tls.topic, 4]
+         LIMIT 1`,
+        [tls.subject, tls.topic]
       );
+      if (fallbackQuestions.rows.length === 0) {
+        return res.status(400).json({ error: 'No questions available for this topic' });
+      }
+      teachingPlan.anchorQuestions = [fallbackQuestions.rows[0]];
     }
 
+    const conceptPlanIds = teachingPlan.anchorQuestions.map((q) => q.id);
+
     await db.query(
-      `UPDATE topic_learning_session SET current_phase = 'concept_fixing' WHERE id = $1`,
-      [id]
+      `UPDATE topic_learning_session
+       SET current_phase = 'concept_fixing',
+           concept_plan = $1,
+           concept_anchor_index = 0,
+           concept_retry_count = 0,
+           concept_core_points = $2,
+           saq_completed = 0
+       WHERE id = $3`,
+      [JSON.stringify(conceptPlanIds), JSON.stringify(teachingPlan.corePoints), id]
     );
 
-    const questionsForClient = questions.rows.map(q => ({
-      id: q.id,
-      stem: q.stem,
-      type: q.type,
-      subject: q.subject,
-      topic: q.topic,
-      subtopic: q.subtopic,
-      difficulty: q.difficulty,
-      yield_category: q.yield_category,
-      options: q.options
-    }));
+    const questionsForClient = [serializeQuestionForClient(teachingPlan.anchorQuestions[0])];
 
     res.json({
       phase: 'concept_fixing',
       questions: questionsForClient,
-      total_questions: questionsForClient.length,
+      total_questions: conceptPlanIds.length,
+      current_anchor_index: 1,
+      learning_mode: 'guided_competency',
+      concept_core_points: teachingPlan.corePoints,
       weak_subtopics: weakSubtopics,
       focus_buckets: focusBuckets,
       adaptive: {
         level: profile.level,
         difficulty_label: getDifficultyLabel(profile),
-        saq_count: adaptiveSAQCount,
+        saq_count: conceptPlanIds.length,
         avg_score: profile.avgScore,
         recommendation: profile.recommendation
       }
@@ -215,13 +213,27 @@ router.post('/:id/concept-fixing/answer', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Session not found' });
     }
 
-    const questionResult = await db.query('SELECT * FROM question WHERE id = $1', [question_id]);
+    const conceptPlanIds = parseJsonArray(tlsResult.rows[0].concept_plan);
+    const currentAnchorIndex = tlsResult.rows[0].concept_anchor_index || 0;
+    const totalAnchors = conceptPlanIds.length;
+
+    if (totalAnchors === 0) {
+      return res.status(400).json({ error: 'Concept plan is not initialized. Please restart concept fixing.' });
+    }
+
+    const expectedQuestionId = conceptPlanIds[Math.min(currentAnchorIndex, totalAnchors - 1)];
+    if (question_id !== expectedQuestionId) {
+      return res.status(400).json({ error: 'Please answer the current guided SAQ before moving ahead.' });
+    }
+
+    const questionResult = await db.query('SELECT * FROM question WHERE id = $1', [expectedQuestionId]);
     if (questionResult.rows.length === 0) {
       return res.status(404).json({ error: 'Question not found' });
     }
     const question = questionResult.rows[0];
 
     const evaluation = await evaluateWithFallback(question, answer_text, userId);
+    const isAnchorMastered = (evaluation.score || 0) >= MIN_ANCHOR_COMPETENCY_SCORE;
 
     const attemptId = db.generateUUID();
     await db.query(
@@ -234,16 +246,54 @@ router.post('/:id/concept-fixing/answer', authenticate, async (req, res) => {
     );
 
     const currentSaqCount = tlsResult.rows[0].saq_completed || 0;
+    const nextAnchorIndex = isAnchorMastered ? currentAnchorIndex + 1 : currentAnchorIndex;
+    const nextRetryCount = isAnchorMastered ? 0 : (tlsResult.rows[0].concept_retry_count || 0) + 1;
+    const phaseComplete = nextAnchorIndex >= totalAnchors;
+
     await db.query(
-      `UPDATE topic_learning_session SET saq_completed = $1 WHERE id = $2`,
-      [currentSaqCount + 1, id]
+      `UPDATE topic_learning_session
+       SET saq_completed = $1,
+           concept_anchor_index = $2,
+           concept_retry_count = $3,
+           current_phase = $4
+       WHERE id = $5`,
+      [
+        currentSaqCount + (isAnchorMastered ? 1 : 0),
+        nextAnchorIndex,
+        nextRetryCount,
+        phaseComplete ? 'mcq_consolidation' : 'concept_fixing',
+        id
+      ]
     );
+
+    let nextQuestion = null;
+    if (!phaseComplete) {
+      const nextQuestionId = conceptPlanIds[nextAnchorIndex];
+      const nextQuestionResult = await db.query('SELECT * FROM question WHERE id = $1', [nextQuestionId]);
+      if (nextQuestionResult.rows.length > 0) {
+        nextQuestion = serializeQuestionForClient(nextQuestionResult.rows[0]);
+      }
+    }
+
+    const teachingFollowUp = isAnchorMastered
+      ? null
+      : buildConceptFollowUp(question, evaluation, nextRetryCount);
 
     res.json({
       attempt_id: attemptId,
       score: evaluation.score,
       feedback: evaluation.feedback,
-      teacher_response: evaluation.teacher_response || null
+      teacher_response: evaluation.teacher_response || null,
+      is_anchor_mastered: isAnchorMastered,
+      current_anchor_index: Math.min(nextAnchorIndex + 1, totalAnchors),
+      total_anchors: totalAnchors,
+      retry_count: nextRetryCount,
+      phase_complete: phaseComplete,
+      next_action: phaseComplete
+        ? 'start_mixed_practice'
+        : (isAnchorMastered ? 'advance_anchor' : 'retry_same_anchor'),
+      next_question: nextQuestion,
+      teaching_follow_up: teachingFollowUp
     });
   } catch (error) {
     console.error('Concept fixing answer error:', error);
@@ -413,9 +463,9 @@ router.post('/:id/mcq/start', authenticate, requireFeature('topic_mastery_flow')
     const adaptiveConfig = buildAdaptiveMCQQuery(tls.subject, tls.topic, focusBuckets, mcqLimit, profile);
     const difficultyLabel = getDifficultyLabel(profile);
 
-    let questionRows = await fetchAdaptiveMCQs(tls.subject, tls.topic, focusBuckets, mcqLimit, adaptiveConfig);
+    let mcqRows = await fetchAdaptiveMCQs(tls.subject, tls.topic, focusBuckets, mcqLimit, adaptiveConfig);
 
-    if (questionRows.length < 5) {
+    if (mcqRows.length < 4) {
       const fallback = await db.query(
         `SELECT * FROM question
          WHERE subject = $1 AND topic = $2 AND status = 'active'
@@ -424,7 +474,47 @@ router.post('/:id/mcq/start', authenticate, requireFeature('topic_mastery_flow')
          LIMIT $3`,
         [tls.subject, tls.topic, mcqLimit]
       );
-      questionRows = fallback.rows;
+      mcqRows = fallback.rows;
+    }
+
+    const targetObjectiveCount = Math.max(4, Math.ceil(mcqLimit * 0.65));
+    if (mcqRows.length < targetObjectiveCount) {
+      const corePoints = parseJsonArray(tls.concept_core_points).slice(0, 10);
+      const pyqExamples = mcqRows.slice(0, 8).map((q) => ({
+        stem: q.stem,
+        subtopic: q.subtopic
+      }));
+      const generatedObjective = await generateMcqItems({
+        subject: tls.subject,
+        topic: tls.topic,
+        count: targetObjectiveCount - mcqRows.length,
+        corePoints,
+        pyqExamples
+      });
+      const persistedGeneratedObjective = await persistGeneratedObjectiveQuestions({
+        generatedQuestions: generatedObjective.questions || [],
+        subject: tls.subject,
+        topic: tls.topic,
+        userId
+      });
+      mcqRows = interleaveQuestions(mcqRows, persistedGeneratedObjective).slice(0, targetObjectiveCount);
+    }
+
+    const saqLimit = Math.max(2, Math.round(mcqLimit * 0.35));
+    const saqRowsResult = await db.query(
+      `SELECT * FROM question
+       WHERE subject = $1 AND topic = $2 AND status = 'active'
+         AND type IN ('saq', 'case_based')
+       ORDER BY CASE yield_category WHEN 'core' THEN 1 WHEN 'frequent' THEN 2 ELSE 3 END,
+                RANDOM()
+       LIMIT $3`,
+      [tls.subject, tls.topic, saqLimit]
+    );
+    const saqRows = saqRowsResult.rows;
+
+    let questionRows = interleaveQuestions(mcqRows, saqRows);
+    if (questionRows.length === 0) {
+      questionRows = mcqRows;
     }
 
     await db.query(
@@ -451,6 +541,11 @@ router.post('/:id/mcq/start', authenticate, requireFeature('topic_mastery_flow')
       questions: questionsForClient,
       total_questions: questionsForClient.length,
       mcq_limit: mcqLimit,
+      mode: 'mixed_practice',
+      mix_breakdown: {
+        objective: mcqRows.length,
+        short_answer: saqRows.length
+      },
       adaptive: {
         level: profile.level,
         difficulty_label: difficultyLabel,
@@ -492,12 +587,13 @@ router.post('/:id/mcq/answer', authenticate, async (req, res) => {
     const question = questionResult.rows[0];
 
     const hasCorrectAnswer = question.correct_answer && question.correct_answer.trim() !== '';
+    const isObjectiveType = ['mcq', 'true_false', 'assertion_reason'].includes(question.type) && hasCorrectAnswer;
     let isCorrect = false;
     let score = 0;
     let feedbackObj = {};
     let teacherResponse = '';
 
-    if (hasCorrectAnswer) {
+    if (isObjectiveType) {
       isCorrect = answer_text.trim().toUpperCase() === question.correct_answer.trim().toUpperCase();
       score = isCorrect ? 100 : 0;
 
@@ -522,22 +618,29 @@ router.post('/:id/mcq/answer', authenticate, async (req, res) => {
       };
 
       if (isCorrect) {
-        teacherResponse = `Correct! The answer is ${question.correct_answer.trim().toUpperCase()}, ${correctText}.`;
+        teacherResponse = `Good job choosing ${question.correct_answer.trim().toUpperCase()}, ${correctText}.`;
+        teacherResponse += ' Now lock in the reason this option is best.';
         if (question.ideal_answer) teacherResponse += ' ' + question.ideal_answer;
+        teacherResponse += ' Quick check: if one key clue changes in the stem, would your answer stay the same?';
       } else {
-        teacherResponse = `The correct answer is ${question.correct_answer.trim().toUpperCase()}, ${correctText}.`;
+        teacherResponse = `Good attempt. The correct answer is ${question.correct_answer.trim().toUpperCase()}, ${correctText}.`;
+        teacherResponse += ' Your main gap is identifying the discriminator clue.';
         if (question.ideal_answer) teacherResponse += ' ' + question.ideal_answer;
+        teacherResponse += ` Quick check: which single phrase in the stem points to ${question.correct_answer.trim().toUpperCase()}?`;
       }
     } else {
-      score = 50;
-      feedbackObj = { strengths: 'Answer recorded.', improvements: 'No correct answer available for comparison.' };
+      const evaluation = await evaluateWithFallback(question, answer_text, userId);
+      score = evaluation.score || 0;
+      isCorrect = score >= 70;
+      feedbackObj = evaluation.feedback || {};
+      teacherResponse = evaluation.teacher_response || null;
     }
 
     let misconceptionType = null;
     let distractorMeaning = null;
     let misconceptionData = null;
 
-    if (!isCorrect) {
+    if (isObjectiveType && !isCorrect) {
       try {
         misconceptionData = await detectMisconception(userId, question, answer_text, isCorrect, score);
         if (misconceptionData) {
@@ -590,7 +693,7 @@ router.post('/:id/mcq/answer', authenticate, async (req, res) => {
        ON CONFLICT (user_id, question_id)
        DO UPDATE SET mastery_level = $4, attempt_count = questionmastery.attempt_count + 1,
                      last_attempt_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP`,
-      [db.generateUUID(), userId, question_id, isCorrect ? 100 : 0]
+      [db.generateUUID(), userId, question_id, score]
     );
 
     res.json({
@@ -666,9 +769,10 @@ router.post('/:id/mastery-check', authenticate, async (req, res) => {
     const masteryThreshold = tuning.mastery_threshold_mastered || 85;
     const revisionThreshold = tuning.mastery_threshold_revision || 60;
     const coreThreshold = tuning.core_coverage_threshold || 90;
+    const competencyThreshold = tuning.competency_achieved_threshold || 80;
 
     let masteryResult;
-    if (mcqAccuracy >= masteryThreshold && coreCoverage >= coreThreshold) {
+    if (mcqAccuracy >= masteryThreshold && coreCoverage >= coreThreshold && competencyScore >= competencyThreshold) {
       masteryResult = 'mastered';
     } else if (mcqAccuracy >= revisionThreshold) {
       masteryResult = 'revision_required';
@@ -790,6 +894,7 @@ router.post('/:id/mastery-check', authenticate, async (req, res) => {
       mcq_accuracy: Math.round(mcqAccuracy * 100) / 100,
       core_coverage: Math.round(coreCoverage * 100) / 100,
       competency_score: Math.round(competencyScore * 100) / 100,
+      can_exit_topic: masteryResult === 'mastered' && competencyScore >= competencyThreshold,
       saq_raw_score: saqRawScore,
       mcq_stats: {
         total: tls.mcq_total,
@@ -803,7 +908,8 @@ router.post('/:id/mastery-check', authenticate, async (req, res) => {
       thresholds: {
         mastered: masteryThreshold,
         revision: revisionThreshold,
-        core_coverage: coreThreshold
+        core_coverage: coreThreshold,
+        competency: competencyThreshold
       }
     });
   } catch (error) {
@@ -826,6 +932,21 @@ router.post('/:id/complete', authenticate, async (req, res) => {
     }
 
     const tls = tlsResult.rows[0];
+
+    const thresholdResult = await db.query(
+      `SELECT parameter_value FROM system_tuning_parameters WHERE parameter_name = 'competency_achieved_threshold' LIMIT 1`
+    );
+    const competencyThreshold = parseFloat(thresholdResult.rows[0]?.parameter_value || 80);
+    const canExitTopic = tls.mastery_result === 'mastered' && (tls.competency_score || 0) >= competencyThreshold;
+
+    if (!canExitTopic) {
+      return res.status(400).json({
+        error: 'Competency threshold not achieved yet. Continue mixed practice before exiting this topic.',
+        mastery_result: tls.mastery_result,
+        competency_score: tls.competency_score || 0,
+        required_competency: competencyThreshold
+      });
+    }
 
     await db.query(
       `UPDATE topic_learning_session SET current_phase = 'completed', completed_at = CURRENT_TIMESTAMP WHERE id = $1`,
@@ -902,6 +1023,298 @@ router.post('/:id/complete', authenticate, async (req, res) => {
   }
 });
 
+function parseJsonArray(raw) {
+  if (!raw) return [];
+  try {
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function parseKeyPoints(raw) {
+  const points = parseJsonArray(raw);
+  return points.filter(Boolean).map((p) => String(p).trim()).filter(Boolean);
+}
+
+function parsePreviousYearWeight(raw) {
+  const tags = parseJsonArray(raw);
+  if (tags.length > 0) return Math.min(tags.length, 5);
+  if (typeof raw === 'string' && raw.trim()) return 1;
+  return 0;
+}
+
+function getQuestionPriority(question, weakSubtopics, profileLevel) {
+  const yieldWeight = {
+    core: 4,
+    frequent: 3,
+    occasional: 2,
+    rare: 1
+  }[question.yield_category] || 1;
+
+  const weakBoost = weakSubtopics.includes(question.subtopic) ? 2 : 0;
+  const pyqWeight = parsePreviousYearWeight(question.previous_year_tags) * 0.6;
+
+  let profileBoost = 0;
+  if (profileLevel === 'struggling' || profileLevel === 'needs_foundation') {
+    profileBoost = question.difficulty === 'easy' ? 1 : (question.difficulty === 'medium' ? 0.6 : 0);
+  } else if (profileLevel === 'mastering_fast') {
+    profileBoost = question.difficulty === 'hard' ? 1 : (question.difficulty === 'medium' ? 0.6 : 0.2);
+  } else {
+    profileBoost = question.difficulty === 'medium' ? 0.8 : 0.4;
+  }
+
+  const keyPointBoost = Math.min(parseKeyPoints(question.key_points).length, 3) * 0.25;
+  const typeBoost = ['saq', 'case_based'].includes(question.type) ? 1.2 : 0.4;
+  return yieldWeight + weakBoost + pyqWeight + profileBoost + keyPointBoost + typeBoost;
+}
+
+function serializeQuestionForClient(q) {
+  return {
+    id: q.id,
+    stem: q.stem,
+    type: q.type,
+    subject: q.subject,
+    topic: q.topic,
+    subtopic: q.subtopic,
+    difficulty: q.difficulty,
+    yield_category: q.yield_category,
+    options: q.options
+  };
+}
+
+function buildConceptFollowUp(question, evaluation, retryCount) {
+  const keyPoints = parseKeyPoints(question.key_points);
+  const hintSource = evaluation.feedback?.improvements || evaluation.feedback?.model_explanation || '';
+  const shortHint = String(hintSource).split(/[.?!]/).find(Boolean)?.trim() || 'Focus on the highest-yield differentiator for this stem.';
+  const fallbackProbe = keyPoints.length > 0
+    ? `Can you now include this missing idea: ${keyPoints[Math.min(retryCount - 1, keyPoints.length - 1)]}?`
+    : `Try again in 1-2 lines: what is the single best clue that supports your answer?`;
+
+  return {
+    hint: shortHint,
+    subquestion: fallbackProbe
+  };
+}
+
+function interleaveQuestions(objectiveQuestions, shortAnswerQuestions) {
+  const mixed = [];
+  const objective = [...objectiveQuestions];
+  const shortAnswer = [...shortAnswerQuestions];
+
+  while (objective.length > 0 || shortAnswer.length > 0) {
+    if (objective.length > 0) mixed.push(objective.shift());
+    if (shortAnswer.length > 0) mixed.push(shortAnswer.shift());
+  }
+
+  const seen = new Set();
+  return mixed.filter((q) => {
+    if (!q?.id || seen.has(q.id)) return false;
+    seen.add(q.id);
+    return true;
+  });
+}
+
+async function buildConceptTeachingPlan({ tls, userId, profile, weakSubtopics, focusBuckets, targetCount = 5 }) {
+  const candidateResult = await db.query(
+    `SELECT * FROM question
+     WHERE subject = $1 AND topic = $2 AND status = 'active'
+       AND type IN ('saq', 'case_based', 'mcq', 'true_false', 'assertion_reason')
+     ORDER BY RANDOM()
+     LIMIT 80`,
+    [tls.subject, tls.topic]
+  );
+
+  const candidates = candidateResult.rows || [];
+  const ranked = candidates
+    .map((q) => ({
+      question: q,
+      priority: getQuestionPriority(q, weakSubtopics, profile.level)
+    }))
+    .sort((a, b) => b.priority - a.priority);
+
+  const selected = [];
+  const usedSubtopics = new Set();
+
+  for (const item of ranked) {
+    const subtopic = item.question.subtopic || `__none__${item.question.id}`;
+    if (usedSubtopics.has(subtopic) && selected.length >= 3) {
+      continue;
+    }
+    selected.push(item.question);
+    usedSubtopics.add(subtopic);
+    if (selected.length >= targetCount) break;
+  }
+
+  if (selected.length < Math.min(4, targetCount)) {
+    for (const item of ranked) {
+      if (selected.find((q) => q.id === item.question.id)) continue;
+      selected.push(item.question);
+      if (selected.length >= Math.min(4, targetCount)) break;
+    }
+  }
+
+  const corePoints = [];
+  for (const question of selected) {
+    const points = parseKeyPoints(question.key_points);
+    for (const point of points) {
+      if (!corePoints.includes(point)) {
+        corePoints.push(point);
+      }
+      if (corePoints.length >= 8) break;
+    }
+    if (corePoints.length >= 8) break;
+  }
+
+  if (corePoints.length === 0) {
+    const fallbackPoints = focusBuckets.map((bucket) => `${bucket} concepts`).slice(0, 4);
+    corePoints.push(...fallbackPoints);
+  }
+
+  let anchors = selected.slice(0, targetCount);
+  const minRequired = Math.max(4, Math.min(5, targetCount));
+  if (anchors.length < minRequired) {
+    const missingCount = minRequired - anchors.length;
+    const pyqExamples = candidates.slice(0, 8).map((q) => ({
+      stem: q.stem,
+      subtopic: q.subtopic
+    }));
+
+    const generated = await generateSaqAnchors({
+      subject: tls.subject,
+      topic: tls.topic,
+      count: missingCount,
+      corePoints,
+      pyqExamples
+    });
+
+    const generatedQuestions = await persistGeneratedAnchors({
+      generatedQuestions: generated.questions || [],
+      subject: tls.subject,
+      topic: tls.topic,
+      userId
+    });
+
+    anchors = anchors.concat(generatedQuestions);
+  }
+
+  return {
+    anchorQuestions: anchors.slice(0, Math.max(targetCount, minRequired)),
+    corePoints
+  };
+}
+
+async function persistGeneratedAnchors({ generatedQuestions, subject, topic, userId }) {
+  const persisted = [];
+  for (const gq of generatedQuestions) {
+    const stem = String(gq.stem || '').trim();
+    if (!stem) continue;
+    const id = db.generateUUID();
+    const type = 'saq';
+    const subtopic = String(gq.subtopic || topic).trim() || topic;
+    const difficulty = ['easy', 'medium', 'hard'].includes(String(gq.difficulty || '').toLowerCase())
+      ? String(gq.difficulty).toLowerCase()
+      : 'medium';
+    const yieldCategory = ['core', 'frequent', 'occasional', 'rare'].includes(String(gq.yield_category || '').toLowerCase())
+      ? String(gq.yield_category).toLowerCase()
+      : 'core';
+    const idealAnswer = String(gq.ideal_answer || '').trim() || `Explain the key concept for ${topic}.`;
+    const keyPoints = Array.isArray(gq.key_points) ? gq.key_points : [];
+    const normalizedKeyPoints = keyPoints.map((p) => String(p).trim()).filter(Boolean).slice(0, 6);
+
+    await db.query(
+      `INSERT INTO question
+       (id, stem, type, subject, topic, subtopic, difficulty, importance, yield_category,
+        cognitive_focus, ideal_answer, key_points, previous_year_tags, status, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'medium', $8, 'conceptual', $9, $10, $11, 'active', $12)`,
+      [
+        id,
+        stem,
+        type,
+        subject,
+        topic,
+        subtopic,
+        difficulty,
+        yieldCategory,
+        idealAnswer,
+        JSON.stringify(normalizedKeyPoints),
+        JSON.stringify(['ai_generated_anchor']),
+        userId || null
+      ]
+    );
+
+    const inserted = await db.query('SELECT * FROM question WHERE id = $1', [id]);
+    if (inserted.rows.length > 0) {
+      persisted.push(inserted.rows[0]);
+    }
+  }
+  return persisted;
+}
+
+async function persistGeneratedObjectiveQuestions({ generatedQuestions, subject, topic, userId }) {
+  const persisted = [];
+  for (const gq of generatedQuestions) {
+    const stem = String(gq.stem || '').trim();
+    if (!stem) continue;
+    const options = gq.options && typeof gq.options === 'object' ? gq.options : null;
+    const normalizedOptions = {
+      A: String(options?.A || '').trim(),
+      B: String(options?.B || '').trim(),
+      C: String(options?.C || '').trim(),
+      D: String(options?.D || '').trim()
+    };
+    if (!normalizedOptions.A || !normalizedOptions.B || !normalizedOptions.C || !normalizedOptions.D) {
+      continue;
+    }
+
+    const id = db.generateUUID();
+    const type = 'mcq';
+    const subtopic = String(gq.subtopic || topic).trim() || topic;
+    const difficulty = ['easy', 'medium', 'hard'].includes(String(gq.difficulty || '').toLowerCase())
+      ? String(gq.difficulty).toLowerCase()
+      : 'medium';
+    const yieldCategory = ['core', 'frequent', 'occasional', 'rare'].includes(String(gq.yield_category || '').toLowerCase())
+      ? String(gq.yield_category).toLowerCase()
+      : 'core';
+    const idealAnswer = String(gq.ideal_answer || '').trim() || `Identify the best answer for ${topic}.`;
+    const keyPoints = Array.isArray(gq.key_points) ? gq.key_points : [];
+    const normalizedKeyPoints = keyPoints.map((p) => String(p).trim()).filter(Boolean).slice(0, 6);
+    const correctAnswer = ['A', 'B', 'C', 'D'].includes(String(gq.correct_answer || '').toUpperCase())
+      ? String(gq.correct_answer).toUpperCase()
+      : 'A';
+
+    await db.query(
+      `INSERT INTO question
+       (id, stem, type, subject, topic, subtopic, difficulty, importance, yield_category,
+        cognitive_focus, ideal_answer, key_points, previous_year_tags, options, correct_answer, status, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'medium', $8, 'conceptual', $9, $10, $11, $12, $13, 'active', $14)`,
+      [
+        id,
+        stem,
+        type,
+        subject,
+        topic,
+        subtopic,
+        difficulty,
+        yieldCategory,
+        idealAnswer,
+        JSON.stringify(normalizedKeyPoints),
+        JSON.stringify(['ai_generated_mixed_practice']),
+        JSON.stringify(normalizedOptions),
+        correctAnswer,
+        userId || null
+      ]
+    );
+
+    const inserted = await db.query('SELECT * FROM question WHERE id = $1', [id]);
+    if (inserted.rows.length > 0) {
+      persisted.push(inserted.rows[0]);
+    }
+  }
+  return persisted;
+}
+
 async function evaluateWithFallback(question, answerText, userId) {
   const isMCQType = ['mcq', 'true_false', 'assertion_reason'].includes(question.type);
   const hasCorrectAnswer = question.correct_answer && question.correct_answer.trim() !== '';
@@ -927,8 +1340,8 @@ async function evaluateWithFallback(question, answerText, userId) {
         model_explanation: question.ideal_answer || ''
       },
       teacher_response: isCorrect
-        ? `Correct! The answer is ${question.correct_answer.trim().toUpperCase()}.`
-        : `The correct answer is ${question.correct_answer.trim().toUpperCase()}, ${correctText}.`,
+        ? `Good job. The correct answer is ${question.correct_answer.trim().toUpperCase()}. Can you state in one line why this option is best?`
+        : `Good attempt. The correct answer is ${question.correct_answer.trim().toUpperCase()}, ${correctText}. What clue in the stem rules out your chosen option?`,
       mastery_impact: { delta: 0 }
     };
   }
@@ -949,7 +1362,7 @@ async function evaluateWithFallback(question, answerText, userId) {
         improvements: 'Keep practicing.',
         model_explanation: question.ideal_answer || ''
       },
-      teacher_response: 'Thank you for your answer. Review the topic to strengthen your understanding.',
+      teacher_response: 'You made a sincere attempt. Focus on the core concept first, then connect it to one stem clue. What is your one-line takeaway from this question?',
       mastery_impact: { delta: 0 }
     };
   }

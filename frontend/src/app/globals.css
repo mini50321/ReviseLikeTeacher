@@ -24,7 +24,7 @@ body::before {
   left: 0;
   width: 100%;
   height: 100%;
-  background: url('/images/background.jpg') center center / cover no-repeat;
+  background: url('/images/calm-sky-blue-gradient-backdrop.png') center center / cover no-repeat;
   background-attachment: fixed;
   z-index: -2;
   pointer-events: none;

@@ -45,7 +45,8 @@
   letter-spacing: 0.6px;
 }
 
-.formGroup input {
+.formGroup input,
+.formGroup select {
   width: 100%;
   padding: 12px 16px;
   background: rgba(255, 255, 255, 0.06);
@@ -56,14 +57,16 @@
   transition: all 0.2s;
 }
 
-.formGroup input:focus {
+.formGroup input:focus,
+.formGroup select:focus {
   outline: none;
   border-color: rgba(67, 97, 238, 0.5);
   background: rgba(255, 255, 255, 0.08);
   box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
 }
 
-.formGroup input:disabled {
+.formGroup input:disabled,
+.formGroup select:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
