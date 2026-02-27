@@ -1,12 +1,16 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { voiceAPI } from '../lib/api';
+import api, { voiceAPI } from '../lib/api';
 import styles from './FeedbackDisplay.module.css';
 
 export default function FeedbackDisplay({ attempt, onNext, onEnd, isLastQuestion }) {
   const [audioState, setAudioState] = useState('idle');
   const [audioUrl, setAudioUrl] = useState(null);
+  const [quickCheckAnswer, setQuickCheckAnswer] = useState('');
+  const [quickCheckSubmitting, setQuickCheckSubmitting] = useState(false);
+  const [quickCheckResult, setQuickCheckResult] = useState(null);
+  const [quickCheckError, setQuickCheckError] = useState('');
   const audioRef = useRef(null);
   const fetchedTextRef = useRef(null);
 
@@ -36,6 +40,13 @@ export default function FeedbackDisplay({ attempt, onNext, onEnd, isLastQuestion
       fetchAudio(teacherResponse);
     }
   }, [teacherResponse, fetchAudio, attempt]);
+
+  useEffect(() => {
+    setQuickCheckAnswer('');
+    setQuickCheckResult(null);
+    setQuickCheckError('');
+    setQuickCheckSubmitting(false);
+  }, [attempt?.id]);
 
   useEffect(() => {
     if (!audioUrl || audioState !== 'ready') return;
@@ -78,6 +89,23 @@ export default function FeedbackDisplay({ attempt, onNext, onEnd, isLastQuestion
     if (teacherResponse) {
       fetchedTextRef.current = teacherResponse;
       fetchAudio(teacherResponse);
+    }
+  };
+
+  const submitQuickCheck = async () => {
+    if (!attempt?.id || !quickCheckAnswer.trim()) return;
+    setQuickCheckSubmitting(true);
+    setQuickCheckError('');
+    try {
+      const response = await api.post(`/attempts/${attempt.id}/quick-check`, {
+        quick_check_answer: quickCheckAnswer.trim(),
+        teacher_response: teacherResponse || ''
+      });
+      setQuickCheckResult(response.data);
+    } catch (error) {
+      setQuickCheckError(error.response?.data?.error || 'Failed to submit quick check response.');
+    } finally {
+      setQuickCheckSubmitting(false);
     }
   };
 
@@ -175,6 +203,32 @@ export default function FeedbackDisplay({ attempt, onNext, onEnd, isLastQuestion
               </div>
             </div>
             <div className={styles.teacherText}>{teacherResponse}</div>
+            <div className={styles.quickCheckBox}>
+              <div className={styles.quickCheckTitle}>Reply to quick check</div>
+              <textarea
+                className={styles.quickCheckInput}
+                value={quickCheckAnswer}
+                onChange={(e) => setQuickCheckAnswer(e.target.value)}
+                placeholder="Type your reply here..."
+                disabled={quickCheckSubmitting}
+                rows={3}
+              />
+              <div className={styles.quickCheckActions}>
+                <button
+                  className={styles.quickCheckButton}
+                  onClick={submitQuickCheck}
+                  disabled={quickCheckSubmitting || !quickCheckAnswer.trim()}
+                >
+                  {quickCheckSubmitting ? 'Submitting...' : 'Submit Reply'}
+                </button>
+              </div>
+              {quickCheckError && (
+                <div className={styles.quickCheckError}>{quickCheckError}</div>
+              )}
+              {quickCheckResult?.follow_up && (
+                <div className={styles.quickCheckFeedback}>{quickCheckResult.follow_up}</div>
+              )}
+            </div>
           </div>
         )}
 

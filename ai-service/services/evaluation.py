@@ -200,3 +200,86 @@ def get_fallback_evaluation(question: Dict[str, Any], student_answer: str, ideal
         }
     }
 
+
+async def evaluate_quick_check(
+    question: Dict[str, Any],
+    original_answer: str,
+    teacher_response: str,
+    quick_check_answer: str
+) -> Dict[str, Any]:
+    client = get_openai_client()
+    ideal_answer = question.get("ideal_answer", "")
+
+    if not client:
+        return {
+            "understanding_level": "partial",
+            "follow_up": "Good effort. You are close, but refine the discriminator concept and answer in one precise line.",
+            "can_proceed": True
+        }
+
+    try:
+        stem = question.get("stem", "")
+        topic = question.get("topic", "")
+        subject = question.get("subject", "")
+        prompt = f"""You are a NEET PG tutor evaluating the student's response to a quick-check follow-up question.
+
+Question stem: {stem}
+Subject: {subject}
+Topic: {topic}
+Ideal answer: {ideal_answer}
+Student original answer: {original_answer}
+Teacher quick-check prompt context: {teacher_response}
+Student quick-check reply: {quick_check_answer}
+
+Return JSON:
+{{
+  "understanding_level": "strong|partial|weak",
+  "follow_up": "2-3 short sentences: acknowledge, correct, then one actionable tip",
+  "can_proceed": true
+}}
+
+Rules:
+- Keep follow_up under 80 words.
+- Be direct and encouraging.
+- Focus on one correction only.
+- Return valid JSON only."""
+
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None,
+            lambda: client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are an expert tutor. Return JSON only."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.3,
+                max_tokens=300,
+                response_format={"type": "json_object"}
+            )
+        )
+
+        import json
+        content = response.choices[0].message.content.strip()
+        result = json.loads(content)
+
+        level = str(result.get("understanding_level", "partial")).lower()
+        if level not in ["strong", "partial", "weak"]:
+            level = "partial"
+        follow_up = str(result.get("follow_up", "")).strip()
+        if not follow_up:
+            follow_up = "Good effort. Refine the key discriminator and try to state the concept in one precise line."
+
+        return {
+            "understanding_level": level,
+            "follow_up": follow_up,
+            "can_proceed": True
+        }
+    except Exception as e:
+        print(f"Quick-check evaluation error: {str(e)}")
+        return {
+            "understanding_level": "partial",
+            "follow_up": "Good effort. Refine the key discriminator and try to state the concept in one precise line.",
+            "can_proceed": True
+        }
+

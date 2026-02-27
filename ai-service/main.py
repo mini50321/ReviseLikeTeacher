@@ -84,6 +84,31 @@ async def evaluate(request: dict):
         print(f"Evaluation error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Evaluation failed: {str(e)}")
 
+@app.post("/quick-check")
+async def quick_check(request: dict):
+    try:
+        from services.evaluation import evaluate_quick_check
+        question = request.get("question")
+        original_answer = request.get("original_answer", "")
+        teacher_response = request.get("teacher_response", "")
+        quick_check_answer = request.get("quick_check_answer")
+
+        if not question or not quick_check_answer:
+            raise HTTPException(status_code=400, detail="question and quick_check_answer are required")
+
+        result = await evaluate_quick_check(
+            question=question,
+            original_answer=original_answer,
+            teacher_response=teacher_response,
+            quick_check_answer=quick_check_answer
+        )
+        return JSONResponse(content=result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Quick-check error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Quick-check failed: {str(e)}")
+
 @app.post("/tts")
 async def text_to_speech(request: dict):
     try:

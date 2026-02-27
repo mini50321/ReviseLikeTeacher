@@ -114,6 +114,75 @@
   font-style: italic;
 }
 
+.quickCheckBox {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.quickCheckTitle {
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.quickCheckInput {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.2);
+  color: #ffffff;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  resize: vertical;
+}
+
+.quickCheckInput:focus {
+  outline: none;
+  border-color: rgba(99, 102, 241, 0.5);
+}
+
+.quickCheckActions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.quickCheckButton {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  background: rgba(99, 102, 241, 0.2);
+  color: #c7d2fe;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.quickCheckButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.quickCheckError {
+  margin-top: 8px;
+  color: #fca5a5;
+  font-size: 13px;
+}
+
+.quickCheckFeedback {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 8px;
+  color: #d1fae5;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .loadingDots {
   display: flex;
   gap: 4px;

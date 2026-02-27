@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth');
 const { db } = require('../db');
-const { evaluateAnswer } = require('../services/ai');
+const { evaluateAnswer, evaluateQuickCheck } = require('../services/ai');
 
 const round = (num, decimals) => Math.round(num * Math.pow(10, decimals)) / Math.pow(10, decimals);
 
@@ -285,6 +285,62 @@ router.post('/:id/feedback/rate', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Rate feedback error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/:id/quick-check', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { id } = req.params;
+    const { quick_check_answer, teacher_response } = req.body;
+
+    if (!quick_check_answer || !quick_check_answer.trim()) {
+      return res.status(400).json({ error: 'quick_check_answer is required' });
+    }
+
+    const attemptResult = await db.query(
+      `SELECT a.*, q.*
+       FROM attempt a
+       JOIN question q ON q.id = a.question_id
+       WHERE a.id = $1`,
+      [id]
+    );
+
+    if (attemptResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Attempt not found' });
+    }
+
+    const row = attemptResult.rows[0];
+    if (row.user_id !== userId) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    const question = {
+      id: row.question_id,
+      stem: row.stem,
+      type: row.type,
+      ideal_answer: row.ideal_answer,
+      key_points: row.key_points,
+      topic: row.topic,
+      subject: row.subject,
+      difficulty: row.difficulty
+    };
+
+    const quickCheck = await evaluateQuickCheck({
+      question,
+      originalAnswer: row.answer_text || '',
+      teacherResponse: teacher_response || '',
+      quickCheckAnswer: quick_check_answer.trim()
+    });
+
+    res.json({
+      understanding_level: quickCheck.understanding_level || 'partial',
+      follow_up: quickCheck.follow_up,
+      can_proceed: quickCheck.can_proceed !== false
+    });
+  } catch (error) {
+    console.error('Quick-check route error:', error);
+    res.status(500).json({ error: error.message || 'Quick-check failed' });
   }
 });
 

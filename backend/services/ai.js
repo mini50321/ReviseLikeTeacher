@@ -303,6 +303,38 @@ async function generateMcqItems({ subject, topic, count = 4, corePoints = [], py
   }
 }
 
+async function evaluateQuickCheck({ question, originalAnswer, teacherResponse, quickCheckAnswer }) {
+  await ensureAIServiceReady();
+
+  try {
+    const result = await retryRequest(async () => {
+      const response = await axios.post(`${AI_SERVICE_URL}/quick-check`, {
+        question,
+        original_answer: originalAnswer,
+        teacher_response: teacherResponse || '',
+        quick_check_answer: quickCheckAnswer
+      }, {
+        timeout: 30000
+      });
+
+      if (!response.data || !response.data.follow_up) {
+        throw new Error('Invalid quick-check response');
+      }
+
+      return response.data;
+    }, { maxRetries: 2, initialDelay: 1500, label: 'Quick-check evaluation' });
+
+    return result;
+  } catch (error) {
+    console.error('Quick-check evaluation error:', error.message || error);
+    return {
+      understanding_level: 'partial',
+      follow_up: 'Good effort. Refine the key discriminator and state the concept in one precise line.',
+      can_proceed: true
+    };
+  }
+}
+
 function startKeepAlive() {
   if (process.env.NODE_ENV !== 'production') return;
 
@@ -327,5 +359,6 @@ module.exports = {
   extractQuestionsFromPDF,
   generateSaqAnchors,
   generateMcqItems,
+  evaluateQuickCheck,
   startKeepAlive
 };
