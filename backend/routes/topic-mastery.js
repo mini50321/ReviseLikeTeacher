@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth');
-const { requireFeature } = require('../middleware/subscription');
 const { db } = require('../db');
 const { evaluateAnswer, generateSaqAnchors, generateMcqItems } = require('../services/ai');
 const { detectMisconception } = require('../services/misconception');
@@ -66,7 +65,7 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
-router.post('/:id/concept-fixing/start', authenticate, requireFeature('topic_mastery_flow'), async (req, res) => {
+router.post('/:id/concept-fixing/start', authenticate, async (req, res) => {
   try {
     const userId = req.user.userId;
     const { id } = req.params;
@@ -301,7 +300,7 @@ router.post('/:id/concept-fixing/answer', authenticate, async (req, res) => {
   }
 });
 
-router.post('/:id/laq/start', authenticate, requireFeature('topic_mastery_flow'), async (req, res) => {
+router.post('/:id/laq/start', authenticate, async (req, res) => {
   try {
     const userId = req.user.userId;
     const { id } = req.params;
@@ -438,7 +437,7 @@ router.post('/:id/laq/answer', authenticate, async (req, res) => {
   }
 });
 
-router.post('/:id/mcq/start', authenticate, requireFeature('topic_mastery_flow'), async (req, res) => {
+router.post('/:id/mcq/start', authenticate, async (req, res) => {
   try {
     const userId = req.user.userId;
     const { id } = req.params;

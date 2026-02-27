@@ -146,6 +146,7 @@ function TopicMasteryContent() {
       startTimeRef.current = Date.now();
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to start concept fixing');
+      setPhase('error');
     } finally {
       setLoading(false);
     }
@@ -170,6 +171,7 @@ function TopicMasteryContent() {
       startTimeRef.current = Date.now();
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to start LAQ');
+      setPhase('error');
     } finally {
       setLoading(false);
     }
@@ -196,6 +198,7 @@ function TopicMasteryContent() {
       startTimeRef.current = Date.now();
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to start MCQ');
+      setPhase('error');
     } finally {
       setLoading(false);
     }
