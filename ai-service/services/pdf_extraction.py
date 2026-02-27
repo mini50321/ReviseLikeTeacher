@@ -12,6 +12,39 @@ except ImportError:
     pdfplumber = None
 
 
+LAQ_KEYWORDS = [
+    "long answer",
+    "essay",
+    "discuss",
+    "describe in detail",
+    "elaborate",
+    "write in detail",
+    "critically evaluate",
+    "compare and contrast"
+]
+
+SAQ_KEYWORDS = [
+    "short answer",
+    "short note",
+    "briefly",
+    "enumerate",
+    "list",
+    "define",
+    "name"
+]
+
+CASE_KEYWORDS = [
+    "patient",
+    "year-old",
+    "presented with",
+    "complains of",
+    "history of",
+    "on examination",
+    "clinical scenario",
+    "vignette"
+]
+
+
 def extract_text_from_pdf(pdf_bytes: bytes) -> str:
     if pdfplumber is None:
         raise ImportError("pdfplumber is not installed")
@@ -47,25 +80,14 @@ def extract_text_from_pdf(pdf_bytes: bytes) -> str:
 async def parse_questions_from_text(text: str, filename: str = "") -> List[Dict[str, Any]]:
     structured_questions = parse_structured_question_blocks(text, filename)
     if len(text) > 120000 and structured_questions:
-        return structured_questions
+        return normalize_extracted_questions(structured_questions)
 
     client = get_openai_client()
+    if client is None:
+        return normalize_extracted_questions(structured_questions)
 
     max_chars = 12000
-    chunks = []
-    if len(text) <= max_chars:
-        chunks = [text]
-    else:
-        words = text.split()
-        current_chunk = ""
-        for word in words:
-            if len(current_chunk) + len(word) + 1 > max_chars:
-                chunks.append(current_chunk.strip())
-                current_chunk = word
-            else:
-                current_chunk += " " + word
-        if current_chunk.strip():
-            chunks.append(current_chunk.strip())
+    chunks = build_text_chunks(text, max_chars=max_chars)
 
     all_questions = []
 
@@ -78,7 +100,7 @@ For each question, identify:
 1. The full question text (stem)
 2. Options (A, B, C, D) if it's an MCQ
 3. The correct answer if marked in the text
-4. Question type: mcq, saq, case_based, true_false, or assertion_reason
+4. Question type: mcq, saq, laq, case_based, true_false, or assertion_reason
 5. Subject (e.g., Anatomy, Physiology, Pharmacology, Pathology, Microbiology, etc.)
 6. Topic within the subject
 7. Subtopic if identifiable
@@ -117,6 +139,14 @@ Respond with a JSON array. Each item:
 
 For non-MCQ questions, set options, correct_answer, and distractor_analysis to null.
 
+Type labeling rules:
+- Use "mcq" only when there are explicit options.
+- Use "true_false" for true/false statements.
+- Use "assertion_reason" for assertion-reason format.
+- Use "case_based" for patient vignette style clinical stems.
+- Use "laq" for long-form/discussion/essay style prompts requiring multi-part detailed answers.
+- Use "saq" for short open-ended prompts requiring concise answers.
+
 TEXT (chunk {i + 1} of {len(chunks)}):
 {chunk}
 
@@ -154,8 +184,8 @@ Return ONLY valid JSON array. No extra text."""
             print(f"Failed to parse JSON from chunk {i + 1}")
 
     if all_questions:
-        return all_questions
-    return structured_questions
+        return normalize_extracted_questions(all_questions)
+    return normalize_extracted_questions(structured_questions)
 
 
 def parse_structured_question_blocks(text: str, filename: str = "") -> List[Dict[str, Any]]:
@@ -164,8 +194,8 @@ def parse_structured_question_blocks(text: str, filename: str = "") -> List[Dict
     if header_match:
         header_subject = header_match.group(1).strip().title()
 
-    block_pattern = re.compile(r"(?ms)^\s*(\d+)\)\s*\(([^)]+)\)\s*(.+?)(?=^\s*\d+\)\s*\(|\Z)")
-    option_pattern = re.compile(r"(?ms)^\s*([A-E])\.\s*(.+?)(?=^\s*[A-E]\.\s|^\s*PREFERRED RESPONSE|\Z)")
+    block_pattern = re.compile(r"(?ms)^\s*(\d+)[\)\.\:-]\s*(?:\(([^)]+)\)\s*)?(.+?)(?=^\s*\d+[\)\.\:-]\s*(?:\(|\S)|\Z)")
+    option_pattern = re.compile(r"(?ms)^\s*([A-E])[\)\.\:-]\s*(.+?)(?=^\s*[A-E][\)\.\:-]\s|^\s*PREFERRED RESPONSE|\Z)")
     pref_pattern = re.compile(r"PREFERRED RESPONSE\s*▼\s*([1-5A-E])", re.IGNORECASE)
 
     questions: List[Dict[str, Any]] = []
@@ -210,15 +240,20 @@ def parse_structured_question_blocks(text: str, filename: str = "") -> List[Dict
             if explanation:
                 ideal_answer = explanation
 
-        q_type = "mcq" if len(options) >= 2 else "saq"
+        q_type = infer_question_type(
+            stem=stem_text,
+            options=options if len(options) >= 2 else None,
+            declared_type=None,
+            ideal_answer=ideal_answer
+        )
         subject = infer_subject_from_stem(stem_text, header_subject, filename)
         topic = "General"
 
         question = {
             "stem": stem_text,
             "type": q_type,
-            "options": options if q_type == "mcq" else None,
-            "correct_answer": correct_answer if q_type == "mcq" else None,
+            "options": options if q_type in ["mcq", "true_false", "assertion_reason"] else None,
+            "correct_answer": correct_answer if q_type in ["mcq", "true_false", "assertion_reason"] else None,
             "subject": subject,
             "topic": topic,
             "subtopic": None,
@@ -256,6 +291,183 @@ def infer_subject_from_stem(stem: str, header_subject: str, filename: str) -> st
         return "Orthopedics"
 
     return "General Medicine"
+
+
+def build_text_chunks(text: str, max_chars: int = 12000) -> List[str]:
+    text = text or ""
+    if len(text) <= max_chars:
+        return [text] if text.strip() else []
+
+    chunks: List[str] = []
+    current = ""
+    sections = re.split(r"(\n--- Page \d+ ---\n)", text)
+
+    if len(sections) == 1:
+        sections = [text]
+
+    for sec in sections:
+        if not sec:
+            continue
+        if len(sec) > max_chars:
+            start = 0
+            while start < len(sec):
+                part = sec[start:start + max_chars]
+                if part.strip():
+                    chunks.append(part)
+                start += max_chars
+            continue
+
+        if len(current) + len(sec) > max_chars:
+            if current.strip():
+                chunks.append(current)
+            current = sec
+        else:
+            current += sec
+
+    if current.strip():
+        chunks.append(current)
+    return chunks
+
+
+def normalize_options(options: Any) -> Dict[str, str]:
+    if options is None:
+        return {}
+    if isinstance(options, dict):
+        normalized = {}
+        for key in ["A", "B", "C", "D", "E"]:
+            value = str(options.get(key, "")).strip()
+            if value:
+                normalized[key] = normalize_ws(value)
+        return normalized
+    if isinstance(options, list):
+        labels = ["A", "B", "C", "D", "E"]
+        normalized = {}
+        for i, value in enumerate(options):
+            if i >= len(labels):
+                break
+            txt = normalize_ws(str(value))
+            if txt:
+                normalized[labels[i]] = txt
+        return normalized
+    if isinstance(options, str):
+        extracted = {}
+        pattern = re.compile(r"(?ms)([A-E])[\)\.\:-]\s*(.+?)(?=(?:\n\s*[A-E][\)\.\:-]\s)|\Z)")
+        for m in pattern.finditer(options):
+            label = m.group(1).upper()
+            value = normalize_ws(m.group(2))
+            if value:
+                extracted[label] = value
+        return extracted
+    return {}
+
+
+def infer_question_type(stem: str, options: Dict[str, str] = None, declared_type: str = None, ideal_answer: str = None) -> str:
+    declared = (declared_type or "").strip().lower()
+    allowed = {"mcq", "saq", "laq", "case_based", "true_false", "assertion_reason"}
+    if declared in allowed:
+        if declared in {"mcq", "true_false", "assertion_reason"} and not options:
+            pass
+        else:
+            return declared
+
+    s = (stem or "").strip().lower()
+    ia = (ideal_answer or "").strip().lower()
+    has_options = bool(options and len(options) >= 2)
+
+    if "assertion" in s and "reason" in s:
+        return "assertion_reason"
+    if "true or false" in s or re.search(r"\btrue\s*/\s*false\b", s):
+        return "true_false"
+    if has_options:
+        return "mcq"
+    if any(k in s for k in CASE_KEYWORDS):
+        return "case_based"
+
+    long_signal = len(stem or "") > 260 or len(ideal_answer or "") > 320
+    if any(k in s for k in LAQ_KEYWORDS) or any(k in ia for k in LAQ_KEYWORDS) or long_signal:
+        return "laq"
+    if any(k in s for k in SAQ_KEYWORDS):
+        return "saq"
+    return "saq"
+
+
+def normalize_extracted_questions(raw_questions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    cleaned: List[Dict[str, Any]] = []
+    seen = set()
+
+    for q in raw_questions or []:
+        if not isinstance(q, dict):
+            continue
+        stem = normalize_ws(str(q.get("stem", "")))
+        if not stem or len(stem) < 12:
+            continue
+
+        signature = stem.lower()
+        if signature in seen:
+            continue
+        seen.add(signature)
+
+        options = normalize_options(q.get("options"))
+        q_type = infer_question_type(
+            stem=stem,
+            options=options if options else None,
+            declared_type=q.get("type"),
+            ideal_answer=q.get("ideal_answer")
+        )
+
+        correct_answer = q.get("correct_answer")
+        if isinstance(correct_answer, str):
+            correct_answer = correct_answer.strip().upper()
+            if correct_answer.isdigit():
+                idx = int(correct_answer) - 1
+                if 0 <= idx < 5:
+                    correct_answer = ["A", "B", "C", "D", "E"][idx]
+            if correct_answer not in ["A", "B", "C", "D", "E"]:
+                correct_answer = None
+        else:
+            correct_answer = None
+
+        if q_type not in ["mcq", "true_false", "assertion_reason"]:
+            options = None
+            correct_answer = None
+
+        key_points = q.get("key_points", [])
+        if not isinstance(key_points, list):
+            key_points = []
+        key_points = [normalize_ws(str(p)) for p in key_points if normalize_ws(str(p))]
+
+        exam_tags = q.get("exam_tags", [])
+        if not isinstance(exam_tags, list):
+            exam_tags = []
+        exam_tags = [normalize_ws(str(t)) for t in exam_tags if normalize_ws(str(t))]
+
+        difficulty = str(q.get("difficulty", "medium")).lower()
+        if difficulty not in ["easy", "medium", "hard"]:
+            difficulty = "medium"
+
+        cognitive_focus = str(q.get("cognitive_focus", "conceptual")).lower()
+        if cognitive_focus not in ["factual", "conceptual", "clinical"]:
+            cognitive_focus = "conceptual"
+
+        cleaned.append({
+            "stem": stem,
+            "type": q_type,
+            "options": options,
+            "correct_answer": correct_answer,
+            "subject": normalize_ws(str(q.get("subject", ""))) or "General Medicine",
+            "topic": normalize_ws(str(q.get("topic", ""))) or "General",
+            "subtopic": normalize_ws(str(q.get("subtopic", ""))) or None,
+            "difficulty": difficulty,
+            "exam_tags": exam_tags,
+            "key_points": key_points,
+            "ideal_answer": normalize_ws(str(q.get("ideal_answer", ""))) or None,
+            "cognitive_focus": cognitive_focus,
+            "distractor_analysis": q.get("distractor_analysis"),
+            "concept_tags": q.get("concept_tags") if q.get("concept_tags") is not None else [],
+            "trap_pattern": normalize_ws(str(q.get("trap_pattern", ""))) or None
+        })
+
+    return cleaned
 
 
 def classify_yield(pyq_count: int) -> str:
