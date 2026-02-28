@@ -121,6 +121,40 @@ export const voiceAPI = {
 
     return response.data;
   },
+
+  coachTurn: async ({
+    transcript,
+    subject,
+    topic,
+    questionStem,
+    studentAnswer,
+    topK = 5,
+    latencyMode = 'balanced',
+    conversationHistory = []
+  }) => {
+    if (!navigator.onLine) {
+      throw new Error('No internet connection');
+    }
+
+    if (!transcript || !transcript.trim()) {
+      throw new Error('Transcript is required');
+    }
+
+    const response = await api.post('/voice/coach-turn', {
+      transcript: transcript.trim(),
+      subject,
+      topic,
+      question_stem: questionStem,
+      student_answer: studentAnswer,
+      top_k: topK,
+      latency_mode: latencyMode === 'fast' ? 'fast' : 'balanced',
+      conversation_history: Array.isArray(conversationHistory) ? conversationHistory : []
+    }, {
+      timeout: 30000
+    });
+
+    return response.data;
+  }
 };
 
 export default api;

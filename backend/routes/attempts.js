@@ -233,6 +233,12 @@ router.post('/', authenticate, async (req, res) => {
       feedback: evaluation.feedback,
       score: evaluation.score,
       teacher_response: evaluation.teacher_response || null,
+      question_context: {
+        question_id: question.id,
+        stem: question.stem || null,
+        subject: question.subject || null,
+        topic: question.topic || null
+      },
       mastery_impact: {
         topic: question.topic,
         previous_mastery: currentMastery,

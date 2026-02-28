@@ -287,6 +287,7 @@ function PracticePageContent() {
           ) : (
             <FeedbackDisplay
               attempt={currentAttempt}
+              question={currentQuestion}
               onNext={handleNextQuestion}
               onEnd={handleEndSession}
               isLastQuestion={currentQuestionIndex === questions.length - 1}

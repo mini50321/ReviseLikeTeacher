@@ -28,6 +28,79 @@ async def root():
 async def health():
     return {"status": "healthy"}
 
+@app.post("/context/reindex")
+async def context_reindex(request: dict = None):
+    try:
+        from services.context_retrieval import build_or_load_context_index
+        force_rebuild = bool((request or {}).get("force_rebuild", True))
+        index_data = build_or_load_context_index(force_rebuild=force_rebuild)
+        return JSONResponse(content={
+            "ok": True,
+            "total_indexed": index_data.get("count", 0),
+            "used_embeddings": bool(index_data.get("has_embeddings"))
+        })
+    except Exception as e:
+        import traceback
+        print(f"Context reindex error: {str(e)}")
+        print(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Context reindex failed: {str(e)}")
+
+@app.post("/context/retrieve")
+async def context_retrieve(request: dict):
+    try:
+        from services.context_retrieval import retrieve_relevant_context
+        query = request.get("query", "")
+        subject = request.get("subject")
+        topic = request.get("topic")
+        top_k = int(request.get("top_k", 5))
+        force_rebuild = bool(request.get("force_rebuild", False))
+
+        if not query or not str(query).strip():
+            raise HTTPException(status_code=400, detail="query is required")
+
+        result = retrieve_relevant_context(
+            query=str(query),
+            subject=subject,
+            topic=topic,
+            top_k=max(1, min(top_k, 10)),
+            force_rebuild=force_rebuild
+        )
+        return JSONResponse(content=result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        print(f"Context retrieve error: {str(e)}")
+        print(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Context retrieval failed: {str(e)}")
+
+@app.post("/voice-coach-turn")
+async def voice_coach_turn(request: dict):
+    try:
+        from services.voice_coach import coach_voice_turn
+        transcript = request.get("transcript")
+        if not transcript or not str(transcript).strip():
+            raise HTTPException(status_code=400, detail="transcript is required")
+
+        result = await coach_voice_turn(
+            transcript=str(transcript),
+            subject=request.get("subject"),
+            topic=request.get("topic"),
+            question_stem=request.get("question_stem"),
+            student_answer=request.get("student_answer"),
+            top_k=int(request.get("top_k", 5)),
+            latency_mode=request.get("latency_mode", "balanced"),
+            conversation_history=request.get("conversation_history", [])
+        )
+        return JSONResponse(content=result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        print(f"Voice coach turn error: {str(e)}")
+        print(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Voice coach turn failed: {str(e)}")
+
 @app.post("/transcribe")
 async def transcribe(
     audio: UploadFile = File(...),

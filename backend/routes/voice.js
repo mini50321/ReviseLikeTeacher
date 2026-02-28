@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const { authenticate } = require('../middleware/auth');
-const { transcribeVoice, textToSpeech } = require('../services/ai');
+const { transcribeVoice, textToSpeech, coachVoiceTurn } = require('../services/ai');
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -110,6 +110,46 @@ router.post('/tts', authenticate, async (req, res) => {
     res.status(500).json({
       error: error.message || 'Speech generation failed'
     });
+  }
+});
+
+router.post('/coach-turn', authenticate, async (req, res) => {
+  try {
+    const {
+      transcript,
+      subject,
+      topic,
+      question_stem,
+      student_answer,
+      top_k = 5,
+      latency_mode = 'balanced',
+      conversation_history = []
+    } = req.body;
+
+    if (!transcript || !String(transcript).trim()) {
+      return res.status(400).json({ error: 'transcript is required' });
+    }
+    if (String(transcript).trim().length > 1500) {
+      return res.status(400).json({ error: 'transcript is too long (max 1500 characters)' });
+    }
+
+    const normalizedLatencyMode = String(latency_mode || 'balanced').toLowerCase() === 'fast' ? 'fast' : 'balanced';
+
+    const result = await coachVoiceTurn({
+      transcript: String(transcript).trim(),
+      subject,
+      topic,
+      questionStem: question_stem,
+      studentAnswer: student_answer,
+      topK: Math.max(1, Math.min(Number(top_k) || 5, 8)),
+      latencyMode: normalizedLatencyMode,
+      conversationHistory: Array.isArray(conversation_history) ? conversation_history : []
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('Voice coach route error:', error);
+    res.status(500).json({ error: error.message || 'Voice coach turn failed' });
   }
 });
 

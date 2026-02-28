@@ -183,6 +183,110 @@
   line-height: 1.5;
 }
 
+.voiceCoachBox {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 10px;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.24);
+}
+
+.voiceCoachTitle {
+  color: #bfdbfe;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.voiceCoachDivider {
+  margin: 12px 0 8px;
+  color: #bfdbfe;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.voiceCoachHint {
+  margin-top: 8px;
+  color: #dbeafe;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.voiceCoachResponse {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(2, 132, 199, 0.12);
+  border: 1px solid rgba(2, 132, 199, 0.3);
+}
+
+.voiceCoachReplyHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: #c7d2fe;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.voiceCoachText {
+  color: #e0f2fe;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.voiceCoachMeta {
+  margin-top: 8px;
+  color: #bfdbfe;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.voiceCoachGrounding {
+  margin-top: 8px;
+  color: #e0f2fe;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.voiceCoachSourceIds {
+  margin-top: 6px;
+  color: #c7d2fe;
+  font-size: 12px;
+  line-height: 1.4;
+  word-break: break-all;
+}
+
+.voiceCoachClarify {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fde68a;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.voiceCoachRefs {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.voiceCoachRefItem {
+  color: #dbeafe;
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 6px 8px;
+  background: rgba(15, 23, 42, 0.25);
+  border-radius: 6px;
+}
+
 .loadingDots {
   display: flex;
   gap: 4px;

@@ -1,6 +1,9 @@
 const axios = require('axios');
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+const voiceCoachCache = new Map();
+const VOICE_COACH_CACHE_TTL_MS = Number(process.env.VOICE_COACH_CACHE_TTL_MS || 120000);
+const VOICE_COACH_CACHE_MAX_ITEMS = Number(process.env.VOICE_COACH_CACHE_MAX_ITEMS || 300);
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -335,6 +338,76 @@ async function evaluateQuickCheck({ question, originalAnswer, teacherResponse, q
   }
 }
 
+async function coachVoiceTurn({ transcript, subject, topic, questionStem, studentAnswer, topK = 5, latencyMode = 'balanced', conversationHistory = [] }) {
+  await ensureAIServiceReady();
+  const cleanTranscript = String(transcript || '').trim().slice(0, 1500);
+  const boundedTopK = Math.max(1, Math.min(Number(topK) || 5, 8));
+  const normalizedLatencyMode = String(latencyMode || 'balanced').toLowerCase() === 'fast' ? 'fast' : 'balanced';
+  const normalizedConversationHistory = Array.isArray(conversationHistory)
+    ? conversationHistory.slice(-8).map((turn) => ({
+        student: String(turn?.student || '').slice(0, 600),
+        teacher: String(turn?.teacher || '').slice(0, 900)
+      }))
+    : [];
+  const cacheKey = JSON.stringify({
+    transcript: cleanTranscript,
+    subject: subject || null,
+    topic: topic || null,
+    questionStem: questionStem || null,
+    studentAnswer: studentAnswer || null,
+    topK: boundedTopK,
+    latencyMode: normalizedLatencyMode,
+    conversationHistory: normalizedConversationHistory
+  });
+
+  const now = Date.now();
+  const cached = voiceCoachCache.get(cacheKey);
+  if (cached && now - cached.ts <= VOICE_COACH_CACHE_TTL_MS) {
+    return { ...cached.value, backend_cache_hit: true };
+  }
+
+  try {
+    const result = await retryRequest(async () => {
+      const response = await axios.post(`${AI_SERVICE_URL}/voice-coach-turn`, {
+        transcript: cleanTranscript,
+        subject,
+        topic,
+        question_stem: questionStem,
+        student_answer: studentAnswer,
+        top_k: boundedTopK,
+        latency_mode: normalizedLatencyMode,
+        conversation_history: normalizedConversationHistory
+      }, {
+        timeout: 30000
+      });
+
+      if (!response.data || !response.data.teacher_response) {
+        throw new Error('Invalid voice coach response');
+      }
+
+      return response.data;
+    }, { maxRetries: 2, initialDelay: 1500, label: 'Voice coach turn' });
+
+    if (voiceCoachCache.size >= VOICE_COACH_CACHE_MAX_ITEMS) {
+      const oldestKey = voiceCoachCache.keys().next().value;
+      if (oldestKey) {
+        voiceCoachCache.delete(oldestKey);
+      }
+    }
+    voiceCoachCache.set(cacheKey, { ts: now, value: result });
+    return result;
+  } catch (error) {
+    console.error('Voice coach turn error:', error.message || error);
+    return {
+      teacher_response: 'Good attempt. Refine the key concept and state one discriminator clue.',
+      teaching_focus: 'concept_clarity',
+      references: [],
+      used_context_count: 0,
+      used_embeddings: false
+    };
+  }
+}
+
 function startKeepAlive() {
   if (process.env.NODE_ENV !== 'production') return;
 
@@ -360,5 +433,6 @@ module.exports = {
   generateSaqAnchors,
   generateMcqItems,
   evaluateQuickCheck,
+  coachVoiceTurn,
   startKeepAlive
 };

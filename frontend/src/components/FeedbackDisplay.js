@@ -2,17 +2,34 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import api, { voiceAPI } from '../lib/api';
+import VoiceRecorder from './VoiceRecorder';
+import LanguageSelector from './LanguageSelector';
 import styles from './FeedbackDisplay.module.css';
 
-export default function FeedbackDisplay({ attempt, onNext, onEnd, isLastQuestion }) {
+export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLastQuestion }) {
+  const showVoiceTelemetry = process.env.NEXT_PUBLIC_SHOW_VOICE_TELEMETRY === 'true';
   const [audioState, setAudioState] = useState('idle');
   const [audioUrl, setAudioUrl] = useState(null);
   const [quickCheckAnswer, setQuickCheckAnswer] = useState('');
   const [quickCheckSubmitting, setQuickCheckSubmitting] = useState(false);
   const [quickCheckResult, setQuickCheckResult] = useState(null);
   const [quickCheckError, setQuickCheckError] = useState('');
+  const [coachInput, setCoachInput] = useState('');
+  const [coachLoading, setCoachLoading] = useState(false);
+  const [coachResult, setCoachResult] = useState(null);
+  const [coachError, setCoachError] = useState('');
+  const [coachHistory, setCoachHistory] = useState([]);
+  const [coachLanguage, setCoachLanguage] = useState('english');
+  const [coachAudioBlob, setCoachAudioBlob] = useState(null);
+  const [coachTranscribing, setCoachTranscribing] = useState(false);
+  const [coachVoiceError, setCoachVoiceError] = useState('');
+  const [coachTranscriptReady, setCoachTranscriptReady] = useState(false);
+  const [coachReplyAudioState, setCoachReplyAudioState] = useState('idle');
+  const [coachReplyAudioUrl, setCoachReplyAudioUrl] = useState(null);
   const audioRef = useRef(null);
   const fetchedTextRef = useRef(null);
+  const coachReplyAudioRef = useRef(null);
+  const coachReplyFetchedTextRef = useRef(null);
 
   const score = attempt?.score || 0;
   const feedbackData = attempt?.feedback || {};
@@ -46,6 +63,19 @@ export default function FeedbackDisplay({ attempt, onNext, onEnd, isLastQuestion
     setQuickCheckResult(null);
     setQuickCheckError('');
     setQuickCheckSubmitting(false);
+    setCoachInput('');
+    setCoachResult(null);
+    setCoachError('');
+    setCoachLoading(false);
+    setCoachHistory([]);
+    setCoachAudioBlob(null);
+    setCoachLanguage('english');
+    setCoachTranscribing(false);
+    setCoachVoiceError('');
+    setCoachTranscriptReady(false);
+    setCoachReplyAudioState('idle');
+    setCoachReplyAudioUrl(null);
+    coachReplyFetchedTextRef.current = null;
   }, [attempt?.id]);
 
   useEffect(() => {
@@ -106,6 +136,113 @@ export default function FeedbackDisplay({ attempt, onNext, onEnd, isLastQuestion
       setQuickCheckError(error.response?.data?.error || 'Failed to submit quick check response.');
     } finally {
       setQuickCheckSubmitting(false);
+    }
+  };
+
+  const submitCoachTurn = async () => {
+    if (!coachInput.trim()) return;
+    setCoachLoading(true);
+    setCoachError('');
+    try {
+      const contextSubject = question?.subject || attempt?.question_context?.subject || null;
+      const contextTopic = question?.topic || attempt?.question_context?.topic || attempt?.mastery_impact?.topic || null;
+      const contextStem = question?.stem || question?.question_text || attempt?.question_context?.stem || null;
+
+      const response = await voiceAPI.coachTurn({
+        transcript: coachInput.trim(),
+        subject: contextSubject,
+        topic: contextTopic,
+        questionStem: contextStem,
+        studentAnswer: attempt?.answer_text || null,
+        topK: coachTranscriptReady ? 3 : 4,
+        latencyMode: coachTranscriptReady ? 'fast' : 'balanced',
+        conversationHistory: coachHistory
+      });
+      setCoachResult(response);
+      setCoachHistory((prev) => [
+        ...prev.slice(-7),
+        { student: coachInput.trim(), teacher: response?.teacher_response || '' }
+      ]);
+    } catch (error) {
+      setCoachError(error.response?.data?.error || error.message || 'Failed to get coaching response.');
+    } finally {
+      setCoachLoading(false);
+    }
+  };
+
+  const submitCoachVoiceTurn = async () => {
+    if (!coachAudioBlob) {
+      setCoachVoiceError('Please record a voice follow-up first.');
+      return;
+    }
+
+    setCoachTranscribing(true);
+    setCoachVoiceError('');
+
+    try {
+      const transcriptResult = await voiceAPI.transcribe(coachAudioBlob, coachLanguage);
+      const transcript = (transcriptResult?.transcription || '').trim();
+      if (!transcript) {
+        throw new Error('No speech detected. Please try recording again.');
+      }
+      setCoachInput(transcript);
+      setCoachTranscriptReady(true);
+    } catch (error) {
+      setCoachVoiceError(error.response?.data?.error || error.message || 'Voice follow-up failed.');
+    } finally {
+      setCoachTranscribing(false);
+    }
+  };
+
+  const fetchCoachReplyAudio = useCallback(async (text) => {
+    if (!text) return;
+    setCoachReplyAudioState('loading');
+    try {
+      const audioBlob = await voiceAPI.speak(text);
+      const url = URL.createObjectURL(audioBlob);
+      setCoachReplyAudioUrl(url);
+      setCoachReplyAudioState('ready');
+    } catch (error) {
+      setCoachReplyAudioState('error');
+    }
+  }, []);
+
+  useEffect(() => {
+    const coachText = coachResult?.teacher_response || '';
+    if (coachText && coachReplyFetchedTextRef.current !== coachText) {
+      coachReplyFetchedTextRef.current = coachText;
+      fetchCoachReplyAudio(coachText);
+    }
+  }, [coachResult?.teacher_response, fetchCoachReplyAudio]);
+
+  useEffect(() => {
+    if (!coachReplyAudioUrl || coachReplyAudioState !== 'ready') return;
+
+    const audio = new Audio(coachReplyAudioUrl);
+    coachReplyAudioRef.current = audio;
+
+    audio.onplay = () => setCoachReplyAudioState('playing');
+    audio.onended = () => setCoachReplyAudioState('finished');
+    audio.onerror = () => setCoachReplyAudioState('error');
+
+    audio.play().catch(() => setCoachReplyAudioState('finished'));
+
+    return () => {
+      audio.pause();
+      audio.onplay = null;
+      audio.onended = null;
+      audio.onerror = null;
+    };
+  }, [coachReplyAudioUrl, coachReplyAudioState]);
+
+  const toggleCoachReplyPlayback = () => {
+    if (!coachReplyAudioRef.current) return;
+    if (coachReplyAudioState === 'playing') {
+      coachReplyAudioRef.current.pause();
+      setCoachReplyAudioState('finished');
+    } else if (coachReplyAudioState === 'finished' || coachReplyAudioState === 'ready') {
+      coachReplyAudioRef.current.currentTime = 0;
+      coachReplyAudioRef.current.play().catch(() => {});
     }
   };
 
@@ -227,6 +364,104 @@ export default function FeedbackDisplay({ attempt, onNext, onEnd, isLastQuestion
               )}
               {quickCheckResult?.follow_up && (
                 <div className={styles.quickCheckFeedback}>{quickCheckResult.follow_up}</div>
+              )}
+            </div>
+            <div className={styles.voiceCoachBox}>
+              <div className={styles.voiceCoachTitle}>Ask teacher follow-up</div>
+              <textarea
+                className={styles.quickCheckInput}
+                value={coachInput}
+                onChange={(e) => {
+                  setCoachInput(e.target.value);
+                  setCoachTranscriptReady(false);
+                }}
+                placeholder="Type follow-up, or transcribe voice and edit here before asking teacher."
+                disabled={coachLoading}
+                rows={3}
+              />
+              {coachTranscriptReady && (
+                <div className={styles.voiceCoachHint}>
+                  Transcript ready. You can edit it, then click <strong>Ask Teacher</strong>.
+                </div>
+              )}
+              <div className={styles.quickCheckActions}>
+                <button
+                  className={styles.quickCheckButton}
+                  onClick={submitCoachTurn}
+                  disabled={coachLoading || !coachInput.trim()}
+                >
+                  {coachLoading ? 'Thinking...' : 'Ask Teacher'}
+                </button>
+              </div>
+              <div className={styles.voiceCoachDivider}>or ask by voice</div>
+              <LanguageSelector value={coachLanguage} onChange={setCoachLanguage} />
+              <VoiceRecorder
+                onRecordingComplete={(blob) => {
+                  setCoachAudioBlob(blob);
+                  setCoachVoiceError('');
+                }}
+                onError={(error) => setCoachVoiceError(error)}
+              />
+              <div className={styles.quickCheckActions}>
+                <button
+                  className={styles.quickCheckButton}
+                  onClick={submitCoachVoiceTurn}
+                  disabled={coachTranscribing || coachLoading || !coachAudioBlob}
+                >
+                  {coachTranscribing ? 'Transcribing...' : 'Transcribe Voice'}
+                </button>
+              </div>
+              {coachVoiceError && <div className={styles.quickCheckError}>{coachVoiceError}</div>}
+              {coachError && <div className={styles.quickCheckError}>{coachError}</div>}
+              {coachResult?.teacher_response && (
+                <div className={styles.voiceCoachResponse}>
+                  <div className={styles.voiceCoachReplyHeader}>
+                    <span>Teacher reply</span>
+                    {(coachReplyAudioState === 'finished' || coachReplyAudioState === 'ready' || coachReplyAudioState === 'playing') && (
+                      <button onClick={toggleCoachReplyPlayback} className={styles.playButton}>
+                        {coachReplyAudioState === 'playing' ? '⏸ Pause' : '▶ Play'}
+                      </button>
+                    )}
+                  </div>
+                  <div className={styles.voiceCoachText}>{coachResult.teacher_response}</div>
+                  {showVoiceTelemetry && (
+                    <div className={styles.voiceCoachMeta}>
+                      Focus: {coachResult.teaching_focus || 'concept_clarity'} | Mode: {coachResult.latency_mode || 'balanced'} | Context: {coachResult.context_confidence || '-'} ({coachResult.context_top_score ?? '-'}) | Latency: {coachResult.latency_ms ?? '-'}ms | Cache: {(coachResult.cache_hit || coachResult.backend_cache_hit) ? 'hit' : 'miss'} | Fallback: {coachResult.fallback_used ? 'yes' : 'no'}
+                    </div>
+                  )}
+                  {showVoiceTelemetry && coachResult.quality_checks && (
+                    <div className={styles.voiceCoachMeta}>
+                      Quality: {coachResult.quality_checks.style_passed ? 'pass' : 'review'} | Words: {coachResult.quality_checks.word_count} | Check question: {coachResult.quality_checks.has_check_question ? 'yes' : 'no'}
+                    </div>
+                  )}
+                  {showVoiceTelemetry && Array.isArray(coachResult.query_expansions) && coachResult.query_expansions.length > 0 && (
+                    <div className={styles.voiceCoachGrounding}>
+                      Domain expansions used: {coachResult.query_expansions.join(', ')}
+                    </div>
+                  )}
+                  {coachResult.needs_clarification && (
+                    <div className={styles.voiceCoachClarify}>
+                      Clarification needed: add one precise anchor (drug name, mechanism keyword, or quoted PYQ/textbook line), then ask again.
+                    </div>
+                  )}
+                  {coachResult.grounding_note && (
+                    <div className={styles.voiceCoachGrounding}>{coachResult.grounding_note}</div>
+                  )}
+                  {showVoiceTelemetry && Array.isArray(coachResult.used_source_ids) && coachResult.used_source_ids.length > 0 && (
+                    <div className={styles.voiceCoachSourceIds}>
+                      Sources used: {coachResult.used_source_ids.join(', ')}
+                    </div>
+                  )}
+                  {showVoiceTelemetry && Array.isArray(coachResult.references) && coachResult.references.length > 0 && (
+                    <div className={styles.voiceCoachRefs}>
+                      {coachResult.references.slice(0, 3).map((ref, idx) => (
+                        <div key={`${ref.source_id || 'ref'}-${idx}`} className={styles.voiceCoachRefItem}>
+                          {ref.subject || 'General'} / {ref.topic || 'General'} - {ref.preview || 'Reference'}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>

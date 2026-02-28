@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Voice AI Training Sample",
+  "type": "object",
+  "required": [
+    "sample_id",
+    "split",
+    "student_input",
+    "retrieved_context",
+    "target_teacher_response",
+    "metadata"
+  ],
+  "properties": {
+    "sample_id": {
+      "type": "string"
+    },
+    "split": {
+      "type": "string",
+      "enum": ["train", "val", "test"]
+    },
+    "student_input": {
+      "type": "object",
+      "required": ["transcript", "subject", "topic"],
+      "properties": {
+        "transcript": { "type": "string" },
+        "subject": { "type": "string" },
+        "topic": { "type": "string" },
+        "question_stem": { "type": "string" }
+      }
+    },
+    "retrieved_context": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source_id", "source_type", "text"],
+        "properties": {
+          "source_id": { "type": "string" },
+          "source_type": { "type": "string" },
+          "subject": { "type": "string" },
+          "topic": { "type": "string" },
+          "text": { "type": "string" }
+        }
+      }
+    },
+    "target_teacher_response": {
+      "type": "object",
+      "required": ["response_text", "teaching_focus", "quick_check_question"],
+      "properties": {
+        "response_text": { "type": "string" },
+        "teaching_focus": { "type": "string" },
+        "quick_check_question": { "type": "string" },
+        "grounding_source_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["source_pack_version", "created_at"],
+      "properties": {
+        "source_pack_version": { "type": "string" },
+        "created_at": { "type": "string" },
+        "annotator": { "type": "string" },
+        "difficulty": { "type": "string" }
+      }
+    }
+  }
+}
