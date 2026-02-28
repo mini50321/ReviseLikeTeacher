@@ -393,25 +393,6 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
                   {coachLoading ? 'Thinking...' : 'Ask Teacher'}
                 </button>
               </div>
-              <div className={styles.voiceCoachDivider}>or ask by voice</div>
-              <LanguageSelector value={coachLanguage} onChange={setCoachLanguage} />
-              <VoiceRecorder
-                onRecordingComplete={(blob) => {
-                  setCoachAudioBlob(blob);
-                  setCoachVoiceError('');
-                }}
-                onError={(error) => setCoachVoiceError(error)}
-              />
-              <div className={styles.quickCheckActions}>
-                <button
-                  className={styles.quickCheckButton}
-                  onClick={submitCoachVoiceTurn}
-                  disabled={coachTranscribing || coachLoading || !coachAudioBlob}
-                >
-                  {coachTranscribing ? 'Transcribing...' : 'Transcribe Voice'}
-                </button>
-              </div>
-              {coachVoiceError && <div className={styles.quickCheckError}>{coachVoiceError}</div>}
               {coachError && <div className={styles.quickCheckError}>{coachError}</div>}
               {coachResult?.teacher_response && (
                 <div className={styles.voiceCoachResponse}>
@@ -463,6 +444,25 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
                   )}
                 </div>
               )}
+              <div className={styles.voiceCoachDivider}>or ask by voice</div>
+              <LanguageSelector value={coachLanguage} onChange={setCoachLanguage} />
+              <VoiceRecorder
+                onRecordingComplete={(blob) => {
+                  setCoachAudioBlob(blob);
+                  setCoachVoiceError('');
+                }}
+                onError={(error) => setCoachVoiceError(error)}
+              />
+              <div className={styles.quickCheckActions}>
+                <button
+                  className={styles.quickCheckButton}
+                  onClick={submitCoachVoiceTurn}
+                  disabled={coachTranscribing || coachLoading || !coachAudioBlob}
+                >
+                  {coachTranscribing ? 'Transcribing...' : 'Transcribe Voice'}
+                </button>
+              </div>
+              {coachVoiceError && <div className={styles.quickCheckError}>{coachVoiceError}</div>}
             </div>
           </div>
         )}
