@@ -219,7 +219,9 @@ async def text_to_speech(request: dict):
 @app.post("/extract-pdf")
 async def extract_pdf(
     file: UploadFile = File(...),
-    filename: str = Form("")
+    filename: str = Form(""),
+    start_page: int = Form(0),
+    end_page: int | None = Form(None)
 ):
     try:
         from services.pdf_extraction import extract_questions_from_pdf
@@ -231,7 +233,12 @@ async def extract_pdf(
         if len(pdf_content) > 50 * 1024 * 1024:
             raise HTTPException(status_code=400, detail="PDF file too large (max 50MB)")
 
-        result = await extract_questions_from_pdf(pdf_content, filename or file.filename or "unknown.pdf")
+        result = await extract_questions_from_pdf(
+            pdf_content,
+            filename or file.filename or "unknown.pdf",
+            start_page=start_page,
+            end_page=end_page
+        )
 
         return JSONResponse(content=result)
     except HTTPException:
@@ -532,5 +539,5 @@ async def generate_mcq_items_endpoint(request: dict):
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    uvicorn.run(app, host="127.0.0.1", port=port)
 

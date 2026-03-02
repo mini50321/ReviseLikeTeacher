@@ -18,6 +18,21 @@ export default function PDFUploadPage() {
   const [extracting, setExtracting] = useState(false);
   const [extractionResult, setExtractionResult] = useState(null);
   const [error, setError] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  const groupExtractionsByChunk = (items, chunkSize = pageSize) => {
+    const groups = [];
+    for (let i = 0; i < items.length; i += chunkSize) {
+      const start = i + 1;
+      const end = Math.min(i + chunkSize, items.length);
+      groups.push({
+        range: `${start}-${end}`,
+        items: items.slice(i, i + chunkSize)
+      });
+    }
+    return groups;
+  };
 
   useEffect(() => {
     fetchPDFs();
@@ -27,8 +42,13 @@ export default function PDFUploadPage() {
     if (selectedPdf) {
       fetchExtractions(selectedPdf.id);
       setExtractionResult(null);
+      setCurrentPage(1);
     }
   }, [selectedPdf]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [extractions.length]);
 
   const fetchPDFs = async () => {
     try {
@@ -99,16 +119,37 @@ export default function PDFUploadPage() {
     setExtractionResult(null);
 
     try {
-      const response = await api.post(`/pdf/${selectedPdf.id}/extract`, {}, {
-        timeout: 300000
-      });
+      await api.post(`/pdf/${selectedPdf.id}/extract`);
 
-      setExtractionResult(response.data);
-      fetchExtractions(selectedPdf.id);
-      fetchPDFs();
+      const poll = async () => {
+        try {
+          const [pdfRes, extRes] = await Promise.all([
+            api.get(`/pdf/${selectedPdf.id}`),
+            api.get(`/extractions/${selectedPdf.id}`)
+          ]);
+
+          setSelectedPdf(pdfRes.data.pdf);
+          setExtractions(extRes.data.extractions || []);
+
+          const status = pdfRes.data.pdf.upload_status;
+          if (status === 'processing') {
+            setTimeout(poll, 7000);
+          } else {
+            setExtracting(false);
+            setExtractionResult({
+              summary: pdfRes.data.pdf.extraction_summary || '',
+              importance_breakdown: {},
+              yield_breakdown: {}
+            });
+          }
+        } catch (e) {
+          setTimeout(poll, 10000);
+        }
+      };
+
+      poll();
     } catch (err) {
       setError(err.response?.data?.error || 'AI extraction failed. Please try again.');
-    } finally {
       setExtracting(false);
     }
   };
@@ -323,48 +364,121 @@ export default function PDFUploadPage() {
                   </div>
                 ) : !extracting && (
                   <div className={styles.extractionList}>
-                    {extractions.map((extraction, index) => (
-                      <div key={extraction.id || `extraction-${index}`} className={styles.extractionCard}>
-                        <div className={styles.extractionHeader}>
-                          <div className={styles.extractionMeta}>
-                            <span className={styles.badge}>{extraction.detected_subject}</span>
-                            <span className={styles.badge}>{extraction.detected_topic}</span>
-                            <span className={styles.badge}>{extraction.detected_type}</span>
-                            <span
-                              className={styles.importanceBadge}
-                              style={getImportanceStyle(extraction.detected_importance)}
-                            >
-                              {extraction.detected_importance || 'medium'}
-                            </span>
-                            {extraction.frequency_count > 1 && (
-                              <span className={styles.badge} style={{ background: 'rgba(139, 92, 246, 0.25)', border: '1px solid rgba(139, 92, 246, 0.5)' }}>
-                                Repeated {extraction.frequency_count}x
-                              </span>
-                            )}
-                            {extraction.most_recent_year && (
-                              <span className={styles.badge} style={{ background: 'rgba(59, 130, 246, 0.25)', border: '1px solid rgba(59, 130, 246, 0.5)' }}>
-                                Last: {extraction.most_recent_year}
-                              </span>
-                            )}
+                    {(() => {
+                      const groups = groupExtractionsByChunk(extractions);
+                      const totalPages = groups.length || 1;
+                      const safePage = Math.min(Math.max(currentPage, 1), totalPages);
+                      const group = groups[safePage - 1] || { range: '1-0', items: [] };
+                      return (
+                        <>
+                          <div className={styles.pageGroup}>
+                            <h3 className={styles.pageGroupTitle}>
+                              Questions {group.range}
+                            </h3>
+                            {group.items.map((extraction, index) => (
+                              <div key={extraction.id || `extraction-${group.range}-${index}`} className={styles.extractionCard}>
+                                <div className={styles.extractionHeader}>
+                                  <div className={styles.extractionMeta}>
+                                    <span className={styles.badge}>{extraction.detected_subject}</span>
+                                    <span className={styles.badge}>{extraction.detected_topic}</span>
+                                    <span className={styles.badge}>{extraction.detected_type}</span>
+                                    <span
+                                      className={styles.importanceBadge}
+                                      style={getImportanceStyle(extraction.detected_importance)}
+                                    >
+                                      {extraction.detected_importance || 'medium'}
+                                    </span>
+                                    {extraction.frequency_count > 1 && (
+                                      <span className={styles.badge} style={{ background: 'rgba(139, 92, 246, 0.25)', border: '1px solid rgba(139, 92, 246, 0.5)' }}>
+                                        Repeated {extraction.frequency_count}x
+                                      </span>
+                                    )}
+                                    {extraction.most_recent_year && (
+                                      <span className={styles.badge} style={{ background: 'rgba(59, 130, 246, 0.25)', border: '1px solid rgba(59, 130, 246, 0.5)' }}>
+                                        Last: {extraction.most_recent_year}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className={`${styles.status} ${styles[extraction.status]}`}>
+                                    {extraction.status}
+                                  </span>
+                                </div>
+                                <div className={styles.extractionText}>
+                                  {extraction.extracted_text.substring(0, 200)}
+                                  {extraction.extracted_text.length > 200 && '...'}
+                                </div>
+                                <div className={styles.extractionActions}>
+                                  <button
+                                    className={styles.reviewButton}
+                                    onClick={() => setReviewingExtraction(extraction)}
+                                  >
+                                    Review
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                          <span className={`${styles.status} ${styles[extraction.status]}`}>
-                            {extraction.status}
-                          </span>
-                        </div>
-                        <div className={styles.extractionText}>
-                          {extraction.extracted_text.substring(0, 200)}
-                          {extraction.extracted_text.length > 200 && '...'}
-                        </div>
-                        <div className={styles.extractionActions}>
-                          <button
-                            className={styles.reviewButton}
-                            onClick={() => setReviewingExtraction(extraction)}
-                          >
-                            Review
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                          {totalPages > 1 && (
+                            <div className={styles.pagination}>
+                              <button
+                                className={styles.pageNavButton}
+                                disabled={safePage === 1}
+                                onClick={() => safePage > 1 && setCurrentPage(safePage - 1)}
+                              >
+                                ‹
+                              </button>
+                              {(() => {
+                                const items = [];
+                                if (totalPages <= 5) {
+                                  for (let p = 1; p <= totalPages; p++) {
+                                    items.push(p);
+                                  }
+                                } else {
+                                  items.push(1);
+                                  let start = Math.max(2, safePage - 1);
+                                  let end = Math.min(totalPages - 1, safePage + 1);
+                                  if (start > 2) {
+                                    items.push('prevMore');
+                                  }
+                                  for (let p = start; p <= end; p++) {
+                                    items.push(p);
+                                  }
+                                  if (end < totalPages - 1) {
+                                    items.push('nextMore');
+                                  }
+                                  items.push(totalPages);
+                                }
+                                return items.map((item, idx) => {
+                                  if (typeof item === 'number') {
+                                    return (
+                                      <button
+                                        key={`page-${item}`}
+                                        className={`${styles.pageButton} ${item === safePage ? styles.pageButtonActive : ''}`}
+                                        onClick={() => setCurrentPage(item)}
+                                      >
+                                        {item}
+                                      </button>
+                                    );
+                                  }
+                                  return (
+                                    <span key={`ellipsis-${idx}`} className={styles.pageButtonEllipsis}>
+                                      …
+                                    </span>
+                                  );
+                                });
+                              })()}
+                              <button
+                                className={styles.pageNavButton}
+                                disabled={safePage === totalPages}
+                                onClick={() => safePage < totalPages && setCurrentPage(safePage + 1)}
+                              >
+                                ›
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 )}
               </section>

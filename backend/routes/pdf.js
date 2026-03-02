@@ -139,99 +139,93 @@ router.post('/:id/extract', authenticate, requireAdmin, async (req, res) => {
       return res.status(404).json({ error: 'PDF file not found on server' });
     }
 
-    let result;
-    try {
-      result = await extractQuestionsFromPDF(fileBuffer, pdf.file_name);
-    } catch (aiError) {
-      await db.query(
-        "UPDATE pdfupload SET upload_status = 'failed' WHERE id = $1",
-        [id]
-      );
-      return res.status(500).json({ error: aiError.message || 'AI extraction failed' });
-    }
+    (async () => {
+      try {
+        const result = await extractQuestionsFromPDF(fileBuffer, pdf.file_name);
+        const questions = result.questions || [];
 
-    const questions = result.questions || [];
+        for (const q of questions) {
+          const eqId = db.generateUUID();
+          const stemWithRange = q.page_range ? `Pages ${q.page_range}: ${q.stem || ''}` : (q.stem || '');
+          await db.query(
+            `INSERT INTO extractedquestion
+             (id, pdfupload_id, extracted_text, detected_type, detected_subject,
+              detected_topic, detected_subtopic, detected_difficulty, detected_importance,
+              detected_cognitive_focus, detected_key_points, detected_previous_year_tags,
+              extracted_options, extracted_correct_answer, extracted_ideal_answer,
+              yield_category, detected_distractor_analysis, detected_concept_tags,
+              detected_trap_pattern, frequency_count, most_recent_year,
+              confidence_score, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, 'draft')`,
+            [
+              eqId,
+              id,
+              stemWithRange,
+              q.type || 'mcq',
+              q.subject || 'Unknown',
+              q.topic || 'General',
+              q.subtopic || null,
+              q.difficulty || 'medium',
+              q.importance || 'medium',
+              q.cognitive_focus || 'factual',
+              JSON.stringify(q.key_points || []),
+              JSON.stringify(q.exam_tags || []),
+              q.options ? JSON.stringify(q.options) : null,
+              q.correct_answer || null,
+              q.ideal_answer || null,
+              q.yield_category || 'occasional',
+              typeof q.distractor_analysis === 'string' ? q.distractor_analysis : JSON.stringify(q.distractor_analysis || null),
+              typeof q.concept_tags === 'string' ? q.concept_tags : JSON.stringify(q.concept_tags || []),
+              q.trap_pattern || null,
+              q.frequency_count || 1,
+              q.most_recent_year || null,
+              80
+            ]
+          );
+        }
 
-    for (const q of questions) {
-      const eqId = db.generateUUID();
-      await db.query(
-        `INSERT INTO extractedquestion
-         (id, pdfupload_id, extracted_text, detected_type, detected_subject,
-          detected_topic, detected_subtopic, detected_difficulty, detected_importance,
-          detected_cognitive_focus, detected_key_points, detected_previous_year_tags,
-          extracted_options, extracted_correct_answer, extracted_ideal_answer,
-          yield_category, detected_distractor_analysis, detected_concept_tags,
-          detected_trap_pattern, frequency_count, most_recent_year,
-          confidence_score, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, 'draft')`,
-        [
-          eqId,
-          id,
-          q.stem || '',
-          q.type || 'mcq',
-          q.subject || 'Unknown',
-          q.topic || 'General',
-          q.subtopic || null,
-          q.difficulty || 'medium',
-          q.importance || 'medium',
-          q.cognitive_focus || 'factual',
-          JSON.stringify(q.key_points || []),
-          JSON.stringify(q.exam_tags || []),
-          q.options ? JSON.stringify(q.options) : null,
-          q.correct_answer || null,
-          q.ideal_answer || null,
-          q.yield_category || 'occasional',
-          typeof q.distractor_analysis === 'string' ? q.distractor_analysis : JSON.stringify(q.distractor_analysis || null),
-          typeof q.concept_tags === 'string' ? q.concept_tags : JSON.stringify(q.concept_tags || []),
-          q.trap_pattern || null,
-          q.frequency_count || 1,
-          q.most_recent_year || null,
-          80
-        ]
-      );
-    }
+        const subtopicYield = result.subtopic_yield || [];
+        for (const sy of subtopicYield) {
+          const syId = db.generateUUID();
+          const existing = await db.query(
+            'SELECT id, pyq_count FROM subtopic_yield WHERE subject = $1 AND topic = $2 AND subtopic = $3',
+            [sy.subject, sy.topic, sy.subtopic]
+          );
 
-    const subtopicYield = result.subtopic_yield || [];
-    for (const sy of subtopicYield) {
-      const syId = db.generateUUID();
-      const existing = await db.query(
-        'SELECT id, pyq_count FROM subtopic_yield WHERE subject = $1 AND topic = $2 AND subtopic = $3',
-        [sy.subject, sy.topic, sy.subtopic]
-      );
+          if (existing.rows.length > 0) {
+            const newCount = existing.rows[0].pyq_count + sy.pyq_count;
+            const newCategory = newCount >= 10 ? 'core' : newCount >= 5 ? 'frequent' : newCount >= 2 ? 'occasional' : 'rare';
+            await db.query(
+              `UPDATE subtopic_yield SET pyq_count = $1, yield_category = $2,
+               years_appeared = $3, most_recent_year = $4 WHERE id = $5`,
+              [newCount, newCategory, JSON.stringify(sy.years_appeared || []),
+               sy.most_recent_year || null, existing.rows[0].id]
+            );
+          } else {
+            await db.query(
+              `INSERT INTO subtopic_yield (id, subject, topic, subtopic, pyq_count, yield_category, years_appeared, most_recent_year)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+              [syId, sy.subject, sy.topic, sy.subtopic, sy.pyq_count,
+               sy.yield_category, JSON.stringify(sy.years_appeared || []),
+               sy.most_recent_year || null]
+            );
+          }
+        }
 
-      if (existing.rows.length > 0) {
-        const newCount = existing.rows[0].pyq_count + sy.pyq_count;
-        const newCategory = newCount >= 10 ? 'core' : newCount >= 5 ? 'frequent' : newCount >= 2 ? 'occasional' : 'rare';
         await db.query(
-          `UPDATE subtopic_yield SET pyq_count = $1, yield_category = $2,
-           years_appeared = $3, most_recent_year = $4 WHERE id = $5`,
-          [newCount, newCategory, JSON.stringify(sy.years_appeared || []),
-           sy.most_recent_year || null, existing.rows[0].id]
+          "UPDATE pdfupload SET upload_status = 'extracted', extraction_summary = $1, processed_at = CURRENT_TIMESTAMP WHERE id = $2",
+          [result.summary || '', id]
         );
-      } else {
+      } catch (aiError) {
+        console.error('Background PDF extraction error:', aiError);
         await db.query(
-          `INSERT INTO subtopic_yield (id, subject, topic, subtopic, pyq_count, yield_category, years_appeared, most_recent_year)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-          [syId, sy.subject, sy.topic, sy.subtopic, sy.pyq_count,
-           sy.yield_category, JSON.stringify(sy.years_appeared || []),
-           sy.most_recent_year || null]
+          "UPDATE pdfupload SET upload_status = 'failed' WHERE id = $1",
+          [id]
         );
       }
-    }
+    })();
 
-    await db.query(
-      "UPDATE pdfupload SET upload_status = 'extracted', extraction_summary = $1, processed_at = CURRENT_TIMESTAMP WHERE id = $2",
-      [result.summary || '', id]
-    );
-
-    res.json({
-      total_extracted: questions.length,
-      summary: result.summary,
-      importance_breakdown: result.importance_breakdown || {},
-      yield_breakdown: result.yield_breakdown || {},
-      subtopic_yield_count: subtopicYield.length,
-      subjects: result.subjects || []
-    });
+    return res.status(202).json({ status: 'processing' });
   } catch (error) {
     console.error('PDF extraction route error:', error);
     res.status(500).json({ error: error.message || 'Extraction failed' });

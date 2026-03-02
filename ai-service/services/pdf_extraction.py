@@ -3,6 +3,8 @@ import json
 import tempfile
 import asyncio
 import re
+import base64
+from io import BytesIO
 from typing import Dict, Any, List
 from services.transcription import get_openai_client
 
@@ -45,7 +47,7 @@ CASE_KEYWORDS = [
 ]
 
 
-def extract_text_from_pdf(pdf_bytes: bytes) -> str:
+def extract_text_from_pdf(pdf_bytes: bytes, start_page: int = 0, end_page: int | None = None) -> str:
     if pdfplumber is None:
         raise ImportError("pdfplumber is not installed")
     max_chars = int(os.getenv("PDF_MAX_TEXT_CHARS", "180000"))
@@ -59,12 +61,93 @@ def extract_text_from_pdf(pdf_bytes: bytes) -> str:
         parts = []
         total_chars = 0
         with pdfplumber.open(tmp_path) as pdf:
+            total_pages = len(pdf.pages)
+            if start_page < 0:
+                start_page = 0
+            if end_page is None or end_page > total_pages:
+                end_page = min(total_pages, max_pages)
             for i, page in enumerate(pdf.pages):
-                if i >= max_pages or total_chars >= max_chars:
+                if i < start_page:
+                    continue
+                if i >= end_page or total_chars >= max_chars:
                     break
                 page_text = page.extract_text()
                 if page_text:
                     chunk = f"\n--- Page {i + 1} ---\n{page_text}"
+                    remaining = max_chars - total_chars
+                    if remaining <= 0:
+                        break
+                    if len(chunk) > remaining:
+                        chunk = chunk[:remaining]
+                    parts.append(chunk)
+                    total_chars += len(chunk)
+        return "".join(parts).strip()
+    finally:
+        os.unlink(tmp_path)
+
+
+def extract_text_from_pdf_with_ocr(pdf_bytes: bytes, start_page: int = 0, end_page: int | None = None) -> str:
+    if pdfplumber is None:
+        return ""
+    client = get_openai_client()
+    if client is None:
+        return ""
+    max_chars = int(os.getenv("PDF_OCR_MAX_TEXT_CHARS", "60000"))
+    max_pages = int(os.getenv("PDF_OCR_MAX_PAGES", "20"))
+    ocr_model = os.getenv("PDF_OCR_MODEL", os.getenv("AI_MODEL", "gpt-4o-mini"))
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+        tmp.write(pdf_bytes)
+        tmp_path = tmp.name
+    try:
+        parts = []
+        total_chars = 0
+        with pdfplumber.open(tmp_path) as pdf:
+            total_pages = len(pdf.pages)
+            if start_page < 0:
+                start_page = 0
+            if end_page is None or end_page > total_pages:
+                end_page = min(total_pages, max_pages)
+            for i, page in enumerate(pdf.pages):
+                if i < start_page:
+                    continue
+                if i >= end_page or total_chars >= max_chars:
+                    break
+                image = page.to_image(resolution=200).original
+                buf = BytesIO()
+                image.save(buf, format="PNG")
+                b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+                content = [
+                    {
+                        "type": "text",
+                        "text": "Transcribe all readable text from this page. Return only the plain text, no explanations."
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": "data:image/png;base64," + b64
+                        }
+                    }
+                ]
+                try:
+                    resp = client.chat.completions.create(
+                        model=ocr_model,
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": "You are an OCR engine. You read text from images and output only the exact text content."
+                            },
+                            {
+                                "role": "user",
+                                "content": content
+                            }
+                        ]
+                    )
+                    page_text = resp.choices[0].message.content or ""
+                except Exception as e:
+                    print(f"OCR page error: {e}")
+                    page_text = ""
+                if page_text:
+                    chunk = f"\n--- Page {i + 1} (OCR) ---\n{page_text}"
                     remaining = max_chars - total_chars
                     if remaining <= 0:
                         break
@@ -594,9 +677,22 @@ def analyze_importance(questions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return questions, subtopic_yield_data
 
 
-async def extract_questions_from_pdf(pdf_bytes: bytes, filename: str = "") -> Dict[str, Any]:
-    print(f"Extracting text from PDF: {filename} ({len(pdf_bytes)} bytes)")
-    text = extract_text_from_pdf(pdf_bytes)
+async def extract_questions_from_pdf(pdf_bytes: bytes, filename: str = "", start_page: int = 0, end_page: int | None = None) -> Dict[str, Any]:
+    print(f"Extracting text from PDF: {filename} ({len(pdf_bytes)} bytes) pages {start_page + 1} to {end_page or -1}")
+    text = extract_text_from_pdf(pdf_bytes, start_page=start_page, end_page=end_page)
+
+    if not text or len(text.strip()) < 50:
+        print("Direct text extraction produced little or no text, attempting OCR...")
+        ocr_text = extract_text_from_pdf_with_ocr(pdf_bytes, start_page=start_page, end_page=end_page)
+        if ocr_text and len(ocr_text.strip()) >= 50:
+            text = ocr_text
+        else:
+            return {
+                "questions": [],
+                "total_extracted": 0,
+                "summary": "Could not extract meaningful text from this PDF even after AI OCR.",
+                "text_length": len(ocr_text) if ocr_text else (len(text) if text else 0)
+            }
 
     if not text or len(text.strip()) < 50:
         return {
