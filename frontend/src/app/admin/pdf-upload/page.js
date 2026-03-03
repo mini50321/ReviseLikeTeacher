@@ -346,7 +346,7 @@ export default function PDFUploadPage() {
                   )}
                 </div>
 
-                {extracting && (
+                {extracting && extractions.length === 0 && (
                   <div className={styles.extractingState}>
                     <div className={styles.spinner}></div>
                     <p>AI is reading the PDF and extracting questions...</p>
@@ -354,15 +354,22 @@ export default function PDFUploadPage() {
                   </div>
                 )}
 
+                {extracting && extractions.length > 0 && (
+                  <div className={styles.extractingState}>
+                    <div className={styles.spinner}></div>
+                    <p>Extracting more questions… {extractions.length} so far.</p>
+                  </div>
+                )}
+
                 {!selectedPdf ? (
                   <div className={styles.emptyState}>
                     <p>Select a PDF from the list to view or extract questions.</p>
                   </div>
-                ) : !extracting && extractions.length === 0 ? (
+                ) : extractions.length === 0 && !extracting ? (
                   <div className={styles.emptyState}>
                     <p>No questions extracted yet. Click "Extract Questions" to let AI parse this PDF.</p>
                   </div>
-                ) : !extracting && (
+                ) : extractions.length > 0 && (
                   <div className={styles.extractionList}>
                     {(() => {
                       const groups = groupExtractionsByChunk(extractions);
@@ -404,8 +411,8 @@ export default function PDFUploadPage() {
                                   </span>
                                 </div>
                                 <div className={styles.extractionText}>
-                                  {extraction.extracted_text.substring(0, 200)}
-                                  {extraction.extracted_text.length > 200 && '...'}
+                                  {(extraction.extracted_text || '').substring(0, 200)}
+                                  {(extraction.extracted_text || '').length > 200 && '...'}
                                 </div>
                                 <div className={styles.extractionActions}>
                                   <button

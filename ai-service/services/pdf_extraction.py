@@ -50,8 +50,8 @@ CASE_KEYWORDS = [
 def extract_text_from_pdf(pdf_bytes: bytes, start_page: int = 0, end_page: int | None = None) -> str:
     if pdfplumber is None:
         raise ImportError("pdfplumber is not installed")
-    max_chars = int(os.getenv("PDF_MAX_TEXT_CHARS", "180000"))
-    max_pages = int(os.getenv("PDF_MAX_PAGES", "250"))
+    max_chars = int(os.getenv("PDF_MAX_TEXT_CHARS", "60000"))
+    max_pages = int(os.getenv("PDF_MAX_PAGES", "80"))
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
         tmp.write(pdf_bytes)
@@ -93,7 +93,7 @@ def extract_text_from_pdf_with_ocr(pdf_bytes: bytes, start_page: int = 0, end_pa
     if client is None:
         return ""
     max_chars = int(os.getenv("PDF_OCR_MAX_TEXT_CHARS", "60000"))
-    max_pages = int(os.getenv("PDF_OCR_MAX_PAGES", "20"))
+    max_pages = int(os.getenv("PDF_OCR_MAX_PAGES", "40"))
     ocr_model = os.getenv("PDF_OCR_MODEL", os.getenv("AI_MODEL", "gpt-4o-mini"))
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
         tmp.write(pdf_bytes)
@@ -169,12 +169,14 @@ async def parse_questions_from_text(text: str, filename: str = "") -> List[Dict[
     if client is None:
         return normalize_extracted_questions(structured_questions)
 
-    max_chars = 12000
+    max_chars = 8000
     chunks = build_text_chunks(text, max_chars=max_chars)
 
     all_questions = []
 
-    for i, chunk in enumerate(chunks):
+    max_chunks = int(os.getenv("PDF_MAX_AI_CHUNKS", "5"))
+
+    for i, chunk in enumerate(chunks[:max_chunks]):
         prompt = f"""You are an expert at parsing medical exam question papers (NEET PG, AIIMS, JIPMER, etc).
 
 The following text is extracted from a PDF file named "{filename}". Parse and extract ALL individual questions from this text.

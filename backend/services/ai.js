@@ -215,84 +215,35 @@ async function textToSpeech(text, voice = 'nova', speed = 1.0) {
   }
 }
 
-async function extractQuestionsFromPDF(pdfBuffer, filename = 'document.pdf') {
+async function extractQuestionsFromPDF(pdfBuffer, filename = 'document.pdf', startPage = 0, endPage = null) {
   await ensureAIServiceReady();
 
   try {
-    const chunkSize = Number(process.env.PDF_CHUNK_PAGE_SIZE || 5);
-    const maxChunks = Number(process.env.PDF_MAX_CHUNKS || 30);
+    const result = await retryRequest(async () => {
+      const FormData = require('form-data');
+      const formData = new FormData();
 
-    let allQuestions = [];
-    let lastResult = null;
-
-    for (let chunkIndex = 0; chunkIndex < maxChunks; chunkIndex++) {
-      const startPage = chunkIndex * chunkSize;
-      const endPage = startPage + chunkSize;
-
-      const result = await retryRequest(async () => {
-        const FormData = require('form-data');
-        const formData = new FormData();
-
-        formData.append('file', pdfBuffer, {
-          filename: filename,
-          contentType: 'application/pdf'
-        });
-        formData.append('filename', filename);
-        formData.append('start_page', String(startPage));
+      formData.append('file', pdfBuffer, {
+        filename: filename,
+        contentType: 'application/pdf'
+      });
+      formData.append('filename', filename);
+      formData.append('start_page', String(startPage));
+      if (endPage != null) {
         formData.append('end_page', String(endPage));
-
-        const response = await axios.post(`${AI_SERVICE_URL}/extract-pdf`, formData, {
-          headers: { ...formData.getHeaders() },
-          timeout: 900000,
-          maxContentLength: Infinity,
-          maxBodyLength: Infinity
-        });
-
-        return response.data;
-      }, { maxRetries: 4, initialDelay: 10000, label: 'PDF extraction' });
-
-      lastResult = result;
-
-      const questions = result.questions || [];
-      const textLength = result.text_length || 0;
-
-      if (questions.length === 0 && textLength < 50) {
-        if (chunkIndex === 0) {
-          return result;
-        }
-        break;
       }
 
-      const pageRange = `${startPage + 1}-${endPage}`;
-      const taggedQuestions = questions.map(q => ({
-        ...q,
-        page_range: pageRange
-      }));
+      const response = await axios.post(`${AI_SERVICE_URL}/extract-pdf`, formData, {
+        headers: { ...formData.getHeaders() },
+        timeout: 900000,
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity
+      });
 
-      allQuestions = allQuestions.concat(taggedQuestions);
+      return response.data;
+    }, { maxRetries: 4, initialDelay: 10000, label: 'PDF extraction' });
 
-      if (questions.length === 0) {
-        break;
-      }
-    }
-
-    if (!lastResult) {
-      throw new Error('PDF extraction failed: no chunks processed');
-    }
-
-    if (allQuestions.length === 0) {
-      return {
-        ...lastResult,
-        questions: [],
-        total_extracted: 0
-      };
-    }
-
-    return {
-      ...lastResult,
-      questions: allQuestions,
-      total_extracted: allQuestions.length
-    };
+    return result;
   } catch (error) {
     console.error('PDF extraction error:', error.message || error);
     if (error.response?.status === 503) {

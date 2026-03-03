@@ -141,81 +141,114 @@ router.post('/:id/extract', authenticate, requireAdmin, async (req, res) => {
 
     (async () => {
       try {
-        const result = await extractQuestionsFromPDF(fileBuffer, pdf.file_name);
-        const questions = result.questions || [];
+        const chunkSize = Number(process.env.PDF_CHUNK_PAGE_SIZE || 5);
+        const maxChunks = Number(process.env.PDF_MAX_CHUNKS || 30);
 
-        for (const q of questions) {
-          const eqId = db.generateUUID();
-          const stemWithRange = q.page_range ? `Pages ${q.page_range}: ${q.stem || ''}` : (q.stem || '');
-          await db.query(
-            `INSERT INTO extractedquestion
-             (id, pdfupload_id, extracted_text, detected_type, detected_subject,
-              detected_topic, detected_subtopic, detected_difficulty, detected_importance,
-              detected_cognitive_focus, detected_key_points, detected_previous_year_tags,
-              extracted_options, extracted_correct_answer, extracted_ideal_answer,
-              yield_category, detected_distractor_analysis, detected_concept_tags,
-              detected_trap_pattern, frequency_count, most_recent_year,
-              confidence_score, status)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, 'draft')`,
-            [
-              eqId,
-              id,
-              stemWithRange,
-              q.type || 'mcq',
-              q.subject || 'Unknown',
-              q.topic || 'General',
-              q.subtopic || null,
-              q.difficulty || 'medium',
-              q.importance || 'medium',
-              q.cognitive_focus || 'factual',
-              JSON.stringify(q.key_points || []),
-              JSON.stringify(q.exam_tags || []),
-              q.options ? JSON.stringify(q.options) : null,
-              q.correct_answer || null,
-              q.ideal_answer || null,
-              q.yield_category || 'occasional',
-              typeof q.distractor_analysis === 'string' ? q.distractor_analysis : JSON.stringify(q.distractor_analysis || null),
-              typeof q.concept_tags === 'string' ? q.concept_tags : JSON.stringify(q.concept_tags || []),
-              q.trap_pattern || null,
-              q.frequency_count || 1,
-              q.most_recent_year || null,
-              80
-            ]
-          );
-        }
+        let totalExtracted = 0;
+        let lastSummary = '';
 
-        const subtopicYield = result.subtopic_yield || [];
-        for (const sy of subtopicYield) {
-          const syId = db.generateUUID();
-          const existing = await db.query(
-            'SELECT id, pyq_count FROM subtopic_yield WHERE subject = $1 AND topic = $2 AND subtopic = $3',
-            [sy.subject, sy.topic, sy.subtopic]
-          );
+        for (let chunkIndex = 0; chunkIndex < maxChunks; chunkIndex++) {
+          const startPage = chunkIndex * chunkSize;
+          const endPage = startPage + chunkSize;
 
-          if (existing.rows.length > 0) {
-            const newCount = existing.rows[0].pyq_count + sy.pyq_count;
-            const newCategory = newCount >= 10 ? 'core' : newCount >= 5 ? 'frequent' : newCount >= 2 ? 'occasional' : 'rare';
+          const result = await extractQuestionsFromPDF(fileBuffer, pdf.file_name, startPage, endPage);
+          const questions = result.questions || [];
+          const textLength = result.text_length || 0;
+
+          if (questions.length === 0 && textLength < 50) {
+            if (chunkIndex === 0) {
+              await db.query(
+                "UPDATE pdfupload SET upload_status = 'failed' WHERE id = $1",
+                [id]
+              );
+            }
+            break;
+          }
+
+          const pageRange = `${startPage + 1}-${endPage}`;
+
+          for (const q of questions) {
+            const eqId = db.generateUUID();
+            const stemWithRange = `Pages ${pageRange}: ${q.stem || ''}`;
             await db.query(
-              `UPDATE subtopic_yield SET pyq_count = $1, yield_category = $2,
-               years_appeared = $3, most_recent_year = $4 WHERE id = $5`,
-              [newCount, newCategory, JSON.stringify(sy.years_appeared || []),
-               sy.most_recent_year || null, existing.rows[0].id]
+              `INSERT INTO extractedquestion
+               (id, pdfupload_id, extracted_text, detected_type, detected_subject,
+                detected_topic, detected_subtopic, detected_difficulty, detected_importance,
+                detected_cognitive_focus, detected_key_points, detected_previous_year_tags,
+                extracted_options, extracted_correct_answer, extracted_ideal_answer,
+                yield_category, detected_distractor_analysis, detected_concept_tags,
+                detected_trap_pattern, frequency_count, most_recent_year,
+                confidence_score, status)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, 'draft')`,
+              [
+                eqId,
+                id,
+                stemWithRange,
+                q.type || 'mcq',
+                q.subject || 'Unknown',
+                q.topic || 'General',
+                q.subtopic || null,
+                q.difficulty || 'medium',
+                q.importance || 'medium',
+                q.cognitive_focus || 'factual',
+                JSON.stringify(q.key_points || []),
+                JSON.stringify(q.exam_tags || []),
+                q.options ? JSON.stringify(q.options) : null,
+                q.correct_answer || null,
+                q.ideal_answer || null,
+                q.yield_category || 'occasional',
+                typeof q.distractor_analysis === 'string' ? q.distractor_analysis : JSON.stringify(q.distractor_analysis || null),
+                typeof q.concept_tags === 'string' ? q.concept_tags : JSON.stringify(q.concept_tags || []),
+                q.trap_pattern || null,
+                q.frequency_count || 1,
+                q.most_recent_year || null,
+                80
+              ]
             );
-          } else {
-            await db.query(
-              `INSERT INTO subtopic_yield (id, subject, topic, subtopic, pyq_count, yield_category, years_appeared, most_recent_year)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-              [syId, sy.subject, sy.topic, sy.subtopic, sy.pyq_count,
-               sy.yield_category, JSON.stringify(sy.years_appeared || []),
-               sy.most_recent_year || null]
+            totalExtracted += 1;
+          }
+
+          const subtopicYield = result.subtopic_yield || [];
+          for (const sy of subtopicYield) {
+            const syId = db.generateUUID();
+            const existing = await db.query(
+              'SELECT id, pyq_count FROM subtopic_yield WHERE subject = $1 AND topic = $2 AND subtopic = $3',
+              [sy.subject, sy.topic, sy.subtopic]
             );
+
+            if (existing.rows.length > 0) {
+              const newCount = existing.rows[0].pyq_count + sy.pyq_count;
+              const newCategory = newCount >= 10 ? 'core' : newCount >= 5 ? 'frequent' : newCount >= 2 ? 'occasional' : 'rare';
+              await db.query(
+                `UPDATE subtopic_yield SET pyq_count = $1, yield_category = $2,
+                 years_appeared = $3, most_recent_year = $4 WHERE id = $5`,
+                [newCount, newCategory, JSON.stringify(sy.years_appeared || []),
+                 sy.most_recent_year || null, existing.rows[0].id]
+              );
+            } else {
+              await db.query(
+                `INSERT INTO subtopic_yield (id, subject, topic, subtopic, pyq_count, yield_category, years_appeared, most_recent_year)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+                [syId, sy.subject, sy.topic, sy.subtopic, sy.pyq_count,
+                 sy.yield_category, JSON.stringify(sy.years_appeared || []),
+                 sy.most_recent_year || null]
+              );
+            }
+          }
+
+          lastSummary = result.summary || lastSummary;
+
+          if (questions.length === 0) {
+            break;
           }
         }
 
-        await db.query(
-          "UPDATE pdfupload SET upload_status = 'extracted', extraction_summary = $1, processed_at = CURRENT_TIMESTAMP WHERE id = $2",
-          [result.summary || '', id]
-        );
+        if (totalExtracted > 0) {
+          await db.query(
+            "UPDATE pdfupload SET upload_status = 'extracted', extraction_summary = $1, processed_at = CURRENT_TIMESTAMP WHERE id = $2",
+            [lastSummary || `Extracted ${totalExtracted} questions in chunks.`, id]
+          );
+        }
       } catch (aiError) {
         console.error('Background PDF extraction error:', aiError);
         await db.query(
