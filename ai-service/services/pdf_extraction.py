@@ -179,63 +179,54 @@ async def parse_questions_from_text(text: str, filename: str = "") -> List[Dict[
     for i, chunk in enumerate(chunks[:max_chunks]):
         prompt = f"""You are an expert at parsing medical exam question papers (NEET PG, AIIMS, JIPMER, etc).
 
-The following text is extracted from a PDF file named "{filename}". Parse and extract ALL individual questions from this text.
+The following text is extracted from a PDF file named "{filename}". Parse and extract individual questions. Follow the rules below strictly.
 
-For each question, identify:
-1. The full question text (stem)
-2. Options (A, B, C, D) if it's an MCQ
-3. The correct answer if marked in the text
-4. Question type: mcq, saq, laq, case_based, true_false, or assertion_reason
-5. Subject (e.g., Anatomy, Physiology, Pharmacology, Pathology, Microbiology, etc.)
-6. Topic within the subject
-7. Subtopic if identifiable
-8. Difficulty: easy, medium, or hard
-9. Exam year tags - identify which exam and year this question appeared in (e.g., "NEET PG 2023", "AIIMS 2022"). Look for clues in the text like headers, footers, question numbers with years, etc.
-10. Key points that the correct answer covers
-11. Ideal answer / explanation if available in the text
-12. Cognitive focus: factual, conceptual, or clinical
-13. Distractor analysis: For each MCQ, explain why each wrong option is tempting. Describe the misconception each distractor exploits.
-14. Concept tags: The core medical concept being tested (e.g., "acid-base balance", "enzyme kinetics")
-15. Trap pattern: If the question has a common trap or trick, describe it (e.g., "reversal of Type 1 vs Type 2", "confusing drug names")
+STEM vs IDEAL_ANSWER (critical):
+- "stem" = ONLY the question text that the student reads and answers. Never put explanation, answer text, or teaching content in stem. If the source has "Explanation: ..." or "Answer: ...", that goes in ideal_answer only; the part that asks the question goes in stem.
+- "ideal_answer" = the model answer or explanation used to evaluate the student. For MCQs use the explanation for the correct option if present; for SAQ/LAQ use the given explanation or model answer. If the source has no explanation, write one short sentence summarizing what a good answer should cover (do not use "None" or leave empty).
+- Do not put explanation text in the question box (stem). Do not put the question in ideal_answer. Keep them strictly separate.
 
-IMPORTANT for exam year detection:
-- Look for patterns like "NEET 2023", "AIIMS Nov 2022", "JIPMER 2021", "PGI 2020", year headers, etc.
-- If the PDF title or headers mention a year, tag all questions with that year
-- If no year is found, use "unknown"
+CORRECT ANSWER (MCQ only):
+- Set correct_answer to the option letter (A, B, C, or D) that is explicitly marked correct in the source (e.g. "Answer: B", "Key: C", "PREFERRED RESPONSE", "Correct option"). Use exactly what the document states; do not infer a different letter.
 
-Respond with a JSON array. Each item:
+SKIP these:
+- Standalone statements, single-line facts, headings, or phrases that are not questions (e.g. "Sound louder in diseased ear").
+- Items where you cannot identify a clear question being asked or a clear correct answer for MCQs.
+
+For each question output:
+1. stem: only the question text
+2. options, correct_answer (for MCQ; must match document)
+3. type: mcq, saq, laq, case_based, true_false, or assertion_reason
+4. subject, topic, subtopic, difficulty, exam_tags
+5. key_points: what the correct answer should cover
+6. ideal_answer: explanation/model answer (never "None"; if missing in text, one sentence on what a good answer covers)
+7. cognitive_focus, distractor_analysis (MCQ), concept_tags, trap_pattern
+
+JSON format per item:
 {{
-  "stem": "full question text",
+  "stem": "only the question text, no explanation",
   "type": "mcq",
-  "options": {{"A": "option text", "B": "option text", "C": "option text", "D": "option text"}},
+  "options": {{"A": "...", "B": "...", "C": "...", "D": "..."}},
   "correct_answer": "A",
-  "subject": "Pharmacology",
-  "topic": "Antibiotics",
-  "subtopic": "Fluoroquinolones",
+  "subject": "...",
+  "topic": "...",
+  "subtopic": "...",
   "difficulty": "medium",
-  "exam_tags": ["NEET PG 2023"],
-  "key_points": ["point 1", "point 2"],
-  "ideal_answer": "explanation text",
+  "exam_tags": ["..."],
+  "key_points": ["...", "..."],
+  "ideal_answer": "explanation or one-sentence summary of what answer should cover; never None",
   "cognitive_focus": "factual",
-  "distractor_analysis": {{"B": "Confuses bacteriostatic with bactericidal", "C": "Common name similarity with cephalosporins", "D": "Overgeneralization of spectrum"}},
-  "concept_tags": ["fluoroquinolone mechanism", "DNA gyrase inhibition"],
-  "trap_pattern": "Confusing generation-specific spectrum coverage"
+  "distractor_analysis": {{"B": "...", "C": "...", "D": "..."}},
+  "concept_tags": ["..."],
+  "trap_pattern": "..."
 }}
 
-For non-MCQ questions, set options, correct_answer, and distractor_analysis to null.
-
-Type labeling rules:
-- Use "mcq" only when there are explicit options.
-- Use "true_false" for true/false statements.
-- Use "assertion_reason" for assertion-reason format.
-- Use "case_based" for patient vignette style clinical stems.
-- Use "laq" for long-form/discussion/essay style prompts requiring multi-part detailed answers.
-- Use "saq" for short open-ended prompts requiring concise answers.
+For non-MCQ: options, correct_answer, distractor_analysis = null. ideal_answer must still be a short explanation or summary, not "None".
 
 TEXT (chunk {i + 1} of {len(chunks)}):
 {chunk}
 
-Return ONLY valid JSON array. No extra text."""
+Return ONLY a valid JSON array. No extra text."""
 
         loop = asyncio.get_event_loop()
 
@@ -306,6 +297,8 @@ def parse_structured_question_blocks(text: str, filename: str = "") -> List[Dict
             split_pref = pref_pattern.search(block)
             stem_text = block[:split_pref.start()].strip() if split_pref else block
         stem_text = normalize_ws(stem_text)
+        if looks_like_explanation(stem_text):
+            continue
 
         pref_match = pref_pattern.search(block)
         correct_answer = None
@@ -317,6 +310,8 @@ def parse_structured_question_blocks(text: str, filename: str = "") -> List[Dict
                     correct_answer = ["A", "B", "C", "D", "E"][idx]
             elif raw in ["A", "B", "C", "D", "E"]:
                 correct_answer = raw
+        if options and correct_answer and correct_answer not in options:
+            correct_answer = None
 
         ideal_answer = None
         if pref_match:
@@ -351,7 +346,7 @@ def parse_structured_question_blocks(text: str, filename: str = "") -> List[Dict
             "concept_tags": [],
             "trap_pattern": None
         }
-        if question["stem"]:
+        if question["stem"] and is_likely_question(stem_text):
             questions.append(question)
 
     return questions
@@ -446,6 +441,44 @@ def normalize_options(options: Any) -> Dict[str, str]:
     return {}
 
 
+QUESTION_START_PATTERN = re.compile(
+    r"^(?:Pages\s+\d+\s*-\s*\d+\s*:\s*)?"
+    r"(what|which|how|why|when|who|where|is\s|are\s|can\s|could\s|would\s|should\s|does\s|do\s|has\s|have\s|will\s|did\s|was\s|were\s|name|list|define|describe|explain|compare|differentiate|enumerate|state|give|identify|the\s+following|all\s+of\s+the\s+following)",
+    re.IGNORECASE
+)
+
+EXPLANATION_START_PATTERN = re.compile(
+    r"^(?:because|this\s+is\s+because|the\s+answer\s+is|the\s+correct\s+answer\s+is|thus|therefore|in\s+this\s+case|it\s+is\s+because|due\s+to|owing\s+to|explanation\s*:?\s*|answer\s*:?\s*|key\s*:?\s*)",
+    re.IGNORECASE
+)
+
+
+def looks_like_explanation(text: str) -> bool:
+    s = (text or "").strip()
+    if len(s) < 20:
+        return False
+    if "?" in s:
+        return False
+    if EXPLANATION_START_PATTERN.match(s):
+        return True
+    if s.count(".") >= 2 and not QUESTION_START_PATTERN.match(s):
+        return True
+    return False
+
+
+def is_likely_question(stem: str) -> bool:
+    s = (stem or "").strip()
+    if not s or len(s) < 12:
+        return False
+    if "?" in s:
+        return True
+    if QUESTION_START_PATTERN.match(s):
+        return True
+    if len(s) > 55:
+        return True
+    return False
+
+
 def infer_question_type(stem: str, options: Dict[str, str] = None, declared_type: str = None, ideal_answer: str = None) -> str:
     declared = (declared_type or "").strip().lower()
     allowed = {"mcq", "saq", "laq", "case_based", "true_false", "assertion_reason"}
@@ -486,6 +519,10 @@ def normalize_extracted_questions(raw_questions: List[Dict[str, Any]]) -> List[D
         stem = normalize_ws(str(q.get("stem", "")))
         if not stem or len(stem) < 12:
             continue
+        if looks_like_explanation(stem):
+            continue
+        if not is_likely_question(stem):
+            continue
 
         signature = stem.lower()
         if signature in seen:
@@ -508,6 +545,8 @@ def normalize_extracted_questions(raw_questions: List[Dict[str, Any]]) -> List[D
                 if 0 <= idx < 5:
                     correct_answer = ["A", "B", "C", "D", "E"][idx]
             if correct_answer not in ["A", "B", "C", "D", "E"]:
+                correct_answer = None
+            if options and correct_answer and correct_answer not in options:
                 correct_answer = None
         else:
             correct_answer = None
@@ -534,6 +573,15 @@ def normalize_extracted_questions(raw_questions: List[Dict[str, Any]]) -> List[D
         if cognitive_focus not in ["factual", "conceptual", "clinical"]:
             cognitive_focus = "conceptual"
 
+        raw_ideal = normalize_ws(str(q.get("ideal_answer", "")))
+        if not raw_ideal or raw_ideal.lower() in ("none", "null", "n/a", "na", "-"):
+            if key_points:
+                ideal_answer = "Key points to cover: " + "; ".join(key_points[:3])
+            else:
+                ideal_answer = "Answer should address the concept implied by the question and topic."
+        else:
+            ideal_answer = raw_ideal
+
         cleaned.append({
             "stem": stem,
             "type": q_type,
@@ -545,7 +593,7 @@ def normalize_extracted_questions(raw_questions: List[Dict[str, Any]]) -> List[D
             "difficulty": difficulty,
             "exam_tags": exam_tags,
             "key_points": key_points,
-            "ideal_answer": normalize_ws(str(q.get("ideal_answer", ""))) or None,
+            "ideal_answer": ideal_answer,
             "cognitive_focus": cognitive_focus,
             "distractor_analysis": q.get("distractor_analysis"),
             "concept_tags": q.get("concept_tags") if q.get("concept_tags") is not None else [],
