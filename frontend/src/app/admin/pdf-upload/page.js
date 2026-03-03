@@ -350,7 +350,6 @@ export default function PDFUploadPage() {
                   <div className={styles.extractingState}>
                     <div className={styles.spinner}></div>
                     <p>AI is reading the PDF and extracting questions...</p>
-                    <p className={styles.extractingHint}>This may take 30-60 seconds depending on the PDF size.</p>
                   </div>
                 )}
 
