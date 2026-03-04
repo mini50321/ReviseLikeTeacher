@@ -179,12 +179,12 @@ async def parse_questions_from_text(text: str, filename: str = "") -> List[Dict[
     for i, chunk in enumerate(chunks[:max_chunks]):
         prompt = f"""You are an expert at parsing medical exam question papers (NEET PG, AIIMS, JIPMER, etc).
 
-The following text is extracted from a PDF file named "{filename}". Parse and extract individual questions. Follow the rules below strictly.
+The following text is extracted from a PDF file named "{filename}". The PDF contains both questions AND their answers/explanations. Your job is to extract both: the question into stem and the corresponding answer/explanation into ideal_answer.
 
 STEM vs IDEAL_ANSWER (critical):
-- "stem" = ONLY the question text that the student reads and answers. Never put explanation, answer text, or teaching content in stem. If the source has "Explanation: ..." or "Answer: ...", that goes in ideal_answer only; the part that asks the question goes in stem.
-- "ideal_answer" = the model answer or explanation used to evaluate the student. For MCQs use the explanation for the correct option if present; for SAQ/LAQ use the given explanation or model answer. If the source has no explanation, write one short sentence summarizing what a good answer should cover (do not use "None" or leave empty).
-- Do not put explanation text in the question box (stem). Do not put the question in ideal_answer. Keep them strictly separate.
+- "stem" = ONLY the question text. Never put the answer or explanation in stem.
+- "ideal_answer" = the answer or explanation that appears in the PDF for this question. Look in the same block or the lines immediately after the question for labels like "Answer:", "Explanation:", "Key:", "Solution:", or the paragraph that clearly explains the answer. Copy or closely paraphrase that text into ideal_answer. The client has confirmed all answers are in the PDF — do not invent a meta-sentence like "A good answer should explain..."; extract what the document actually says. If you truly cannot find any answer text in the chunk, then write 1-2 sentences of correct clinical content for that question (still not a meta-phrase).
+- Do not put explanation text in stem. Do not put the question in ideal_answer.
 
 CORRECT ANSWER (MCQ only):
 - Set correct_answer to the option letter (A, B, C, or D) that is explicitly marked correct in the source (e.g. "Answer: B", "Key: C", "PREFERRED RESPONSE", "Correct option"). Use exactly what the document states; do not infer a different letter.
@@ -199,7 +199,7 @@ For each question output:
 3. type: mcq, saq, laq, case_based, true_false, or assertion_reason
 4. subject, topic, subtopic, difficulty, exam_tags
 5. key_points: what the correct answer should cover
-6. ideal_answer: explanation/model answer (never "None"; if missing in text, one sentence on what a good answer covers)
+6. ideal_answer: the actual correct answer or explanation (e.g. "If there is an air-bone gap, it indicates conductive hearing loss. If there is no air-bone gap, it could be normal or sensorineural hearing loss."). Never "None". If the source has no explanation, write 1-2 sentences stating the correct clinical content — do NOT write meta-phrases like "A good answer should explain..." or "The answer should cover..."; write the answer itself.
 7. cognitive_focus, distractor_analysis (MCQ), concept_tags, trap_pattern
 
 JSON format per item:
@@ -214,14 +214,14 @@ JSON format per item:
   "difficulty": "medium",
   "exam_tags": ["..."],
   "key_points": ["...", "..."],
-  "ideal_answer": "explanation or one-sentence summary of what answer should cover; never None",
+  "ideal_answer": "actual correct answer text (clinical facts/reasoning); never None or meta-phrases like 'A good answer should...'",
   "cognitive_focus": "factual",
   "distractor_analysis": {{"B": "...", "C": "...", "D": "..."}},
   "concept_tags": ["..."],
   "trap_pattern": "..."
 }}
 
-For non-MCQ: options, correct_answer, distractor_analysis = null. ideal_answer must still be a short explanation or summary, not "None".
+For non-MCQ: options, correct_answer, distractor_analysis = null. ideal_answer must be the actual correct answer content (state the facts or reasoning), not "None" and not "A good answer should explain...".
 
 TEXT (chunk {i + 1} of {len(chunks)}):
 {chunk}
@@ -273,6 +273,10 @@ def parse_structured_question_blocks(text: str, filename: str = "") -> List[Dict
     block_pattern = re.compile(r"(?ms)^\s*(\d+)[\)\.\:-]\s*(?:\(([^)]+)\)\s*)?(.+?)(?=^\s*\d+[\)\.\:-]\s*(?:\(|\S)|\Z)")
     option_pattern = re.compile(r"(?ms)^\s*([A-E])[\)\.\:-]\s*(.+?)(?=^\s*[A-E][\)\.\:-]\s|^\s*PREFERRED RESPONSE|\Z)")
     pref_pattern = re.compile(r"PREFERRED RESPONSE\s*▼\s*([1-5A-E])", re.IGNORECASE)
+    answer_label_pattern = re.compile(
+        r"(?ms)(?:Answer|Explanation|Key|Solution)\s*[:\-]\s*(.+?)(?=^\s*(?:\d+[\)\.\:-]|Answer|Explanation|Key|Solution)\s*[:\-]|\Z)",
+        re.IGNORECASE
+    )
 
     questions: List[Dict[str, Any]] = []
     for match in block_pattern.finditer(text):
@@ -319,6 +323,12 @@ def parse_structured_question_blocks(text: str, filename: str = "") -> List[Dict
             explanation = normalize_ws(explanation)
             if explanation:
                 ideal_answer = explanation
+        if not ideal_answer:
+            ans_match = answer_label_pattern.search(block)
+            if ans_match:
+                ideal_answer = normalize_ws(ans_match.group(1))
+                if ideal_answer and len(ideal_answer) < 15:
+                    ideal_answer = None
 
         q_type = infer_question_type(
             stem=stem_text,
@@ -576,9 +586,14 @@ def normalize_extracted_questions(raw_questions: List[Dict[str, Any]]) -> List[D
         raw_ideal = normalize_ws(str(q.get("ideal_answer", "")))
         if not raw_ideal or raw_ideal.lower() in ("none", "null", "n/a", "na", "-"):
             if key_points:
-                ideal_answer = "Key points to cover: " + "; ".join(key_points[:3])
+                ideal_answer = ". ".join(key_points[:4])
             else:
-                ideal_answer = "Answer should address the concept implied by the question and topic."
+                ideal_answer = "See key points and topic for the expected answer content."
+        elif raw_ideal.lower().startswith(("a good answer should", "the answer should", "answer should address", "key points to cover")):
+            if key_points:
+                ideal_answer = ". ".join(key_points[:4])
+            else:
+                ideal_answer = raw_ideal
         else:
             ideal_answer = raw_ideal
 
