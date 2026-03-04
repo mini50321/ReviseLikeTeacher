@@ -37,6 +37,23 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
   const isPassing = score >= 70;
   const isMCQ = feedbackData.is_mcq === true;
 
+  let questionKeyPoints = [];
+  if (question?.key_points) {
+    try {
+      const raw = Array.isArray(question.key_points)
+        ? question.key_points
+        : JSON.parse(question.key_points);
+      if (Array.isArray(raw)) {
+        questionKeyPoints = raw
+          .map((p) => (typeof p === 'string' ? p : String(p)))
+          .map((p) => p.trim())
+          .filter((p) => p.length > 0);
+      }
+    } catch (e) {
+      questionKeyPoints = [];
+    }
+  }
+
   const fetchAudio = useCallback(async (text) => {
     if (!text) return;
     setAudioState('loading');
@@ -368,6 +385,29 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
             </div>
             <div className={styles.voiceCoachBox}>
               <div className={styles.voiceCoachTitle}>Ask teacher follow-up</div>
+              <LanguageSelector value={coachLanguage} onChange={setCoachLanguage} />
+              <VoiceRecorder
+                onRecordingComplete={(blob) => {
+                  setCoachAudioBlob(blob);
+                  setCoachVoiceError('');
+                }}
+                onError={(error) => setCoachVoiceError(error)}
+              />
+              <div className={styles.quickCheckActions}>
+                <button
+                  className={styles.quickCheckButton}
+                  onClick={submitCoachVoiceTurn}
+                  disabled={coachTranscribing || coachLoading || !coachAudioBlob}
+                >
+                  {coachTranscribing ? 'Transcribing...' : 'Transcribe Voice'}
+                </button>
+              </div>
+              {coachVoiceError && <div className={styles.quickCheckError}>{coachVoiceError}</div>}
+              {coachTranscriptReady && (
+                <div className={styles.voiceCoachHint}>
+                  Transcript ready. You can edit it below, then click <strong>Ask Teacher</strong>.
+                </div>
+              )}
               <textarea
                 className={styles.quickCheckInput}
                 value={coachInput}
@@ -375,15 +415,10 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
                   setCoachInput(e.target.value);
                   setCoachTranscriptReady(false);
                 }}
-                placeholder="Type follow-up, or transcribe voice and edit here before asking teacher."
+                placeholder="Type your follow-up here, or edit the transcribed text before asking the teacher."
                 disabled={coachLoading}
                 rows={3}
               />
-              {coachTranscriptReady && (
-                <div className={styles.voiceCoachHint}>
-                  Transcript ready. You can edit it, then click <strong>Ask Teacher</strong>.
-                </div>
-              )}
               <div className={styles.quickCheckActions}>
                 <button
                   className={styles.quickCheckButton}
@@ -444,25 +479,6 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
                   )}
                 </div>
               )}
-              <div className={styles.voiceCoachDivider}>or ask by voice</div>
-              <LanguageSelector value={coachLanguage} onChange={setCoachLanguage} />
-              <VoiceRecorder
-                onRecordingComplete={(blob) => {
-                  setCoachAudioBlob(blob);
-                  setCoachVoiceError('');
-                }}
-                onError={(error) => setCoachVoiceError(error)}
-              />
-              <div className={styles.quickCheckActions}>
-                <button
-                  className={styles.quickCheckButton}
-                  onClick={submitCoachVoiceTurn}
-                  disabled={coachTranscribing || coachLoading || !coachAudioBlob}
-                >
-                  {coachTranscribing ? 'Transcribing...' : 'Transcribe Voice'}
-                </button>
-              </div>
-              {coachVoiceError && <div className={styles.quickCheckError}>{coachVoiceError}</div>}
             </div>
           </div>
         )}
@@ -490,6 +506,15 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
                 <div className={styles.mcqExplanation}>
                   <h3 className={styles.feedbackTitle}>Explanation</h3>
                   <div className={styles.feedbackText}>{feedbackData.model_explanation}</div>
+                  {questionKeyPoints.length > 0 && (
+                    <ul className={styles.keyPointsList}>
+                      {questionKeyPoints.map((kp, idx) => (
+                        <li key={idx} className={styles.keyPointItem}>
+                          {kp}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               )}
             </div>
@@ -498,6 +523,18 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
           <div className={styles.feedbackSection}>
             <h3 className={styles.feedbackTitle}>Feedback</h3>
             <div className={styles.feedbackText}>{formatFeedback(feedbackData)}</div>
+            {questionKeyPoints.length > 0 && (
+              <div className={styles.keyPointsSection}>
+                <h3 className={styles.feedbackTitle}>Key points to remember</h3>
+                <ul className={styles.keyPointsList}>
+                  {questionKeyPoints.map((kp, idx) => (
+                    <li key={idx} className={styles.keyPointItem}>
+                      {kp}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         )}
 

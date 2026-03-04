@@ -12,7 +12,37 @@ router.get('/:pdfId', authenticate, requireAdmin, async (req, res) => {
       [pdfId]
     );
 
-    res.json({ extractions: result.rows });
+    const rows = result.rows || [];
+    let latestYear = null;
+
+    for (const row of rows) {
+      const yearValue = row.most_recent_year;
+      const year = typeof yearValue === 'number' ? yearValue : yearValue ? Number(yearValue) : null;
+      if (!year || Number.isNaN(year)) continue;
+      if (latestYear === null || year > latestYear) {
+        latestYear = year;
+      }
+    }
+
+    const extractions = rows.map(row => {
+      const type = (row.detected_type || '').toLowerCase();
+      const isMcq = type === 'mcq';
+      let pyqLabel = null;
+
+      const yearValue = row.most_recent_year;
+      const year = typeof yearValue === 'number' ? yearValue : yearValue ? Number(yearValue) : null;
+
+      if (isMcq && year && latestYear) {
+        pyqLabel = year === latestYear ? 'latest' : 'older';
+      }
+
+      return {
+        ...row,
+        pyq_label: pyqLabel
+      };
+    });
+
+    res.json({ extractions });
   } catch (error) {
     console.error('Get extractions error:', error);
     res.status(500).json({ error: 'Internal server error' });

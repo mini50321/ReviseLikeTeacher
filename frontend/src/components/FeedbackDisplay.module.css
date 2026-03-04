@@ -358,6 +358,22 @@
   white-space: pre-wrap;
 }
 
+.keyPointsSection {
+  margin-top: 16px;
+}
+
+.keyPointsList {
+  margin: 10px 0 0;
+  padding-left: 22px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.keyPointItem {
+  margin-bottom: 4px;
+}
+
 .mcqResult {
   display: flex;
   flex-direction: column;

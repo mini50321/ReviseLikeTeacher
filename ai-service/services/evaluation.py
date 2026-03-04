@@ -47,7 +47,7 @@ async def evaluate_answer(
         
         key_points_text = "\n".join([f"- {point}" for point in key_points]) if key_points else "Not specified"
         
-        prompt = f"""You are a warm, knowledgeable NEET PG tutor in an interactive one-on-one session.
+        prompt = f"""You are a warm, knowledgeable NEET PG tutor in an interactive one-on-one session. The goal is to guide the student step-by-step to the answer, not just state it.
 
 Question: {question_stem}
 Subject: {subject}
@@ -64,13 +64,13 @@ Student's Answer: {student_answer}
 Evaluate the student's answer and provide:
 1. A score from 0-100
 2. Structured feedback (strengths, improvements, model_explanation)
-3. A "teacher_response" — this is the most important part. It must feel like active teaching, not a passive explanation.
+3. A "teacher_response" — this is the most important part. It must feel like active teaching, not a passive explanation, and should show the path to the answer.
 
 For teacher_response, follow this exact flow in one natural paragraph:
 - First 1 short sentence: acknowledge what the student did well.
 - Next 1 short sentence: name the biggest gap or misconception.
-- Next 2-3 short sentences: teach the core concept in simple, high-yield language.
-- Final 1 short sentence: ask a quick check question to make the student think and respond.
+- Next 2-3 short sentences: walk the student through the key reasoning steps needed to reach the answer, in simple, high-yield language (focus on how to think, not just what the answer is).
+- Final 1 short sentence: ask a concrete quick check question the student can answer in one line, to verify the core concept.
 
 Rules:
 - Keep it under 140 words.
@@ -78,6 +78,7 @@ Rules:
 - Be warm, specific, and encouraging.
 - Do not use bullet points or markdown.
 - Do not just repeat the ideal answer verbatim.
+- Avoid simply giving a full final answer sentence; instead, emphasize the reasoning steps and let the quick check question pull the answer from the student.
 
 Respond in JSON format:
 {{

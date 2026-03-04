@@ -404,6 +404,16 @@ export default function PDFUploadPage() {
                                         Last: {extraction.most_recent_year}
                                       </span>
                                     )}
+                                    {(extraction.detected_type || '').toLowerCase() === 'mcq' && extraction.pyq_label === 'latest' && (
+                                      <span className={`${styles.badge} ${styles.pyqLatest}`}>
+                                        Latest PYQ
+                                      </span>
+                                    )}
+                                    {(extraction.detected_type || '').toLowerCase() === 'mcq' && extraction.pyq_label === 'older' && (
+                                      <span className={`${styles.badge} ${styles.pyqOlder}`}>
+                                        Older PYQ
+                                      </span>
+                                    )}
                                   </div>
                                   <span className={`${styles.status} ${styles[extraction.status]}`}>
                                     {extraction.status}
