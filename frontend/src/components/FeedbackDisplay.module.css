@@ -129,6 +129,13 @@
   margin-bottom: 8px;
 }
 
+.quickCheckVoiceRow {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .quickCheckInput {
   width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -181,6 +188,13 @@
   color: #d1fae5;
   font-size: 14px;
   line-height: 1.5;
+}
+
+.quickCheckHint {
+  margin-top: 8px;
+  color: #dbeafe;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .voiceCoachBox {

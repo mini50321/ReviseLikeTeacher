@@ -14,6 +14,11 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
   const [quickCheckSubmitting, setQuickCheckSubmitting] = useState(false);
   const [quickCheckResult, setQuickCheckResult] = useState(null);
   const [quickCheckError, setQuickCheckError] = useState('');
+  const [quickCheckLanguage, setQuickCheckLanguage] = useState('english');
+  const [quickCheckAudioBlob, setQuickCheckAudioBlob] = useState(null);
+  const [quickCheckTranscribing, setQuickCheckTranscribing] = useState(false);
+  const [quickCheckVoiceError, setQuickCheckVoiceError] = useState('');
+  const [quickCheckTranscriptReady, setQuickCheckTranscriptReady] = useState(false);
   const [coachInput, setCoachInput] = useState('');
   const [coachLoading, setCoachLoading] = useState(false);
   const [coachResult, setCoachResult] = useState(null);
@@ -83,6 +88,11 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
     setQuickCheckResult(null);
     setQuickCheckError('');
     setQuickCheckSubmitting(false);
+    setQuickCheckLanguage('english');
+    setQuickCheckAudioBlob(null);
+    setQuickCheckTranscribing(false);
+    setQuickCheckVoiceError('');
+    setQuickCheckTranscriptReady(false);
     setCoachInput('');
     setCoachResult(null);
     setCoachError('');
@@ -141,6 +151,30 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
     if (teacherResponse) {
       fetchedTextRef.current = teacherResponse;
       fetchAudio(teacherResponse);
+    }
+  };
+
+  const transcribeQuickCheckVoice = async () => {
+    if (!quickCheckAudioBlob) {
+      setQuickCheckVoiceError('Please record a quick-check reply first.');
+      return;
+    }
+
+    setQuickCheckTranscribing(true);
+    setQuickCheckVoiceError('');
+
+    try {
+      const transcriptResult = await voiceAPI.transcribe(quickCheckAudioBlob, quickCheckLanguage);
+      const transcript = (transcriptResult?.transcription || '').trim();
+      if (!transcript) {
+        throw new Error('No speech detected. Please try recording again.');
+      }
+      setQuickCheckAnswer(transcript);
+      setQuickCheckTranscriptReady(true);
+    } catch (error) {
+      setQuickCheckVoiceError(error.response?.data?.error || error.message || 'Voice quick check failed.');
+    } finally {
+      setQuickCheckTranscribing(false);
     }
   };
 
@@ -380,6 +414,34 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
             <div className={styles.teacherText}>{teacherResponse}</div>
             <div className={styles.quickCheckBox}>
               <div className={styles.quickCheckTitle}>Reply to quick check</div>
+              <div className={styles.quickCheckVoiceRow}>
+                <LanguageSelector value={quickCheckLanguage} onChange={setQuickCheckLanguage} />
+                <VoiceRecorder
+                  onRecordingComplete={(blob) => {
+                    setQuickCheckAudioBlob(blob);
+                    setQuickCheckVoiceError('');
+                    setQuickCheckTranscriptReady(false);
+                  }}
+                  onError={(error) => setQuickCheckVoiceError(error)}
+                />
+              </div>
+              <div className={styles.quickCheckActions}>
+                <button
+                  className={styles.quickCheckButton}
+                  onClick={transcribeQuickCheckVoice}
+                  disabled={quickCheckTranscribing || quickCheckSubmitting || !quickCheckAudioBlob}
+                >
+                  {quickCheckTranscribing ? 'Transcribing...' : 'Transcribe Voice'}
+                </button>
+              </div>
+              {quickCheckVoiceError && (
+                <div className={styles.quickCheckError}>{quickCheckVoiceError}</div>
+              )}
+              {quickCheckTranscriptReady && (
+                <div className={styles.quickCheckHint}>
+                  Transcript ready. You can edit it below, then click <strong>Submit Reply</strong>.
+                </div>
+              )}
               <textarea
                 className={styles.quickCheckInput}
                 value={quickCheckAnswer}

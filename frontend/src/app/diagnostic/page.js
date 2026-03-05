@@ -375,105 +375,109 @@ function DiagnosticContent() {
           {error && <div className={styles.error}>{error}</div>}
 
           <div className={styles.questionCard}>
-            <div className={styles.questionStem}>{question.stem}</div>
+            {!showSolution && (
+              <>
+                <div className={styles.questionStem}>{question.stem}</div>
 
-            {isMCQ && parsedOptions ? (
-              <div className={styles.mcqOptions}>
-                {Object.entries(parsedOptions).map(([label, text]) => {
-                  if (!text) return null;
-                  return (
-                    <div
-                      key={label}
-                      className={`${styles.mcqOption} ${selectedOption === label ? styles.mcqOptionSelected : ''}`}
-                      onClick={() => { if (!isLocked) { setSelectedOption(label); } }}
-                    >
-                      <span className={`${styles.mcqLabel} ${selectedOption === label ? styles.mcqLabelSelected : ''}`}>
-                        {label}
-                      </span>
-                      <span className={styles.mcqText}>{text}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className={styles.answerArea}>
-                <div className={styles.answerModeToggle}>
-                  <button
-                    type="button"
-                    className={`${styles.modeButton} ${answerMethod === 'text' ? styles.modeButtonActive : ''}`}
-                    onClick={() => setAnswerMethod('text')}
-                    disabled={isLocked || submitting}
-                  >
-                    Text Answer
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.modeButton} ${answerMethod === 'voice' ? styles.modeButtonActive : ''}`}
-                    onClick={() => setAnswerMethod('voice')}
-                    disabled={isLocked || submitting}
-                  >
-                    Voice Answer
-                  </button>
-                </div>
-
-                {answerMethod === 'text' ? (
-                  <textarea
-                    className={styles.textarea}
-                    value={answerText}
-                    onChange={(e) => setAnswerText(e.target.value)}
-                    placeholder="Type your answer here..."
-                    disabled={isLocked || submitting}
-                    rows={5}
-                  />
-                ) : (
-                  <div className={styles.voiceAnswer}>
-                    <LanguageSelector value={language} onChange={setLanguage} />
-                    <VoiceRecorder
-                      ref={voiceRecorderRef}
-                      onRecordingComplete={(blob) => {
-                        setAudioBlob(blob);
-                        setTranscription('');
-                        setTranscriptionError('');
-                        transcriptionRef.current = '';
-                      }}
-                      onError={(err) => setTranscriptionError(err)}
-                    />
-
-                    {audioBlob && (
-                      <div className={styles.transcriptionSection}>
-                        <button
-                          ref={transcribeButtonRef}
-                          type="button"
-                          onClick={handleTranscribe}
-                          disabled={transcribing}
-                          className={styles.transcribeButton}
+                {isMCQ && parsedOptions ? (
+                  <div className={styles.mcqOptions}>
+                    {Object.entries(parsedOptions).map(([label, text]) => {
+                      if (!text) return null;
+                      return (
+                        <div
+                          key={label}
+                          className={`${styles.mcqOption} ${selectedOption === label ? styles.mcqOptionSelected : ''}`}
+                          onClick={() => { if (!isLocked) { setSelectedOption(label); } }}
                         >
-                          {transcribing ? 'Transcribing...' : 'Transcribe Audio'}
-                        </button>
-                        {transcriptionError && (
-                          <div className={styles.error}>{transcriptionError}</div>
-                        )}
-                        {transcription && (
-                          <div className={styles.transcriptionPreview}>
-                            <label>Transcription Preview:</label>
-                            <textarea
-                              value={transcription}
-                              onChange={(e) => {
-                                setTranscription(e.target.value);
-                                setAnswerText(e.target.value);
-                                transcriptionRef.current = e.target.value;
-                              }}
-                              className={styles.transcriptionText}
-                              rows={4}
-                              placeholder="Transcription will appear here..."
-                            />
+                          <span className={`${styles.mcqLabel} ${selectedOption === label ? styles.mcqLabelSelected : ''}`}>
+                            {label}
+                          </span>
+                          <span className={styles.mcqText}>{text}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className={styles.answerArea}>
+                    <div className={styles.answerModeToggle}>
+                      <button
+                        type="button"
+                        className={`${styles.modeButton} ${answerMethod === 'text' ? styles.modeButtonActive : ''}`}
+                        onClick={() => setAnswerMethod('text')}
+                        disabled={isLocked || submitting}
+                      >
+                        Text Answer
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.modeButton} ${answerMethod === 'voice' ? styles.modeButtonActive : ''}`}
+                        onClick={() => setAnswerMethod('voice')}
+                        disabled={isLocked || submitting}
+                      >
+                        Voice Answer
+                      </button>
+                    </div>
+
+                    {answerMethod === 'text' ? (
+                      <textarea
+                        className={styles.textarea}
+                        value={answerText}
+                        onChange={(e) => setAnswerText(e.target.value)}
+                        placeholder="Type your answer here..."
+                        disabled={isLocked || submitting}
+                        rows={5}
+                      />
+                    ) : (
+                      <div className={styles.voiceAnswer}>
+                        <LanguageSelector value={language} onChange={setLanguage} />
+                        <VoiceRecorder
+                          ref={voiceRecorderRef}
+                          onRecordingComplete={(blob) => {
+                            setAudioBlob(blob);
+                            setTranscription('');
+                            setTranscriptionError('');
+                            transcriptionRef.current = '';
+                          }}
+                          onError={(err) => setTranscriptionError(err)}
+                        />
+
+                        {audioBlob && (
+                          <div className={styles.transcriptionSection}>
+                            <button
+                              ref={transcribeButtonRef}
+                              type="button"
+                              onClick={handleTranscribe}
+                              disabled={transcribing}
+                              className={styles.transcribeButton}
+                            >
+                              {transcribing ? 'Transcribing...' : 'Transcribe Audio'}
+                            </button>
+                            {transcriptionError && (
+                              <div className={styles.error}>{transcriptionError}</div>
+                            )}
+                            {transcription && (
+                              <div className={styles.transcriptionPreview}>
+                                <label>Transcription Preview:</label>
+                                <textarea
+                                  value={transcription}
+                                  onChange={(e) => {
+                                    setTranscription(e.target.value);
+                                    setAnswerText(e.target.value);
+                                    transcriptionRef.current = e.target.value;
+                                  }}
+                                  className={styles.transcriptionText}
+                                  rows={4}
+                                  placeholder="Transcription will appear here..."
+                                />
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
                     )}
                   </div>
                 )}
-              </div>
+              </>
             )}
 
             {feedback && (
@@ -487,7 +491,7 @@ function DiagnosticContent() {
                 {feedback.feedback?.improvements && (
                   <div className={styles.feedbackText}>{feedback.feedback.improvements}</div>
                 )}
-                {feedback.teacher_response && (
+                {!showSolution && feedback.teacher_response && (
                   <div className={styles.feedbackTeacher}>{feedback.teacher_response}</div>
                 )}
                 {showSolution && (feedback.feedback?.model_explanation || question.ideal_answer) && (
