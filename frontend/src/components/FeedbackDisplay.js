@@ -37,6 +37,9 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
   const isPassing = score >= 70;
   const isMCQ = feedbackData.is_mcq === true;
 
+  const [quickCheckAttempts, setQuickCheckAttempts] = useState(0);
+  const [showFullExplanation, setShowFullExplanation] = useState(false);
+
   let questionKeyPoints = [];
   if (question?.key_points) {
     try {
@@ -93,6 +96,8 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
     setCoachReplyAudioState('idle');
     setCoachReplyAudioUrl(null);
     coachReplyFetchedTextRef.current = null;
+    setQuickCheckAttempts(0);
+    setShowFullExplanation(score >= 90);
   }, [attempt?.id]);
 
   useEffect(() => {
@@ -148,7 +153,21 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
         quick_check_answer: quickCheckAnswer.trim(),
         teacher_response: teacherResponse || ''
       });
-      setQuickCheckResult(response.data);
+      const data = response.data;
+      setQuickCheckResult(data);
+
+      const level = (data?.understanding_level || '').toLowerCase();
+      if (level === 'strong') {
+        setShowFullExplanation(true);
+      } else if (level === 'partial' || level === 'weak') {
+        setQuickCheckAttempts(prev => {
+          const next = prev + 1;
+          if (next >= 3) {
+            setShowFullExplanation(true);
+          }
+          return next;
+        });
+      }
     } catch (error) {
       setQuickCheckError(error.response?.data?.error || 'Failed to submit quick check response.');
     } finally {
@@ -273,14 +292,16 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
     );
   }
 
-  const formatFeedback = (feedback) => {
+  const formatFeedback = (feedback, includeExplanation = true) => {
     if (typeof feedback === 'string') return feedback;
 
     if (typeof feedback === 'object' && feedback !== null) {
       const parts = [];
       if (feedback.strengths) parts.push(`Strengths: ${feedback.strengths}`);
       if (feedback.improvements) parts.push(`Areas for Improvement: ${feedback.improvements}`);
-      if (feedback.model_explanation) parts.push(`Explanation: ${feedback.model_explanation}`);
+      if (includeExplanation && feedback.model_explanation) {
+        parts.push(`Explanation: ${feedback.model_explanation}`);
+      }
       if (parts.length === 0) return 'No feedback available.';
       return parts.join('\n\n');
     }
@@ -522,8 +543,16 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
         ) : (
           <div className={styles.feedbackSection}>
             <h3 className={styles.feedbackTitle}>Feedback</h3>
-            <div className={styles.feedbackText}>{formatFeedback(feedbackData)}</div>
-            {questionKeyPoints.length > 0 && (
+            <div className={styles.feedbackText}>
+              {formatFeedback(feedbackData, showFullExplanation)}
+            </div>
+            {!showFullExplanation && score < 90 && (
+              <div className={styles.feedbackHint}>
+                The full answer will be revealed after you work through a few quick-check replies
+                with the teacher above.
+              </div>
+            )}
+            {showFullExplanation && questionKeyPoints.length > 0 && (
               <div className={styles.keyPointsSection}>
                 <h3 className={styles.feedbackTitle}>Key points to remember</h3>
                 <ul className={styles.keyPointsList}>

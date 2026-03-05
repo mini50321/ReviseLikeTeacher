@@ -358,6 +358,12 @@
   white-space: pre-wrap;
 }
 
+.feedbackHint {
+  margin-top: 10px;
+  font-size: 13px;
+  color: rgba(209, 213, 219, 0.85);
+}
+
 .keyPointsSection {
   margin-top: 16px;
 }

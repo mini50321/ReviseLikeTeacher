@@ -40,6 +40,9 @@ function DiagnosticContent() {
   const transcriptionRef = useRef('');
   const transcribeButtonRef = useRef(null);
   const voiceRecorderRef = useRef(null);
+  const [attemptCount, setAttemptCount] = useState(0);
+  const [showSolution, setShowSolution] = useState(false);
+  const [lastWasCorrect, setLastWasCorrect] = useState(false);
 
   useEffect(() => {
     fetchTopics();
@@ -81,6 +84,9 @@ function DiagnosticContent() {
       setTranscription('');
       setTranscriptionError('');
       transcriptionRef.current = '';
+      setAttemptCount(0);
+      setShowSolution(false);
+      setLastWasCorrect(false);
       setPhase('answering');
       startTimeRef.current = Date.now();
     } catch (err) {
@@ -178,6 +184,19 @@ function DiagnosticContent() {
       });
 
       const fb = response.data;
+
+      const score = fb?.score || 0;
+      const fbData = fb?.feedback || {};
+      const isMCQCorrect = fbData.is_mcq === true ? !!fbData.is_correct : false;
+      const isCorrect = isMCQ ? isMCQCorrect : score >= 90;
+
+      const nextAttempts = attemptCount + 1;
+      setAttemptCount(nextAttempts);
+      setLastWasCorrect(isCorrect);
+      if (isCorrect || nextAttempts >= 3) {
+        setShowSolution(true);
+      }
+
       setFeedback(fb);
       setAnswers(prev => [...prev, {
         question_id: question.id,
@@ -204,6 +223,9 @@ function DiagnosticContent() {
       transcriptionRef.current = '';
       setSelectedOption('');
       setFeedback(null);
+       setAttemptCount(0);
+       setShowSolution(false);
+       setLastWasCorrect(false);
       startTimeRef.current = Date.now();
     } else {
       completeDiagnostic();
@@ -336,6 +358,7 @@ function DiagnosticContent() {
 
     const isMCQ = ['mcq', 'true_false', 'assertion_reason'].includes(question.type) && parsedOptions;
     const progress = ((currentIndex + 1) / questions.length) * 100;
+    const isLocked = showSolution;
 
     return (
       <div>
@@ -362,7 +385,7 @@ function DiagnosticContent() {
                     <div
                       key={label}
                       className={`${styles.mcqOption} ${selectedOption === label ? styles.mcqOptionSelected : ''}`}
-                      onClick={() => { if (!feedback) { setSelectedOption(label); } }}
+                      onClick={() => { if (!isLocked) { setSelectedOption(label); } }}
                     >
                       <span className={`${styles.mcqLabel} ${selectedOption === label ? styles.mcqLabelSelected : ''}`}>
                         {label}
@@ -379,7 +402,7 @@ function DiagnosticContent() {
                     type="button"
                     className={`${styles.modeButton} ${answerMethod === 'text' ? styles.modeButtonActive : ''}`}
                     onClick={() => setAnswerMethod('text')}
-                    disabled={!!feedback || submitting}
+                    disabled={isLocked || submitting}
                   >
                     Text Answer
                   </button>
@@ -387,7 +410,7 @@ function DiagnosticContent() {
                     type="button"
                     className={`${styles.modeButton} ${answerMethod === 'voice' ? styles.modeButtonActive : ''}`}
                     onClick={() => setAnswerMethod('voice')}
-                    disabled={!!feedback || submitting}
+                    disabled={isLocked || submitting}
                   >
                     Voice Answer
                   </button>
@@ -399,7 +422,7 @@ function DiagnosticContent() {
                     value={answerText}
                     onChange={(e) => setAnswerText(e.target.value)}
                     placeholder="Type your answer here..."
-                    disabled={!!feedback || submitting}
+                    disabled={isLocked || submitting}
                     rows={5}
                   />
                 ) : (
@@ -467,11 +490,16 @@ function DiagnosticContent() {
                 {feedback.teacher_response && (
                   <div className={styles.feedbackTeacher}>{feedback.teacher_response}</div>
                 )}
+                {showSolution && (feedback.feedback?.model_explanation || question.ideal_answer) && (
+                  <div className={styles.feedbackText}>
+                    Explanation: {feedback.feedback?.model_explanation || question.ideal_answer}
+                  </div>
+                )}
               </div>
             )}
 
             <div className={styles.actions}>
-              {!feedback ? (
+              {!showSolution ? (
                 <button
                   className={styles.submitButton}
                   onClick={submitAnswer}

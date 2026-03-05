@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import Header from '../../components/Header';
-import api from '../../lib/api';
+import api, { voiceAPI } from '../../lib/api';
+import VoiceRecorder from '../../components/VoiceRecorder';
+import LanguageSelector from '../../components/LanguageSelector';
 import { FileText, Zap, CalendarPlus, Stethoscope, CircleCheckBig, TriangleAlert, ShieldAlert } from 'lucide-react';
 import styles from './topic-mastery.module.css';
 
@@ -27,6 +29,12 @@ function TopicMasteryContent() {
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answerText, setAnswerText] = useState('');
+  const [answerMethod, setAnswerMethod] = useState('text');
+  const [language, setLanguage] = useState('english');
+  const [audioBlob, setAudioBlob] = useState(null);
+  const [transcribing, setTranscribing] = useState(false);
+  const [transcription, setTranscription] = useState('');
+  const [transcriptionError, setTranscriptionError] = useState('');
   const [selectedOption, setSelectedOption] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState(null);
@@ -56,6 +64,9 @@ function TopicMasteryContent() {
   const [revisionAdded, setRevisionAdded] = useState(false);
   const [completionSummary, setCompletionSummary] = useState(null);
   const startTimeRef = useRef(Date.now());
+  const transcriptionRef = useRef('');
+  const transcribeButtonRef = useRef(null);
+  const voiceRecorderRef = useRef(null);
 
   const getParsedOptions = (question) => {
     if (!question?.options) return null;
@@ -79,6 +90,30 @@ function TopicMasteryContent() {
       setPhase('no_session');
     }
   }, [tlsId]);
+
+  const handleTranscribe = useCallback(async () => {
+    if (!audioBlob) {
+      setTranscriptionError('No recording available');
+      return null;
+    }
+
+    setTranscribing(true);
+    setTranscriptionError('');
+
+    try {
+      const result = await voiceAPI.transcribe(audioBlob, language);
+      const text = result.transcription || '';
+      setTranscription(text);
+      setAnswerText(text);
+      transcriptionRef.current = text;
+      return text;
+    } catch (error) {
+      setTranscriptionError(error.message || 'Transcription failed. Please try again.');
+      return null;
+    } finally {
+      setTranscribing(false);
+    }
+  }, [audioBlob, language]);
 
   const loadSession = async () => {
     setLoading(true);
@@ -223,7 +258,28 @@ function TopicMasteryContent() {
     const question = questions[currentIndex];
     const parsedOptions = getParsedOptions(question);
     const isMCQ = ['mcq', 'true_false', 'assertion_reason'].includes(question.type) && parsedOptions;
-    const answer = isMCQ ? selectedOption : answerText;
+    let answer = '';
+    let answerMethodToSend = 'text';
+    let languageToSend = null;
+
+    if (isMCQ) {
+      answer = selectedOption;
+    } else if (answerMethod === 'voice') {
+      let finalText = transcriptionRef.current || transcription || '';
+      if (!finalText.trim()) {
+        finalText = await handleTranscribe();
+      }
+      if (!finalText || !finalText.trim()) {
+        setError('Please record and transcribe your answer.');
+        return;
+      }
+      answer = finalText;
+      answerMethodToSend = 'voice';
+      languageToSend = language;
+    } else {
+      answer = answerText;
+    }
+
     if (!answer || !answer.trim()) { setError('Please provide an answer'); return; }
 
     setSubmitting(true);
@@ -234,7 +290,8 @@ function TopicMasteryContent() {
       const response = await api.post(`/topic-mastery/${tlsId}/concept-fixing/answer`, {
         question_id: question.id,
         answer_text: answer.trim(),
-        answer_method: 'text',
+        answer_method: answerMethodToSend,
+        language: languageToSend,
         time_spent_seconds: timeSpent
       });
       setFeedback(response.data);
@@ -257,7 +314,27 @@ function TopicMasteryContent() {
 
   const submitLAQAnswer = async () => {
     const question = questions[currentIndex];
-    if (!answerText.trim()) { setError('Please provide an answer'); return; }
+    let answer = '';
+    let answerMethodToSend = 'text';
+    let languageToSend = null;
+
+    if (answerMethod === 'voice') {
+      let finalText = transcriptionRef.current || transcription || '';
+      if (!finalText.trim()) {
+        finalText = await handleTranscribe();
+      }
+      if (!finalText || !finalText.trim()) {
+        setError('Please record and transcribe your answer.');
+        return;
+      }
+      answer = finalText;
+      answerMethodToSend = 'voice';
+      languageToSend = language;
+    } else {
+      answer = answerText;
+    }
+
+    if (!answer.trim()) { setError('Please provide an answer'); return; }
 
     setSubmitting(true);
     setError('');
@@ -266,8 +343,9 @@ function TopicMasteryContent() {
     try {
       const response = await api.post(`/topic-mastery/${tlsId}/laq/answer`, {
         question_id: question.id,
-        answer_text: answerText.trim(),
-        answer_method: 'text',
+        answer_text: answer.trim(),
+        answer_method: answerMethodToSend,
+        language: languageToSend,
         time_spent_seconds: timeSpent
       });
       setFeedback(response.data);
@@ -282,10 +360,34 @@ function TopicMasteryContent() {
     const question = questions[currentIndex];
     const parsedOptions = getParsedOptions(question);
     const isMCQ = ['mcq', 'true_false', 'assertion_reason'].includes(question.type) && parsedOptions;
-    const answer = isMCQ ? selectedOption : answerText;
-    if (!answer || !answer.trim()) {
-      setError(isMCQ ? 'Please select an option' : 'Please provide an answer');
-      return;
+    let answer = '';
+    let answerMethodToSend = 'text';
+    let languageToSend = null;
+
+    if (isMCQ) {
+      answer = selectedOption;
+      if (!answer || !answer.trim()) {
+        setError('Please select an option');
+        return;
+      }
+    } else if (answerMethod === 'voice') {
+      let finalText = transcriptionRef.current || transcription || '';
+      if (!finalText.trim()) {
+        finalText = await handleTranscribe();
+      }
+      if (!finalText || !finalText.trim()) {
+        setError('Please record and transcribe your answer.');
+        return;
+      }
+      answer = finalText;
+      answerMethodToSend = 'voice';
+      languageToSend = language;
+    } else {
+      answer = answerText;
+      if (!answer || !answer.trim()) {
+        setError('Please provide an answer');
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -296,6 +398,8 @@ function TopicMasteryContent() {
       const response = await api.post(`/topic-mastery/${tlsId}/mcq/answer`, {
         question_id: question.id,
         answer_text: answer.trim(),
+        answer_method: answerMethodToSend,
+        language: languageToSend,
         time_spent_seconds: timeSpent
       });
       setFeedback(response.data);
@@ -320,6 +424,12 @@ function TopicMasteryContent() {
       }
       setCurrentIndex(0);
       setAnswerText('');
+      setAnswerMethod('text');
+      setLanguage('english');
+      setAudioBlob(null);
+      setTranscription('');
+      setTranscriptionError('');
+      transcriptionRef.current = '';
       setSelectedOption('');
       setFeedback(null);
       setError('');
@@ -335,6 +445,12 @@ function TopicMasteryContent() {
     if (currentIndex < questions.length - 1) {
       setCurrentIndex(prev => prev + 1);
       setAnswerText('');
+      setAnswerMethod('text');
+      setLanguage('english');
+      setAudioBlob(null);
+      setTranscription('');
+      setTranscriptionError('');
+      transcriptionRef.current = '';
       setSelectedOption('');
       setFeedback(null);
       setError('');
@@ -511,14 +627,83 @@ function TopicMasteryContent() {
           </div>
         ) : (
           !feedback && (
-            <textarea
-              className={styles.textarea}
-              value={answerText}
-              onChange={(e) => setAnswerText(e.target.value)}
-              placeholder="Type your answer here..."
-              disabled={submitting}
-              rows={5}
-            />
+            <div className={styles.answerArea}>
+              <div className={styles.answerModeToggle}>
+                <button
+                  type="button"
+                  className={`${styles.modeButton} ${answerMethod === 'text' ? styles.modeButtonActive : ''}`}
+                  onClick={() => setAnswerMethod('text')}
+                  disabled={submitting}
+                >
+                  Text Answer
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.modeButton} ${answerMethod === 'voice' ? styles.modeButtonActive : ''}`}
+                  onClick={() => setAnswerMethod('voice')}
+                  disabled={submitting}
+                >
+                  Voice Answer
+                </button>
+              </div>
+
+              {answerMethod === 'text' ? (
+                <textarea
+                  className={styles.textarea}
+                  value={answerText}
+                  onChange={(e) => setAnswerText(e.target.value)}
+                  placeholder="Type your answer here..."
+                  disabled={submitting}
+                  rows={5}
+                />
+              ) : (
+                <div className={styles.voiceAnswer}>
+                  <LanguageSelector value={language} onChange={setLanguage} />
+                  <VoiceRecorder
+                    ref={voiceRecorderRef}
+                    onRecordingComplete={(blob) => {
+                      setAudioBlob(blob);
+                      setTranscription('');
+                      setTranscriptionError('');
+                      transcriptionRef.current = '';
+                    }}
+                    onError={(err) => setTranscriptionError(err)}
+                  />
+                  {audioBlob && (
+                    <div className={styles.transcriptionSection}>
+                      <button
+                        ref={transcribeButtonRef}
+                        type="button"
+                        onClick={handleTranscribe}
+                        disabled={transcribing}
+                        className={styles.transcribeButton}
+                      >
+                        {transcribing ? 'Transcribing...' : 'Transcribe Audio'}
+                      </button>
+                      {transcriptionError && (
+                        <div className={styles.error}>{transcriptionError}</div>
+                      )}
+                      {transcription && (
+                        <div className={styles.transcriptionPreview}>
+                          <label>Transcription Preview:</label>
+                          <textarea
+                            value={transcription}
+                            onChange={(e) => {
+                              setTranscription(e.target.value);
+                              setAnswerText(e.target.value);
+                              transcriptionRef.current = e.target.value;
+                            }}
+                            className={styles.transcriptionText}
+                            rows={4}
+                            placeholder="Transcription will appear here..."
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           )
         )}
 
@@ -550,7 +735,14 @@ function TopicMasteryContent() {
             <button
               className={styles.primaryButton}
               onClick={submitFn}
-              disabled={submitting || (isMCQ ? !selectedOption : !answerText.trim())}
+              disabled={
+                submitting ||
+                (isMCQ
+                  ? !selectedOption
+                  : answerMethod === 'text'
+                    ? !answerText.trim()
+                    : !audioBlob && !transcription.trim())
+              }
             >
               {submitting ? 'Evaluating...' : 'Submit Answer'}
             </button>

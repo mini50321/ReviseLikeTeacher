@@ -179,6 +179,85 @@
   background: rgba(255, 255, 255, 0.12);
 }
 
+.answerArea {
+  margin-bottom: 20px;
+}
+
+.answerModeToggle {
+  display: inline-flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.modeButton {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modeButtonActive {
+  background: rgba(129, 140, 248, 0.35);
+  color: #eef2ff;
+}
+
+.voiceAnswer {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.transcriptionSection {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.transcribeButton {
+  align-self: flex-start;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(129, 140, 248, 0.6);
+  background: rgba(129, 140, 248, 0.2);
+  color: #e0e7ff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.transcriptionPreview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.transcriptionPreview label {
+  font-size: 12px;
+  color: rgba(226, 232, 240, 0.9);
+}
+
+.transcriptionText {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: rgba(15, 23, 42, 0.7);
+  color: #e5e7eb;
+  font-size: 14px;
+  resize: vertical;
+  font-family: inherit;
+}
+
 .mcqOptions {
   display: flex;
   flex-direction: column;

@@ -66,11 +66,13 @@ Evaluate the student's answer and provide:
 2. Structured feedback (strengths, improvements, model_explanation)
 3. A "teacher_response" — this is the most important part. It must feel like active teaching, not a passive explanation, and should show the path to the answer.
 
+For non-MCQ style questions (type not in ["mcq", "true_false", "assertion_reason"]), you MUST NOT reveal the exact missing terms directly in strengths, improvements, or teacher_response. Instead, guide the student with questions.
+
 For teacher_response, follow this exact flow in one natural paragraph:
 - First 1 short sentence: acknowledge what the student did well.
-- Next 1 short sentence: name the biggest gap or misconception.
-- Next 2-3 short sentences: walk the student through the key reasoning steps needed to reach the answer, in simple, high-yield language (focus on how to think, not just what the answer is).
-- Final 1 short sentence: ask a concrete quick check question the student can answer in one line, to verify the core concept.
+- Next 1 short sentence: name the biggest gap or misconception in general terms (e.g., "you skipped an important middle-ear step") WITHOUT naming the exact missing structures or terms.
+- Next 2-3 short sentences: walk the student through the key reasoning steps needed to reach the answer, in simple, high-yield language (focus on how to think, not just what the answer is). Use indirect hints (e.g., "after the external auditory canal, sound hits a thin membrane before the ossicles") without saying the term.
+- Final 1 short sentence: ask a concrete quick check question the student can answer in one line, which forces them to name the missing structure or fact themselves.
 
 Rules:
 - Keep it under 140 words.
@@ -79,6 +81,7 @@ Rules:
 - Do not use bullet points or markdown.
 - Do not just repeat the ideal answer verbatim.
 - Avoid simply giving a full final answer sentence; instead, emphasize the reasoning steps and let the quick check question pull the answer from the student.
+- In strengths and improvements, do not list missing terms explicitly for non-MCQ questions; describe them generically so that only model_explanation (which may be shown later) contains the full answer.
 
 Respond in JSON format:
 {{
