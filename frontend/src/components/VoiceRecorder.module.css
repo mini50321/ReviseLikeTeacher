@@ -1,17 +1,12 @@
 .container {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  gap: 12px;
 }
 
 .controls {
   display: flex;
-  gap: 12px;
-  justify-content: center;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
@@ -20,88 +15,112 @@
 .pauseButton,
 .resetButton,
 .uploadButton {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 12px 24px;
-  border: none;
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 600;
+  padding: 10px 18px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
-  color: #ffffff;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  color: rgba(255, 255, 255, 0.9);
+  border: 1px solid transparent;
 }
 
-.uploadButton {
-  background: #3b82f6;
-}
-
-.uploadButton:hover {
-  background: #2563eb;
+.recordButton svg,
+.uploadButton svg {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
 }
 
 .recordButton {
-  background: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
 }
 
-.recordButton:hover {
-  background: #dc2626;
+.recordButton:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #fecaca;
+}
+
+.uploadButton {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.35);
+  color: #93c5fd;
+}
+
+.uploadButton:hover {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.5);
+  color: #bfdbfe;
 }
 
 .stopButton {
-  background: #6b7280;
+  background: rgba(107, 114, 128, 0.2);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .stopButton:hover {
-  background: #4b5563;
+  background: rgba(107, 114, 128, 0.3);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .pauseButton {
-  background: #f59e0b;
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #fcd34d;
 }
 
 .pauseButton:hover {
-  background: #d97706;
+  background: rgba(245, 158, 11, 0.25);
+  border-color: rgba(245, 158, 11, 0.5);
 }
 
 .resetButton {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .resetButton:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .recordingInfo {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  align-items: center;
+  gap: 8px;
+  align-items: stretch;
 }
 
 .timeDisplay {
-  font-size: 24px;
-  font-weight: 700;
-  color: #ef4444;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
   font-variant-numeric: tabular-nums;
 }
 
 .visualizer {
   width: 100%;
-  height: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
   overflow: hidden;
-  position: relative;
 }
 
 .levelBar {
   height: 100%;
-  background: linear-gradient(90deg, #ef4444, #f59e0b, #10b981);
-  border-radius: 4px;
-  transition: width 0.1s ease-out;
+  background: rgba(239, 68, 68, 0.6);
+  border-radius: 2px;
+  transition: width 0.08s ease-out;
 }
 
 .playback {
@@ -110,35 +129,34 @@
 
 .audioPlayer {
   width: 100%;
-  height: 40px;
+  height: 36px;
 }
 
 .errorMessage {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 16px;
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: 8px;
-  margin-bottom: 16px;
+  gap: 10px;
+  padding: 12px 14px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 6px;
   position: relative;
 }
 
 .errorIcon {
-  font-size: 20px;
+  font-size: 16px;
   flex-shrink: 0;
 }
 
 .errorText {
   flex: 1;
-  color: #ef4444;
-  font-size: 14px;
+  color: #fca5a5;
+  font-size: 13px;
   line-height: 1.5;
 }
 
 .errorText div {
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .errorText div:last-child {
@@ -148,8 +166,8 @@
 .errorClose {
   background: transparent;
   border: none;
-  color: #ef4444;
-  font-size: 24px;
+  color: rgba(252, 165, 165, 0.9);
+  font-size: 20px;
   cursor: pointer;
   padding: 0;
   width: 24px;
@@ -158,19 +176,19 @@
   align-items: center;
   justify-content: center;
   border-radius: 4px;
-  transition: background 0.2s;
+  transition: background 0.15s ease;
   flex-shrink: 0;
 }
 
 .errorClose:hover {
-  background: rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.15);
 }
 
 .spinner {
   display: inline-block;
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
   border-top-color: #ffffff;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
@@ -183,7 +201,6 @@
 }
 
 .recordButton:disabled {
-  opacity: 0.7;
+  opacity: 0.6;
   cursor: wait;
 }
-
