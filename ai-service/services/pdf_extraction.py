@@ -197,10 +197,13 @@ For each question output:
 1. stem: only the question text
 2. options, correct_answer (for MCQ; must match document)
 3. type: mcq, saq, laq, case_based, true_false, or assertion_reason
-4. subject, topic, subtopic, difficulty, exam_tags
-5. key_points: what the correct answer should cover
-6. ideal_answer: the actual correct answer or explanation (e.g. "If there is an air-bone gap, it indicates conductive hearing loss. If there is no air-bone gap, it could be normal or sensorineural hearing loss."). Never "None". If the source has no explanation, write 1-2 sentences stating the correct clinical content — do NOT write meta-phrases like "A good answer should explain..." or "The answer should cover..."; write the answer itself.
-7. cognitive_focus, distractor_analysis (MCQ), concept_tags, trap_pattern
+4. subject: from document header, section title, or filename (e.g. ENT, Orthopedics, General Medicine). Never leave blank.
+5. topic: the main clinical/system topic (e.g. Tuning Fork Tests, Fractures, Hearing Loss). Never use "General" unless the source gives no clue.
+6. subtopic: finer category if present (e.g. Rinne test, Weber test). Use null only if none.
+7. difficulty, exam_tags
+8. key_points: 2-5 short phrases the correct answer must cover, derived from the ideal_answer or explanation. Always fill this from the content; do not leave empty.
+9. ideal_answer: the actual correct answer or explanation. Never "None". If the source has no explanation, write 1-2 sentences of correct clinical content.
+10. cognitive_focus (factual/conceptual/clinical), distractor_analysis (MCQ), concept_tags (2-4 tags e.g. anatomy, physiology, clinical finding), trap_pattern (if MCQ has a common trap, one short phrase)
 
 JSON format per item:
 {{
@@ -208,17 +211,17 @@ JSON format per item:
   "type": "mcq",
   "options": {{"A": "...", "B": "...", "C": "...", "D": "..."}},
   "correct_answer": "A",
-  "subject": "...",
-  "topic": "...",
-  "subtopic": "...",
+  "subject": "from document (e.g. ENT, Orthopedics)",
+  "topic": "specific topic (e.g. Tuning Fork Tests, not General)",
+  "subtopic": "finer category or null",
   "difficulty": "medium",
   "exam_tags": ["..."],
-  "key_points": ["...", "..."],
-  "ideal_answer": "actual correct answer text (clinical facts/reasoning); never None or meta-phrases like 'A good answer should...'",
+  "key_points": ["point1", "point2", "..."],
+  "ideal_answer": "actual correct answer text; never None",
   "cognitive_focus": "factual",
   "distractor_analysis": {{"B": "...", "C": "...", "D": "..."}},
-  "concept_tags": ["..."],
-  "trap_pattern": "..."
+  "concept_tags": ["tag1", "tag2", "..."],
+  "trap_pattern": "common trap if any or null"
 }}
 
 For non-MCQ: options, correct_answer, distractor_analysis = null. ideal_answer must be the actual correct answer content (state the facts or reasoning), not "None" and not "A good answer should explain...".
@@ -375,12 +378,57 @@ def infer_subject_from_stem(stem: str, header_subject: str, filename: str) -> st
     upper_name = (filename or "").upper()
     if "OB" in upper_name:
         return "Orthopedics"
+    if "ENT" in upper_name or "OTOLARYNG" in upper_name or "AUDIO" in upper_name:
+        return "ENT"
+    if "MED" in upper_name and "GEN" in upper_name:
+        return "General Medicine"
 
     stem_upper = (stem or "").upper()
     if "WRIST" in stem_upper or "FINGER" in stem_upper or "SCAPHOID" in stem_upper:
         return "Orthopedics"
+    if "RINNE" in stem_upper or "WEBER" in stem_upper or "HEARING" in stem_upper or "COCHLEAR" in stem_upper:
+        return "ENT"
 
     return "General Medicine"
+
+
+def _normalize_subject(s: str) -> str:
+    if not s or s.lower() == "unknown":
+        return "General Medicine"
+    s = normalize_ws(s)
+    if not s:
+        return "General Medicine"
+    return s
+
+
+def _normalize_topic(topic: str, stem: Any, subject: Any) -> str:
+    if topic and normalize_ws(topic) and topic.lower() != "general":
+        return normalize_ws(topic)
+    stem_upper = (stem or "").upper()
+    if "RINNE" in stem_upper or "WEBER" in stem_upper:
+        return "Tuning Fork Tests"
+    if "AIR-BONE" in stem_upper or "AIR BONE" in stem_upper or "AUDIOGRAM" in stem_upper:
+        return "Audiogram"
+    if "HEARING LOSS" in stem_upper or "CONDUCTIVE" in stem_upper or "SNHL" in stem_upper:
+        return "Hearing Loss"
+    return "General"
+
+
+def _normalize_concept_tags(val: Any) -> List[str]:
+    if val is None:
+        return []
+    if isinstance(val, list):
+        return [normalize_ws(str(x)) for x in val if normalize_ws(str(x))]
+    if isinstance(val, str):
+        try:
+            parsed = json.loads(val)
+            if isinstance(parsed, list):
+                return [normalize_ws(str(x)) for x in parsed if normalize_ws(str(x))]
+        except (json.JSONDecodeError, TypeError):
+            pass
+        if val.strip():
+            return [normalize_ws(val)]
+    return []
 
 
 def build_text_chunks(text: str, max_chars: int = 12000) -> List[str]:
@@ -602,8 +650,8 @@ def normalize_extracted_questions(raw_questions: List[Dict[str, Any]]) -> List[D
             "type": q_type,
             "options": options,
             "correct_answer": correct_answer,
-            "subject": normalize_ws(str(q.get("subject", ""))) or "General Medicine",
-            "topic": normalize_ws(str(q.get("topic", ""))) or "General",
+            "subject": _normalize_subject(normalize_ws(str(q.get("subject", ""))) or "General Medicine"),
+            "topic": _normalize_topic(normalize_ws(str(q.get("topic", ""))) or "General", q.get("stem"), q.get("subject")),
             "subtopic": normalize_ws(str(q.get("subtopic", ""))) or None,
             "difficulty": difficulty,
             "exam_tags": exam_tags,
@@ -611,7 +659,7 @@ def normalize_extracted_questions(raw_questions: List[Dict[str, Any]]) -> List[D
             "ideal_answer": ideal_answer,
             "cognitive_focus": cognitive_focus,
             "distractor_analysis": q.get("distractor_analysis"),
-            "concept_tags": q.get("concept_tags") if q.get("concept_tags") is not None else [],
+            "concept_tags": _normalize_concept_tags(q.get("concept_tags")),
             "trap_pattern": normalize_ws(str(q.get("trap_pattern", ""))) or None
         })
 

@@ -9,7 +9,7 @@ import {
   BrainCircuit, FileText, BookOpen, Search, BarChart3, Trophy,
   ScrollText, Zap, Target, Link2, Puzzle, CreditCard,
   PenSquare, FileUp, TrendingUp, RefreshCw, FlaskConical,
-  BadgeCheck, Users, LogOut, ChevronLeft, ChevronRight
+  BadgeCheck, Users, LogOut, ChevronLeft, ChevronRight, Map
 } from 'lucide-react';
 import styles from './Header.module.css';
 
@@ -87,6 +87,7 @@ export default function Header() {
     {
       label: 'Planning',
       links: [
+        { href: '/today-plan', icon: <Target {...iconProps} />, text: "Today's Plan" },
         { href: '/schedule', icon: <CalendarDays {...iconProps} />, text: 'Schedule' },
         { href: '/daily-plan', icon: <ClipboardList {...iconProps} />, text: 'Daily Plan' },
       ]
@@ -95,6 +96,7 @@ export default function Header() {
       label: 'Learning',
       links: [
         { href: '/misconceptions', icon: <BrainCircuit {...iconProps} />, text: 'Misconceptions' },
+        { href: '/concept-map', icon: <Map {...iconProps} />, text: 'Concept Map' },
         { href: '/exam-notes', icon: <FileText {...iconProps} />, text: 'Exam Notes' },
         { href: '/teaching-units', icon: <BookOpen {...iconProps} />, text: 'Teaching Units' },
       ]

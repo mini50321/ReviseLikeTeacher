@@ -6,15 +6,42 @@ import styles from './ExtractionReview.module.css';
 export default function ExtractionReview({ extraction, onReview, onCancel }) {
   if (!extraction) return null;
 
+  const parseKeyPoints = (raw) => {
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'string' && raw) {
+      try {
+        const p = JSON.parse(raw);
+        return Array.isArray(p) ? p : [];
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
+  };
+
   const [editedStem, setEditedStem] = useState(extraction.extracted_text || '');
   const [editedType, setEditedType] = useState(extraction.detected_type || 'mcq');
   const [editedSubject, setEditedSubject] = useState(extraction.detected_subject || '');
   const [editedTopic, setEditedTopic] = useState(extraction.detected_topic || '');
+  const [editedSubtopic, setEditedSubtopic] = useState(extraction.detected_subtopic || '');
   const [editedDifficulty, setEditedDifficulty] = useState(extraction.detected_difficulty || 'medium');
   const [editedImportance, setEditedImportance] = useState(extraction.detected_importance || 'medium');
+  const [editedKeyPoints, setEditedKeyPoints] = useState((parseKeyPoints(extraction.detected_key_points)).join('\n'));
   const [editedIdealAnswer, setEditedIdealAnswer] = useState(extraction.extracted_ideal_answer || '');
   const [editedCorrectAnswer, setEditedCorrectAnswer] = useState(extraction.extracted_correct_answer || '');
   const [editedOptions, setEditedOptions] = useState({ A: '', B: '', C: '', D: '' });
+
+  useEffect(() => {
+    setEditedStem(extraction.extracted_text || '');
+    setEditedType(extraction.detected_type || 'mcq');
+    setEditedSubject(extraction.detected_subject || '');
+    setEditedTopic(extraction.detected_topic || '');
+    setEditedSubtopic(extraction.detected_subtopic || '');
+    setEditedImportance(extraction.detected_importance || 'medium');
+    setEditedKeyPoints((parseKeyPoints(extraction.detected_key_points)).join('\n'));
+    setEditedIdealAnswer(extraction.extracted_ideal_answer || '');
+    setEditedCorrectAnswer(extraction.extracted_correct_answer || '');
+  }, [extraction.id]);
 
   useEffect(() => {
     if (extraction.extracted_options) {
@@ -43,13 +70,19 @@ export default function ExtractionReview({ extraction, onReview, onCancel }) {
   const isMCQ = ['mcq', 'true_false', 'assertion_reason'].includes(editedType);
 
   const handleAccept = () => {
+    const keyPointsArr = editedKeyPoints
+      .split(/\n/)
+      .map((s) => s.trim())
+      .filter(Boolean);
     const corrections = {
       stem: editedStem,
       type: editedType,
       subject: editedSubject,
       topic: editedTopic,
+      subtopic: editedSubtopic.trim() || null,
       difficulty: editedDifficulty,
       importance: editedImportance,
+      key_points: keyPointsArr,
       ideal_answer: editedIdealAnswer,
       options: isMCQ ? JSON.stringify(editedOptions) : null,
       correct_answer: isMCQ ? editedCorrectAnswer : null
@@ -125,8 +158,22 @@ export default function ExtractionReview({ extraction, onReview, onCancel }) {
             </div>
             <div className={styles.fieldGroup}>
               <label>Topic</label>
-              <input value={editedTopic} onChange={(e) => setEditedTopic(e.target.value)} />
+              <input value={editedTopic} onChange={(e) => setEditedTopic(e.target.value)} placeholder="e.g. Tuning Fork Tests" />
             </div>
+            <div className={styles.fieldGroup}>
+              <label>Subtopic</label>
+              <input value={editedSubtopic} onChange={(e) => setEditedSubtopic(e.target.value)} placeholder="e.g. Rinne, Weber" />
+            </div>
+          </div>
+
+          <div className={styles.fieldGroup}>
+            <label>Key points (one per line; used by AI for teaching)</label>
+            <textarea
+              value={editedKeyPoints}
+              onChange={(e) => setEditedKeyPoints(e.target.value)}
+              rows={3}
+              placeholder="Point 1&#10;Point 2&#10;Point 3"
+            />
           </div>
 
           <div className={styles.row}>

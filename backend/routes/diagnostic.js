@@ -283,6 +283,27 @@ router.post('/:id/answer', authenticate, async (req, res) => {
       [JSON.stringify(existingAnswers), JSON.stringify(existingScores), id]
     );
 
+    const nextRevDays = evaluation.score >= 70 ? 3 : 1;
+    const nextRev = new Date();
+    nextRev.setDate(nextRev.getDate() + nextRevDays);
+    const nextRevisionDate = nextRev.toISOString().split('T')[0];
+    const tmResult = await db.query(
+      'SELECT id FROM topicmastery WHERE user_id = $1 AND topic = $2 AND subject = $3',
+      [userId, diagnostic.topic, diagnostic.subject]
+    );
+    if (tmResult.rows.length > 0) {
+      await db.query(
+        'UPDATE topicmastery SET next_revision_date = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+        [nextRevisionDate, tmResult.rows[0].id]
+      );
+    } else {
+      await db.query(
+        `INSERT INTO topicmastery (id, user_id, topic, subject, mastery_level, next_revision_date)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [db.generateUUID(), userId, diagnostic.topic, diagnostic.subject, evaluation.score, nextRevisionDate]
+      );
+    }
+
     res.json({
       attempt_id: attemptId,
       score: evaluation.score,
@@ -363,20 +384,23 @@ router.post('/:id/complete', authenticate, async (req, res) => {
                           diagnosticLevel === 'average' ? 'in_progress' :
                           diagnosticLevel === 'good' ? 'in_progress' : 'in_progress';
 
+    const completeNextRev = new Date();
+    completeNextRev.setDate(completeNextRev.getDate() + 3);
+    const completeNextRevisionDate = completeNextRev.toISOString().split('T')[0];
     if (existingMastery.rows.length > 0) {
       await db.query(
         `UPDATE topicmastery SET diagnostic_level = $1, saq_raw_score = $2,
-         mastery_status = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4`,
-        [diagnosticLevel, rawScore, masteryStatus, existingMastery.rows[0].id]
+         mastery_status = $3, next_revision_date = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $5`,
+        [diagnosticLevel, rawScore, masteryStatus, completeNextRevisionDate, existingMastery.rows[0].id]
       );
     } else {
       const masteryId = db.generateUUID();
       await db.query(
         `INSERT INTO topicmastery
-         (id, user_id, topic, subject, mastery_level, mastery_status, diagnostic_level, saq_raw_score)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+         (id, user_id, topic, subject, mastery_level, mastery_status, diagnostic_level, saq_raw_score, next_revision_date)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
         [masteryId, userId, diagnostic.topic, diagnostic.subject,
-         rawScore * 25, masteryStatus, diagnosticLevel, rawScore]
+         rawScore * 25, masteryStatus, diagnosticLevel, rawScore, completeNextRevisionDate]
       );
     }
 

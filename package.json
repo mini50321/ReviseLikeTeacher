@@ -8,7 +8,8 @@
     "start:frontend": "cd frontend && npm run dev",
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": "cd frontend && npm run dev",
-    "db:reset": "echo 'To reset database, delete backend/database.sqlite and restart the server'"
+    "db:reset": "echo 'To reset database, delete backend/database.sqlite and restart the server'",
+    "seed:tuning-fork": "cd backend && node scripts/seed-tuning-fork-concepts.js"
   },
   "keywords": [
     "education",

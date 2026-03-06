@@ -7,6 +7,7 @@ import Header from '../../components/Header';
 import api, { voiceAPI } from '../../lib/api';
 import VoiceRecorder from '../../components/VoiceRecorder';
 import LanguageSelector from '../../components/LanguageSelector';
+import TeacherVoicePlayer from '../../components/TeacherVoicePlayer';
 import { FileText, Zap, CalendarPlus, Stethoscope, CircleCheckBig, TriangleAlert, ShieldAlert } from 'lucide-react';
 import styles from './topic-mastery.module.css';
 
@@ -718,6 +719,14 @@ function TopicMasteryContent() {
             {feedback.feedback?.improvements && (
               <div className={styles.feedbackText}>{feedback.feedback.improvements}</div>
             )}
+            {(() => {
+              const toSpeak = feedback.teacher_response || (phase === 'concept_fixing' && conceptState.followUp
+                ? `${conceptState.followUp.hint || ''} ${conceptState.followUp.subquestion || ''}`.trim()
+                : '');
+              return toSpeak ? (
+                <TeacherVoicePlayer text={toSpeak} autoPlay={true} label="Listen to teacher" />
+              ) : null;
+            })()}
             {feedback.teacher_response && (
               <div className={styles.feedbackTeacher}>{feedback.teacher_response}</div>
             )}

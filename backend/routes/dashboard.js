@@ -3,6 +3,7 @@ const router = express.Router();
 const { authenticate } = require('../middleware/auth');
 const { db } = require('../db');
 const { calculateReadiness } = require('../services/readiness');
+const { getTodayPlan } = require('../services/today-plan');
 
 router.get('/', authenticate, async (req, res) => {
   try {
@@ -55,6 +56,19 @@ router.get('/', authenticate, async (req, res) => {
       [userId]
     );
 
+    let todayPlanSummary = null;
+    try {
+      const plan = await getTodayPlan(userId);
+      todayPlanSummary = {
+        due_count: (plan.due_revisions || []).length,
+        weak_count: (plan.weak_topics || []).length,
+        questions_done_today: plan.questions_done_today || 0,
+        exam_days_remaining: plan.exam_days_remaining
+      };
+    } catch (e) {
+      todayPlanSummary = { due_count: 0, weak_count: 0, questions_done_today: 0, exam_days_remaining: null };
+    }
+
     res.json({
       profile: {
         target_exam: profile.target_exam,
@@ -100,7 +114,8 @@ router.get('/', authenticate, async (req, res) => {
         average_score: s.average_score,
         started_at: s.started_at,
         status: s.status
-      }))
+      })),
+      todayPlanSummary
     });
   } catch (error) {
     console.error('Dashboard error:', error);

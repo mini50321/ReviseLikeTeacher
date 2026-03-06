@@ -104,6 +104,8 @@ const runMigrations = () => {
     addColumnIfMissing('userprofile', 'goal_tier', "TEXT DEFAULT 'good_rank'");
     addColumnIfMissing('userprofile', 'student_category', "TEXT DEFAULT 'average'");
     addColumnIfMissing('userprofile', 'subscription_tier', "TEXT DEFAULT 'free'");
+    addColumnIfMissing('userprofile', 'learner_profile', 'TEXT');
+    addColumnIfMissing('userprofile', 'time_budget', 'TEXT');
 
     addColumnIfMissing('attempt', 'misconception_type', 'TEXT');
     addColumnIfMissing('attempt', 'misconception_tags', 'TEXT');
@@ -432,6 +434,92 @@ const runMigrations = () => {
     createIndexIfMissing('idx_laq_generation_status', 'CREATE INDEX idx_laq_generation_status ON laq_generation(status)');
     createIndexIfMissing('idx_laq_generation_difficulty', 'CREATE INDEX idx_laq_generation_difficulty ON laq_generation(difficulty)');
 
+    addColumnIfMissing('question', 'concept_id', 'TEXT');
+    createIndexIfMissing('idx_question_concept_id', 'CREATE INDEX idx_question_concept_id ON question(concept_id)');
+
+    createTableIfMissing('topic_concept', `
+      CREATE TABLE topic_concept (
+        id TEXT PRIMARY KEY,
+        subject TEXT NOT NULL,
+        topic TEXT NOT NULL,
+        concept_key TEXT NOT NULL,
+        name TEXT NOT NULL,
+        display_order INTEGER DEFAULT 0,
+        must_know_points TEXT,
+        deep_points TEXT,
+        traps TEXT,
+        leading_questions TEXT,
+        example_phrases TEXT,
+        grading_rubric TEXT,
+        micro_questions TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    createIndexIfMissing('idx_topic_concept_subject', 'CREATE INDEX idx_topic_concept_subject ON topic_concept(subject)');
+    createIndexIfMissing('idx_topic_concept_topic', 'CREATE INDEX idx_topic_concept_topic ON topic_concept(topic)');
+    createIndexIfMissing('idx_topic_concept_subject_topic', 'CREATE INDEX idx_topic_concept_subject_topic ON topic_concept(subject, topic)');
+    createIndexIfMissing('idx_topic_concept_concept_key', 'CREATE INDEX idx_topic_concept_concept_key ON topic_concept(concept_key)');
+    createIndexIfMissing('idx_topic_concept_display_order', 'CREATE INDEX idx_topic_concept_display_order ON topic_concept(display_order)');
+
+    createTableIfMissing('concept_mastery', `
+      CREATE TABLE concept_mastery (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        concept_id TEXT NOT NULL,
+        mastery REAL DEFAULT 0.00,
+        last_seen TEXT,
+        next_due TEXT,
+        weak_points TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, concept_id)
+      )
+    `);
+    createIndexIfMissing('idx_concept_mastery_user_id', 'CREATE INDEX idx_concept_mastery_user_id ON concept_mastery(user_id)');
+    createIndexIfMissing('idx_concept_mastery_concept_id', 'CREATE INDEX idx_concept_mastery_concept_id ON concept_mastery(concept_id)');
+    createIndexIfMissing('idx_concept_mastery_user_concept', 'CREATE INDEX idx_concept_mastery_user_concept ON concept_mastery(user_id, concept_id)');
+    createIndexIfMissing('idx_concept_mastery_next_due', 'CREATE INDEX idx_concept_mastery_next_due ON concept_mastery(next_due)');
+
+    createTableIfMissing('topic_gross_prompt', `
+      CREATE TABLE topic_gross_prompt (
+        id TEXT PRIMARY KEY,
+        subject TEXT NOT NULL,
+        topic TEXT NOT NULL,
+        prompt_text TEXT NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(subject, topic)
+      )
+    `);
+    createIndexIfMissing('idx_topic_gross_prompt_subject_topic', 'CREATE INDEX idx_topic_gross_prompt_subject_topic ON topic_gross_prompt(subject, topic)');
+
+    createTableIfMissing('concept_map_session', `
+      CREATE TABLE concept_map_session (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        subject TEXT NOT NULL,
+        topic TEXT NOT NULL,
+        learner_level TEXT DEFAULT 'mid',
+        snapshot TEXT,
+        current_concept_id TEXT,
+        current_point_id TEXT,
+        probe_count INTEGER DEFAULT 0,
+        leading_tier INTEGER DEFAULT 1,
+        phase TEXT DEFAULT 'probing',
+        completed_point_ids TEXT,
+        summary_text TEXT,
+        missed_points_text TEXT,
+        must_repeat_question TEXT,
+        started_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    createIndexIfMissing('idx_concept_map_session_user_id', 'CREATE INDEX idx_concept_map_session_user_id ON concept_map_session(user_id)');
+    createIndexIfMissing('idx_concept_map_session_phase', 'CREATE INDEX idx_concept_map_session_phase ON concept_map_session(phase)');
+    createIndexIfMissing('idx_concept_map_session_started_at', 'CREATE INDEX idx_concept_map_session_started_at ON concept_map_session(started_at)');
+    addColumnIfMissing('concept_map_session', 'time_limit_minutes', 'INTEGER');
+
     try {
       const triggers = [
         { name: 'update_subtopic_yield_updated_at', table: 'subtopic_yield' },
@@ -441,7 +529,11 @@ const runMigrations = () => {
         { name: 'update_integration_tag_updated_at', table: 'integration_tag' },
         { name: 'update_concept_cluster_updated_at', table: 'concept_cluster' },
         { name: 'update_saq_conversion_updated_at', table: 'saq_conversion' },
-        { name: 'update_laq_generation_updated_at', table: 'laq_generation' }
+        { name: 'update_laq_generation_updated_at', table: 'laq_generation' },
+        { name: 'update_topic_concept_updated_at', table: 'topic_concept' },
+        { name: 'update_concept_mastery_updated_at', table: 'concept_mastery' },
+        { name: 'update_topic_gross_prompt_updated_at', table: 'topic_gross_prompt' },
+        { name: 'update_concept_map_session_updated_at', table: 'concept_map_session' }
       ];
       for (const t of triggers) {
         const exists = db.exec(`SELECT name FROM sqlite_master WHERE type='trigger' AND name='${t.name}'`);

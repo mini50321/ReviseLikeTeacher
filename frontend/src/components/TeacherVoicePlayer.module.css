@@ -1,0 +1,67 @@
+.container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.dots {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.wave {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.status {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.playBtn,
+.retryBtn {
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  border: none;
+}
+
+.playBtn {
+  color: #fff;
+  background: rgba(99, 102, 241, 0.9);
+}
+
+.playBtn:hover {
+  background: rgba(99, 102, 241, 1);
+}
+
+.retryBtn {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.retryBtn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}

@@ -7,6 +7,7 @@ import Header from '../../components/Header';
 import api, { voiceAPI } from '../../lib/api';
 import VoiceRecorder from '../../components/VoiceRecorder';
 import LanguageSelector from '../../components/LanguageSelector';
+import TeacherVoicePlayer from '../../components/TeacherVoicePlayer';
 import styles from './diagnostic.module.css';
 
 function DiagnosticContent() {
@@ -492,12 +493,22 @@ function DiagnosticContent() {
                   <div className={styles.feedbackText}>{feedback.feedback.improvements}</div>
                 )}
                 {!showSolution && feedback.teacher_response && (
-                  <div className={styles.feedbackTeacher}>{feedback.teacher_response}</div>
+                  <>
+                    <TeacherVoicePlayer text={feedback.teacher_response} autoPlay={true} label="Listen to hint" />
+                    <div className={styles.feedbackTeacher}>{feedback.teacher_response}</div>
+                  </>
                 )}
                 {showSolution && (feedback.feedback?.model_explanation || question.ideal_answer) && (
-                  <div className={styles.feedbackText}>
-                    Explanation: {feedback.feedback?.model_explanation || question.ideal_answer}
-                  </div>
+                  <>
+                    <TeacherVoicePlayer
+                      text={`Explanation: ${feedback.feedback?.model_explanation || question.ideal_answer}`}
+                      autoPlay={true}
+                      label="Listen to explanation"
+                    />
+                    <div className={styles.feedbackText}>
+                      Explanation: {feedback.feedback?.model_explanation || question.ideal_answer}
+                    </div>
+                  </>
                 )}
               </div>
             )}

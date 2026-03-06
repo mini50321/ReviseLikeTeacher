@@ -26,6 +26,8 @@ CREATE TABLE userprofile (
     student_category TEXT DEFAULT 'average' CHECK (student_category IN ('bright', 'average', 'weak')),
     subscription_tier TEXT DEFAULT 'free' CHECK (subscription_tier IN ('free', 'standard', 'premium')),
     onboarding_completed INTEGER DEFAULT 0,
+    learner_profile TEXT CHECK (learner_profile IN ('top', 'mid', 'struggling')),
+    time_budget TEXT CHECK (time_budget IN ('short', 'medium', 'long')),
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id)
@@ -58,6 +60,7 @@ CREATE TABLE question (
     created_by TEXT REFERENCES users(id),
     source_pdf_id TEXT,
     extracted_question_id TEXT,
+    concept_id TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
@@ -670,4 +673,106 @@ CREATE TRIGGER update_laq_generation_updated_at AFTER UPDATE ON laq_generation
     FOR EACH ROW
     BEGIN
         UPDATE laq_generation SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+    END;
+
+CREATE TABLE topic_concept (
+    id TEXT PRIMARY KEY,
+    subject TEXT NOT NULL,
+    topic TEXT NOT NULL,
+    concept_key TEXT NOT NULL,
+    name TEXT NOT NULL,
+    display_order INTEGER DEFAULT 0,
+    must_know_points TEXT,
+    deep_points TEXT,
+    traps TEXT,
+    leading_questions TEXT,
+    example_phrases TEXT,
+    grading_rubric TEXT,
+    micro_questions TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_topic_concept_subject ON topic_concept(subject);
+CREATE INDEX idx_topic_concept_topic ON topic_concept(topic);
+CREATE INDEX idx_topic_concept_subject_topic ON topic_concept(subject, topic);
+CREATE INDEX idx_topic_concept_concept_key ON topic_concept(concept_key);
+CREATE INDEX idx_topic_concept_display_order ON topic_concept(display_order);
+
+CREATE TRIGGER update_topic_concept_updated_at AFTER UPDATE ON topic_concept
+    FOR EACH ROW
+    BEGIN
+        UPDATE topic_concept SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+    END;
+
+CREATE TABLE concept_mastery (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    concept_id TEXT NOT NULL REFERENCES topic_concept(id) ON DELETE CASCADE,
+    mastery REAL DEFAULT 0.00 CHECK (mastery >= 0 AND mastery <= 1),
+    last_seen TEXT,
+    next_due TEXT,
+    weak_points TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, concept_id)
+);
+
+CREATE INDEX idx_concept_mastery_user_id ON concept_mastery(user_id);
+CREATE INDEX idx_concept_mastery_concept_id ON concept_mastery(concept_id);
+CREATE INDEX idx_concept_mastery_user_concept ON concept_mastery(user_id, concept_id);
+CREATE INDEX idx_concept_mastery_next_due ON concept_mastery(next_due);
+
+CREATE TRIGGER update_concept_mastery_updated_at AFTER UPDATE ON concept_mastery
+    FOR EACH ROW
+    BEGIN
+        UPDATE concept_mastery SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+    END;
+
+CREATE TABLE topic_gross_prompt (
+    id TEXT PRIMARY KEY,
+    subject TEXT NOT NULL,
+    topic TEXT NOT NULL,
+    prompt_text TEXT NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(subject, topic)
+);
+
+CREATE INDEX idx_topic_gross_prompt_subject_topic ON topic_gross_prompt(subject, topic);
+
+CREATE TRIGGER update_topic_gross_prompt_updated_at AFTER UPDATE ON topic_gross_prompt
+    FOR EACH ROW
+    BEGIN
+        UPDATE topic_gross_prompt SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+    END;
+
+CREATE TABLE concept_map_session (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    subject TEXT NOT NULL,
+    topic TEXT NOT NULL,
+    learner_level TEXT DEFAULT 'mid',
+    snapshot TEXT,
+    current_concept_id TEXT,
+    current_point_id TEXT,
+    probe_count INTEGER DEFAULT 0,
+    leading_tier INTEGER DEFAULT 1,
+    phase TEXT DEFAULT 'probing' CHECK (phase IN ('probing', 'completed')),
+    completed_point_ids TEXT,
+    summary_text TEXT,
+    missed_points_text TEXT,
+    must_repeat_question TEXT,
+    started_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_concept_map_session_user_id ON concept_map_session(user_id);
+CREATE INDEX idx_concept_map_session_phase ON concept_map_session(phase);
+CREATE INDEX idx_concept_map_session_started_at ON concept_map_session(started_at);
+
+CREATE TRIGGER update_concept_map_session_updated_at AFTER UPDATE ON concept_map_session
+    FOR EACH ROW
+    BEGIN
+        UPDATE concept_map_session SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
     END;

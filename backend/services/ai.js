@@ -58,16 +58,27 @@ async function ensureAIServiceReady() {
 async function evaluateAnswer({ question, studentAnswer, currentMastery, userId }) {
   try {
     const result = await retryRequest(async () => {
+      const keyPoints = question.key_points != null
+        ? (Array.isArray(question.key_points) ? question.key_points : (typeof question.key_points === 'string' ? (() => { try { const p = JSON.parse(question.key_points); return Array.isArray(p) ? p : []; } catch (e) { return []; } })() : []))
+        : [];
+      const conceptTags = question.concept_tags != null
+        ? (Array.isArray(question.concept_tags) ? question.concept_tags : (typeof question.concept_tags === 'string' ? (() => { try { const p = JSON.parse(question.concept_tags); return Array.isArray(p) ? p : []; } catch (e) { return []; } })() : []))
+        : [];
       const response = await axios.post(`${AI_SERVICE_URL}/evaluate`, {
         question: {
           id: question.id,
           stem: question.stem,
           type: question.type,
           ideal_answer: question.ideal_answer,
-          key_points: question.key_points,
-          topic: question.topic,
-          subject: question.subject,
-          difficulty: question.difficulty
+          key_points: keyPoints,
+          topic: question.topic || '',
+          subject: question.subject || '',
+          subtopic: question.subtopic || null,
+          difficulty: question.difficulty || 'medium',
+          importance: question.importance || null,
+          yield_category: question.yield_category || null,
+          concept_tags: conceptTags,
+          trap_pattern: question.trap_pattern || null
         },
         student_answer: studentAnswer,
         current_mastery: currentMastery,

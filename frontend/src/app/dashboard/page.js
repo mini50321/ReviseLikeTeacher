@@ -158,10 +158,14 @@ export default function DashboardPage() {
     );
   }
 
-  const { profile, readiness, todaySchedule, sevenDaySchedule, topicMastery, recentSessions } = data;
+  const { profile, readiness, todaySchedule, sevenDaySchedule, topicMastery, recentSessions, todayPlanSummary } = data;
   const daysLeft = getDaysUntilExam(profile?.exam_date);
+  const dueCount = todayPlanSummary?.due_count ?? 0;
+  const weakCount = todayPlanSummary?.weak_count ?? 0;
+  const doneToday = todayPlanSummary?.questions_done_today ?? 0;
 
   const quickLinks = [
+    { href: '/today-plan', icon: Target, label: "Today's Plan", color: '#10b981' },
     { href: '/diagnostic', icon: Stethoscope, label: 'Diagnostic', color: '#4361ee' },
     { href: '/practice?mode=balanced', icon: Shuffle, label: 'Practice', color: '#7c3aed' },
     { href: '/misconceptions', icon: Brain, label: 'Misconceptions', color: '#ec4899' },
@@ -283,28 +287,28 @@ export default function DashboardPage() {
             <div className={styles.contentGrid}>
               <div className={styles.panel}>
                 <div className={styles.panelHeader}>
-                  <h2 className={styles.panelTitle}><CalendarDays size={16} /> Today's Plan</h2>
+                  <h2 className={styles.panelTitle}><Target size={16} /> Today&apos;s revision</h2>
+                  <Link href="/today-plan" className={styles.panelLink}>View full plan</Link>
                 </div>
                 <div className={styles.panelBody}>
-                  {todaySchedule ? (
-                    <div className={styles.todayGrid}>
-                      <div className={styles.todayItem}>
-                        <span className={styles.todayValue}>{todaySchedule.planned_questions}</span>
-                        <span className={styles.todayLabel}>Questions</span>
-                      </div>
-                      <div className={styles.todayItem}>
-                        <span className={styles.todayValue}>{todaySchedule.planned_minutes}</span>
-                        <span className={styles.todayLabel}>Minutes</span>
-                      </div>
-                      <div className={styles.todayItem}>
-                        <span className={styles.todayValue} style={{ color: getStatusColor(todaySchedule.status), fontSize: '14px' }}>
-                          {todaySchedule.status || '—'}
-                        </span>
-                        <span className={styles.todayLabel}>Status</span>
-                      </div>
+                  <div className={styles.todayGrid}>
+                    <div className={styles.todayItem}>
+                      <span className={styles.todayValue}>{dueCount}</span>
+                      <span className={styles.todayLabel}>Due for revision</span>
                     </div>
-                  ) : (
-                    <div className={styles.emptyState}>No plan for today</div>
+                    <div className={styles.todayItem}>
+                      <span className={styles.todayValue}>{weakCount}</span>
+                      <span className={styles.todayLabel}>Weak areas</span>
+                    </div>
+                    <div className={styles.todayItem}>
+                      <span className={styles.todayValue}>{doneToday}</span>
+                      <span className={styles.todayLabel}>Done today</span>
+                    </div>
+                  </div>
+                  {todaySchedule && (
+                    <p className={styles.todayScheduleHint}>
+                      Schedule: {todaySchedule.planned_questions} questions, {todaySchedule.planned_minutes} min
+                    </p>
                   )}
                 </div>
               </div>

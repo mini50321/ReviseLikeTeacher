@@ -33,25 +33,50 @@ async def evaluate_answer(
         key_points = question.get("key_points", [])
         topic = question.get("topic", "")
         subject = question.get("subject", "")
+        subtopic = question.get("subtopic") or ""
         difficulty = question.get("difficulty", "medium")
-        
+        importance = question.get("importance") or ""
+        yield_category = question.get("yield_category") or ""
+        concept_tags = question.get("concept_tags") or []
+        trap_pattern = question.get("trap_pattern") or ""
+
         if isinstance(key_points, str):
             try:
                 import json
                 key_points = json.loads(key_points)
-            except:
+            except Exception:
                 key_points = []
-        
         if not isinstance(key_points, list):
             key_points = []
-        
+        if isinstance(concept_tags, str):
+            try:
+                import json
+                concept_tags = json.loads(concept_tags) if concept_tags.strip() else []
+            except Exception:
+                concept_tags = []
+        if not isinstance(concept_tags, list):
+            concept_tags = []
+
         key_points_text = "\n".join([f"- {point}" for point in key_points]) if key_points else "Not specified"
-        
+        concept_tags_text = ", ".join(concept_tags) if concept_tags else "Not specified"
+        context_parts = [f"Subject: {subject}", f"Topic: {topic}"]
+        if subtopic:
+            context_parts.append(f"Subtopic: {subtopic}")
+        if importance:
+            context_parts.append(f"Importance: {importance}")
+        if yield_category:
+            context_parts.append(f"Yield: {yield_category}")
+        if trap_pattern:
+            context_parts.append(f"Common trap: {trap_pattern}")
+        context_block = "\n".join(context_parts)
+
         prompt = f"""You are a warm, knowledgeable NEET PG tutor in an interactive one-on-one session. The goal is to guide the student step-by-step to the answer, not just state it.
 
 Question: {question_stem}
-Subject: {subject}
-Topic: {topic}
+
+Teaching context (use this to tailor your hints and quick-check question):
+{context_block}
+Concept tags: {concept_tags_text}
 Difficulty: {difficulty}
 
 Key Points to Cover:

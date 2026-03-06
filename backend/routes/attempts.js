@@ -205,17 +205,21 @@ router.post('/', authenticate, async (req, res) => {
 
     const newMastery = currentMastery + evaluation.mastery_impact.delta;
     const masteryUpdate = newMastery > 100 ? 100 : (newMastery < 0 ? 0 : newMastery);
+    const today = new Date();
+    const nextRev = new Date(today);
+    nextRev.setDate(nextRev.getDate() + (evaluation.score >= 70 ? 3 : 1));
+    const nextRevisionDate = nextRev.toISOString().split('T')[0];
 
     if (masteryResult.rows.length > 0) {
       await db.query(
-        'UPDATE topicmastery SET mastery_level = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-        [masteryUpdate, masteryResult.rows[0].id]
+        'UPDATE topicmastery SET mastery_level = $1, next_revision_date = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
+        [masteryUpdate, nextRevisionDate, masteryResult.rows[0].id]
       );
     } else {
       await db.query(
-        `INSERT INTO topicmastery (user_id, topic, subject, mastery_level) 
-         VALUES ($1, $2, $3, $4)`,
-        [userId, question.topic, question.subject, masteryUpdate]
+        `INSERT INTO topicmastery (id, user_id, topic, subject, mastery_level, next_revision_date) 
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [db.generateUUID(), userId, question.topic, question.subject, masteryUpdate, nextRevisionDate]
       );
     }
 
