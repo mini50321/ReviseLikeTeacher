@@ -517,6 +517,9 @@ router.post('/session/:sessionId/answer', authenticate, async (req, res) => {
         nextLeadingPrompt = getLeadingPromptForTier(nextItem.leading_questions, 1);
       }
     }
+    const revealedText = !pointNowHit && probeCount >= 3 && currentItem
+      ? (getLeadingPromptForTier(currentItem.leading_questions, 4) || currentItem.point_description || '')
+      : null;
     if (!nextItem) {
       const summary = buildCompletionSummary(conceptResults, completedIds);
       const missedLabels = missedQueue.slice(0, 3).map(m => m.point_label || m.point_id);
@@ -535,7 +538,8 @@ router.post('/session/:sessionId/answer', authenticate, async (req, res) => {
         missed_points: missedLabels,
         must_repeat_question: mustRepeat,
         point_just_covered: pointNowHit,
-        revealed_after_three: !pointNowHit && probeCount >= 3
+        revealed_after_three: !pointNowHit && probeCount >= 3,
+        revealed_text: revealedText
       });
     }
     await db.query(
@@ -546,6 +550,7 @@ router.post('/session/:sessionId/answer', authenticate, async (req, res) => {
       phase: 'probing',
       point_just_covered: pointNowHit,
       revealed_after_three: !pointNowHit && probeCount >= 3,
+      revealed_text: revealedText,
       next_step: {
         concept_id: nextItem.concept_id,
         concept_key: nextItem.concept_key,

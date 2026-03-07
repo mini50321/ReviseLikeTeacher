@@ -171,14 +171,16 @@ export default function ConceptMapPage() {
         setCompleted({
           summary_lines: data.summary_lines || (data.summary_text ? data.summary_text.split(/\.\s+/).filter(Boolean).slice(0, 3) : []),
           missed_points: data.missed_points || [],
-          must_repeat_question: data.must_repeat_question
+          must_repeat_question: data.must_repeat_question,
+          revealed_text: data.revealed_text
         });
         setNextStep(null);
         setStep('done');
       } else {
         setPointFeedback({
           point_just_covered: data.point_just_covered,
-          revealed_after_three: data.revealed_after_three
+          revealed_after_three: data.revealed_after_three,
+          revealed_text: data.revealed_text
         });
         setNextStep(data.next_step || null);
         setProbeAnswer('');
@@ -329,7 +331,17 @@ export default function ConceptMapPage() {
               {pointFeedback && (
                 <div className={styles.pointFeedback}>
                   {pointFeedback.point_just_covered && <span className={styles.feedbackOk}>Point covered.</span>}
-                  {pointFeedback.revealed_after_three && <span className={styles.feedbackReveal}>Revealed after 3 attempts.</span>}
+                  {pointFeedback.revealed_after_three && (
+                    <div className={styles.revealedBlock}>
+                      <span className={styles.feedbackReveal}>Revealed after 3 attempts:</span>
+                      {pointFeedback.revealed_text && (
+                        <>
+                          <TeacherVoicePlayer text={pointFeedback.revealed_text} autoPlay={true} label="Listen to answer" />
+                          <p className={styles.revealedText}>{pointFeedback.revealed_text}</p>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
               <p className={styles.promptLabel}>Concept: {nextStep.concept_name}</p>
@@ -392,6 +404,12 @@ export default function ConceptMapPage() {
                 return spoken ? <TeacherVoicePlayer text={spoken} autoPlay={true} label="Listen to summary" /> : null;
               })()}
               {completed.message && <p className={styles.completeMessage}>{completed.message}</p>}
+              {completed.revealed_text && (
+                <div className={styles.revealedBlock}>
+                  <span className={styles.feedbackReveal}>Last point revealed:</span>
+                  <p className={styles.revealedText}>{completed.revealed_text}</p>
+                </div>
+              )}
               {completed.aggregated && (
                 <p className={styles.aggregated}>
                   Score: {completed.aggregated.overall_score_percent}% ({completed.aggregated.total_points_hit} / {completed.aggregated.total_points_expected} points)

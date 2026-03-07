@@ -17,10 +17,12 @@ function answerMatchesPhrase(answerNorm, phrase) {
 function answerMatchesRubricItem(answerNorm, item) {
   const phrases = item.example_phrases;
   if (Array.isArray(phrases) && phrases.length > 0) {
-    for (const phrase of phrases) {
-      const p = typeof phrase === 'string' ? phrase : (phrase && phrase.trim ? phrase.trim() : '');
-      if (p && answerMatchesPhrase(answerNorm, p)) return true;
-    }
+    const matched = phrases.filter(p => {
+      const s = typeof p === 'string' ? p : (p && p.trim ? p.trim() : '');
+      return s && s.length >= 2 && answerMatchesPhrase(answerNorm, s);
+    });
+    const minRequired = phrases.length >= 2 ? 2 : 1;
+    if (matched.length >= minRequired) return true;
   }
   const desc = item.description && typeof item.description === 'string' ? item.description : '';
   const label = item.label && typeof item.label === 'string' ? item.label : '';
