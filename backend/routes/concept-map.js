@@ -12,6 +12,33 @@ const {
   pickMustRepeatMicroQuestion
 } = require('../services/concept-map-session');
 const { getRollingAccuracy, getSuggestedProfile } = require('../services/learner-profile');
+const {
+  getNextConcept,
+  getFirstConcept,
+  getPathway,
+  getConceptWeight,
+  setTopicPathwayOrder,
+  resolveConceptId
+} = require('../services/concept-map-pathway');
+const {
+  classifyStudentLevel,
+  classifyStudentLevelFromAggregate
+} = require('../services/student-level-classifier');
+const { startConceptMapSessionFromDiagnostic } = require('../services/diagnostic-to-tutoring');
+const {
+  selectNextPrompt,
+  getTunableConfig
+} = require('../services/socratic-mcq-selector');
+const {
+  loadTutoringConfig,
+  saveTutoringConfig,
+  getSocraticMcqConfigFromTutoring
+} = require('../services/tutoring-config');
+const {
+  importJsonlLines,
+  listExamples,
+  exportAsJsonl
+} = require('../services/tutoring-training-examples');
 
 async function setConceptMasteryNextDue(userId, conceptIds, daysFromNow = 2) {
   if (!Array.isArray(conceptIds) || conceptIds.length === 0) return;
@@ -55,8 +82,16 @@ function serializeConcept(row) {
     subject: row.subject,
     topic: row.topic,
     concept_key: row.concept_key,
+    concept_map_id: row.concept_map_id || null,
     name: row.name,
     display_order: row.display_order != null ? row.display_order : 0,
+    concept_weight: row.concept_weight != null ? row.concept_weight : 1,
+    prerequisite_concept_ids: parseJsonField(row.prerequisite_concept_ids, []),
+    downstream_concept_ids: parseJsonField(row.downstream_concept_ids, []),
+    section: row.section || null,
+    chapter: row.chapter || null,
+    main_topic: row.main_topic || null,
+    subtopic: row.subtopic || null,
     must_know_points: parseJsonField(row.must_know_points, []),
     deep_points: parseJsonField(row.deep_points, []),
     traps: parseJsonField(row.traps, []),
@@ -64,6 +99,8 @@ function serializeConcept(row) {
     example_phrases: parseJsonField(row.example_phrases, []),
     grading_rubric: parseJsonField(row.grading_rubric, []),
     micro_questions: parseJsonField(row.micro_questions, []),
+    saqs: parseJsonField(row.saqs, []),
+    mcqs: parseJsonField(row.mcqs, []),
     created_at: row.created_at,
     updated_at: row.updated_at
   };
@@ -78,6 +115,235 @@ router.get('/topics', authenticate, async (req, res) => {
     res.json({ topics });
   } catch (error) {
     console.error('Concept map topics list error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/next-concept', authenticate, async (req, res) => {
+  try {
+    const { concept_id } = req.query;
+    if (!concept_id) {
+      return res.status(400).json({ error: 'concept_id query param is required' });
+    }
+    const next = await getNextConcept(concept_id);
+    res.json({ next_concept: next });
+  } catch (error) {
+    console.error('Next concept error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/first-concept', authenticate, async (req, res) => {
+  try {
+    const { subject, topic } = req.query;
+    if (!subject) {
+      return res.status(400).json({ error: 'subject query param is required' });
+    }
+    const first = await getFirstConcept(subject, topic || null);
+    res.json({ first_concept: first });
+  } catch (error) {
+    console.error('First concept error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/pathway', authenticate, async (req, res) => {
+  try {
+    const { subject } = req.query;
+    if (!subject) {
+      return res.status(400).json({ error: 'subject query param is required' });
+    }
+    const pathway = await getPathway(subject);
+    res.json({ pathway });
+  } catch (error) {
+    console.error('Pathway error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/concept-weight/:conceptId', authenticate, async (req, res) => {
+  try {
+    const { conceptId } = req.params;
+    if (!conceptId) {
+      return res.status(400).json({ error: 'conceptId is required' });
+    }
+    const weight = await getConceptWeight(conceptId);
+    res.json({ concept_id: conceptId, weight });
+  } catch (error) {
+    console.error('Concept weight error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/next-prompt', authenticate, async (req, res) => {
+  try {
+    const { concept_id, concept_map_id, current_point, student_level, probe_count = 0, leading_tier = 1, used_mcq_ids = [], config: bodyConfig } = req.body;
+    const conceptRef = concept_id || concept_map_id;
+    if (!conceptRef) {
+      return res.status(400).json({ error: 'concept_id or concept_map_id is required' });
+    }
+    const row = await resolveConceptId(conceptRef);
+    if (!row) return res.status(404).json({ error: 'Concept not found' });
+    const concept = serializeConcept(row);
+    const tutoringConfig = bodyConfig || getSocraticMcqConfigFromTutoring(await loadTutoringConfig());
+    const result = selectNextPrompt({
+      concept,
+      currentPoint: current_point || null,
+      studentLevel: student_level || 'average',
+      probeCount: probe_count,
+      leadingTier: leading_tier,
+      usedMcqIds: Array.isArray(used_mcq_ids) ? used_mcq_ids : [],
+      config: tutoringConfig
+    });
+    res.json({
+      type: result.type,
+      socratic_prompt: result.content,
+      mcq: result.mcq
+    });
+  } catch (error) {
+    console.error('Next prompt error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/socratic-mcq-config', authenticate, async (req, res) => {
+  try {
+    const config = getTunableConfig();
+    res.json({ config });
+  } catch (error) {
+    console.error('Socratic MCQ config error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/tutoring-config', authenticate, async (req, res) => {
+  try {
+    const config = await loadTutoringConfig();
+    res.json({ config });
+  } catch (error) {
+    console.error('Tutoring config get error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/training-examples/import', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { jsonl_content, concept_id, concept_map_id, subject, topic, student_level, source_file } = req.body;
+    let lines = [];
+    if (typeof jsonl_content === 'string') {
+      lines = jsonl_content.split(/\n/).filter(Boolean);
+    } else if (Array.isArray(jsonl_content)) {
+      lines = jsonl_content.map(l => typeof l === 'string' ? l : JSON.stringify(l));
+    } else {
+      return res.status(400).json({ error: 'jsonl_content (string or array) required' });
+    }
+    const result = await importJsonlLines(lines, {
+      conceptId: concept_id,
+      conceptMapId: concept_map_id,
+      subject,
+      topic,
+      studentLevel: student_level,
+      sourceFile: source_file
+    });
+    res.json({ ...result });
+  } catch (error) {
+    console.error('Training examples import error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/training-examples', authenticate, async (req, res) => {
+  try {
+    const { concept_id, concept_map_id, subject, topic, student_level, limit } = req.query;
+    const filters = {};
+    if (concept_id) filters.concept_id = concept_id;
+    if (concept_map_id) filters.concept_map_id = concept_map_id;
+    if (subject) filters.subject = subject;
+    if (topic) filters.topic = topic;
+    if (student_level) filters.student_level = student_level;
+    if (limit) filters.limit = parseInt(limit, 10) || 50;
+    const examples = await listExamples(filters);
+    res.json({ examples, count: examples.length });
+  } catch (error) {
+    console.error('Training examples list error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/training-examples/export', authenticate, async (req, res) => {
+  try {
+    const { concept_id, concept_map_id, subject, topic, student_level } = req.query;
+    const filters = {};
+    if (concept_id) filters.concept_id = concept_id;
+    if (concept_map_id) filters.concept_map_id = concept_map_id;
+    if (subject) filters.subject = subject;
+    if (topic) filters.topic = topic;
+    if (student_level) filters.student_level = student_level;
+    const jsonl = await exportAsJsonl(filters);
+    res.set('Content-Type', 'application/x-ndjson');
+    res.set('Content-Disposition', 'attachment; filename="tutoring-training.jsonl"');
+    res.send(jsonl);
+  } catch (error) {
+    console.error('Training examples export error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.put('/tutoring-config', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const params = req.body;
+    if (!params || typeof params !== 'object') {
+      return res.status(400).json({ error: 'Config object required' });
+    }
+    const config = await saveTutoringConfig(params);
+    res.json({ config });
+  } catch (error) {
+    console.error('Tutoring config save error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/classify-level', authenticate, async (req, res) => {
+  try {
+    const { concept_id, concept_map_id, answer_text, learner_level = 'mid' } = req.body;
+    const conceptRef = concept_id || concept_map_id;
+    if (!conceptRef || answer_text == null) {
+      return res.status(400).json({ error: 'concept_id or concept_map_id and answer_text are required' });
+    }
+    const row = await resolveConceptId(conceptRef);
+    if (!row) {
+      return res.status(404).json({ error: 'Concept not found' });
+    }
+    const concept = serializeConcept(row);
+    const level = ['top', 'mid', 'struggling'].includes(learner_level) ? learner_level : 'mid';
+    const classification = classifyStudentLevel(concept, String(answer_text).trim(), level);
+    res.json({
+      concept_id: concept.id,
+      student_level: classification.level,
+      score_percent: classification.score_percent,
+      misconception_count: classification.misconception_count,
+      misconceptions: classification.misconceptions,
+      points_hit: classification.points_hit,
+      points_missed: classification.points_missed,
+      points_total: classification.points_total,
+      word_count: classification.word_count
+    });
+  } catch (error) {
+    console.error('Classify level error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/topic-pathway-order', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { subject, topics } = req.body;
+    if (!subject || !Array.isArray(topics) || topics.length === 0) {
+      return res.status(400).json({ error: 'subject and topics (array) are required' });
+    }
+    await setTopicPathwayOrder(subject, topics);
+    res.json({ subject, topics });
+  } catch (error) {
+    console.error('Topic pathway order error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -216,10 +482,18 @@ router.post('/gross-submit', authenticate, async (req, res) => {
         break;
       }
     }
+    const levelClassification = classifyStudentLevelFromAggregate(conceptResults, answer, concepts);
+
     res.json({
       subject,
       topic,
       learner_level: level,
+      student_level: levelClassification.level,
+      student_level_detail: {
+        score_percent: levelClassification.score_percent,
+        misconception_count: levelClassification.misconception_count,
+        misconceptions: levelClassification.misconceptions
+      },
       concept_results: conceptResults,
       aggregated: {
         total_points_expected: totalExpected,
@@ -231,6 +505,34 @@ router.post('/gross-submit', authenticate, async (req, res) => {
     });
   } catch (error) {
     console.error('Gross submit error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/session/start-from-diagnostic', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { diagnostic_id } = req.body;
+    if (!diagnostic_id) {
+      return res.status(400).json({ error: 'diagnostic_id is required' });
+    }
+    const result = await startConceptMapSessionFromDiagnostic(userId, diagnostic_id);
+    if (result.error) {
+      return res.status(404).json({ error: result.error });
+    }
+    res.status(201).json({
+      session_id: result.session_id,
+      subject: result.subject,
+      topic: result.topic,
+      student_level: result.student_level,
+      prompt_text: result.prompt_text,
+      aggregated: result.aggregated,
+      next_step: result.next_step,
+      completed: result.completed,
+      auto_started: true
+    });
+  } catch (error) {
+    console.error('Start from diagnostic error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -317,19 +619,34 @@ router.post('/session/start', authenticate, async (req, res) => {
     const snapshot = JSON.stringify({
       concept_results: conceptResults,
       missed_points_queue: missedQueue,
-      concepts: concepts.map(c => ({ id: c.id, concept_key: c.concept_key, name: c.name, leading_questions: c.leading_questions, micro_questions: c.micro_questions }))
+      concepts: concepts.map(c => ({
+        id: c.id,
+        concept_key: c.concept_key,
+        name: c.name,
+        leading_questions: c.leading_questions,
+        micro_questions: c.micro_questions,
+        mcqs: c.mcqs || []
+      })),
+      student_level: levelClassification.level
     });
     await db.query(
       `INSERT INTO concept_map_session (id, user_id, subject, topic, learner_level, snapshot, current_concept_id, current_point_id, probe_count, leading_tier, phase, completed_point_ids, time_limit_minutes)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0, $9, 'probing', $10, $11)`,
       [sessionId, userId, subject, topic, level, snapshot, currentConceptId, currentPointId, leadingTier, JSON.stringify([]), timeLimitMinutes]
     );
+    const levelClassification = classifyStudentLevelFromAggregate(conceptResults, answer, concepts);
     const firstMissed = missedQueue[0];
     res.status(201).json({
       session_id: sessionId,
       subject,
       topic,
       learner_level: level,
+      student_level: levelClassification.level,
+      student_level_detail: {
+        score_percent: levelClassification.score_percent,
+        misconception_count: levelClassification.misconception_count,
+        misconceptions: levelClassification.misconceptions
+      },
       prompt_text: promptText,
       aggregated: {
         total_points_expected: totalExpected,
@@ -370,6 +687,9 @@ router.get('/session/:sessionId', authenticate, async (req, res) => {
     const row = result.rows[0];
     const snapshot = parseJsonField(row.snapshot, {});
     const completedIds = parseJsonField(row.completed_point_ids, []);
+    const summaryPrompt = row.phase === 'summary_request'
+      ? `Now summarize the full ${row.topic} in 4-5 exam sentences.`
+      : null;
     res.json({
       session_id: row.id,
       subject: row.subject,
@@ -383,6 +703,7 @@ router.get('/session/:sessionId', authenticate, async (req, res) => {
       snapshot: snapshot,
       completed_point_ids: completedIds,
       summary_text: row.summary_text,
+      summary_prompt: summaryPrompt,
       missed_points_text: parseJsonField(row.missed_points_text, []),
       must_repeat_question: row.must_repeat_question,
       started_at: row.started_at,
@@ -410,6 +731,49 @@ router.post('/session/:sessionId/answer', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Session not found' });
     }
     const session = sessionResult.rows[0];
+    if (session.phase === 'summary_request') {
+      const snap = parseJsonField(session.snapshot, {});
+      const conceptsData = snap.concepts || [];
+      const lastConceptId = snap.primary_concept_id || (conceptsData[0] && conceptsData[0].id);
+      const summaryText = String(answer_text || '').trim();
+      let summaryScorePercent = 0;
+      if (conceptsData.length > 0) {
+        for (const c of conceptsData) {
+          const fullConcept = await db.query('SELECT * FROM topic_concept WHERE id = $1', [c.id]);
+          if (fullConcept.rows && fullConcept.rows.length > 0) {
+            const conceptObj = serializeConcept(fullConcept.rows[0]);
+            const sr = scoreAnswerAgainstConcept(conceptObj, summaryText, session.learner_level || 'mid');
+            summaryScorePercent = Math.max(summaryScorePercent, sr.scorePercent);
+          }
+        }
+      }
+      const conceptResults = snap.concept_results || [];
+      const completedIds = parseJsonField(session.completed_point_ids, []);
+      const summary = buildCompletionSummary(conceptResults, completedIds);
+      const missedLabels = (snap.missed_points_queue || []).slice(0, 3).map(m => m.point_label || m.point_id);
+      const mustRepeat = pickMustRepeatMicroQuestion(conceptResults, conceptsData);
+      let nextConcept = null;
+      if (lastConceptId) {
+        nextConcept = await getNextConcept(lastConceptId);
+      }
+      await db.query(
+        `UPDATE concept_map_session SET phase = 'completed', summary_text = $1, missed_points_text = $2, must_repeat_question = $3, current_concept_id = $4, current_point_id = $5 WHERE id = $6`,
+        [summary, JSON.stringify(missedLabels), mustRepeat || '', null, null, sessionId]
+      );
+      const conceptIds = (conceptsData || []).map(c => c.id).filter(Boolean);
+      await setConceptMasteryNextDue(userId, conceptIds);
+      const summaryLines = buildCompletionSummaryLines(conceptResults);
+      return res.json({
+        phase: 'completed',
+        summary_requested: true,
+        summary_text: summary,
+        summary_lines: summaryLines,
+        summary_score_percent: summaryScorePercent,
+        missed_points: missedLabels,
+        must_repeat_question: mustRepeat,
+        next_concept: nextConcept
+      });
+    }
     if (session.phase === 'completed') {
       const missed = parseJsonField(session.missed_points_text, []);
       return res.json({
@@ -440,6 +804,9 @@ router.post('/session/:sessionId/answer', authenticate, async (req, res) => {
         const conceptIds = (conceptsData || []).map(c => c.id).filter(Boolean);
         await setConceptMasteryNextDue(userId, conceptIds);
         const summaryLines = buildCompletionSummaryLines(conceptResults);
+        let nextConcept = null;
+        const lastId = conceptResults[0]?.concept_id || conceptsData[0]?.id;
+        if (lastId) nextConcept = await getNextConcept(lastId);
         return res.json({
           phase: 'completed',
           time_up: true,
@@ -447,6 +814,7 @@ router.post('/session/:sessionId/answer', authenticate, async (req, res) => {
           summary_lines: summaryLines,
           missed_points: missedLabels,
           must_repeat_question: mustRepeat,
+          next_concept: nextConcept,
           message: 'Time\'s up. Here\'s your summary.'
         });
       }
@@ -454,6 +822,7 @@ router.post('/session/:sessionId/answer', authenticate, async (req, res) => {
     const snapshot = parseJsonField(session.snapshot, {});
     const conceptResults = snapshot.concept_results || [];
     const missedQueue = snapshot.missed_points_queue || [];
+    const tutoringConfig = getSocraticMcqConfigFromTutoring(await loadTutoringConfig());
     const conceptsData = snapshot.concepts || [];
     const completedIds = parseJsonField(session.completed_point_ids, []);
     const currentConceptId = session.current_concept_id;
@@ -461,26 +830,24 @@ router.post('/session/:sessionId/answer', authenticate, async (req, res) => {
     let probeCount = (session.probe_count || 0) + 1;
     let leadingTier = session.leading_tier || 1;
     if (!currentConceptId || !currentPointId) {
+      const summary = buildCompletionSummary(conceptResults, completedIds);
       await db.query(
         `UPDATE concept_map_session SET phase = 'completed', summary_text = $1, missed_points_text = $2, must_repeat_question = $3 WHERE id = $4`,
-        [
-          buildCompletionSummary(conceptResults, completedIds),
-          JSON.stringify([]),
-          pickMustRepeatMicroQuestion(conceptResults, conceptsData) || '',
-          sessionId
-        ]
+        [summary, JSON.stringify([]), pickMustRepeatMicroQuestion(conceptResults, conceptsData) || '', sessionId]
       );
       const conceptIds = (conceptsData || []).map(c => c.id).filter(Boolean);
       await setConceptMasteryNextDue(userId, conceptIds);
-      const updated = await db.query('SELECT * FROM concept_map_session WHERE id = $1', [sessionId]);
-      const u = updated.rows[0];
-      const summaryLines = (u.summary_text || '').split(/\.\s+/).filter(Boolean).slice(0, 3);
+      let nextConcept = null;
+      const lastId = conceptResults[0]?.concept_id || conceptsData[0]?.id;
+      if (lastId) nextConcept = await getNextConcept(lastId);
+      const summaryLines = summary.split(/\.\s+/).filter(Boolean).slice(0, 3);
       return res.json({
         phase: 'completed',
-        summary_text: u.summary_text,
+        summary_text: summary,
         summary_lines: summaryLines,
         missed_points: [],
-        must_repeat_question: u.must_repeat_question
+        must_repeat_question: pickMustRepeatMicroQuestion(conceptResults, conceptsData),
+        next_concept: nextConcept
       });
     }
     const conceptRow = await db.query('SELECT * FROM topic_concept WHERE id = $1', [currentConceptId]);
@@ -504,42 +871,85 @@ router.post('/session/:sessionId/answer', authenticate, async (req, res) => {
     let nextItem = remaining[0];
     let nextLeadingPrompt = null;
     let nextLeadingTier = 1;
+    let nextMcq = null;
+    const studentLevel = snapshot.student_level || 'average';
+    const conceptForPrompt = (nextItem?.concept_id === currentConceptId) ? concept : (conceptsData.find(c => c.id === (nextItem?.concept_id || currentConceptId)) || concept);
     if (nextItem) {
-      nextLeadingPrompt = getLeadingPromptForTier(nextItem.leading_questions, 1);
+      const selectorResult = selectNextPrompt({
+        concept: conceptForPrompt,
+        currentPoint: nextItem,
+        studentLevel,
+        probeCount: (nextItem?.concept_id === currentConceptId && nextItem?.point_id === currentPointId) ? probeCount : 0,
+        leadingTier: (nextItem?.concept_id === currentConceptId && nextItem?.point_id === currentPointId) ? leadingTier : 1,
+        usedMcqIds: snapshot.used_mcq_ids || [],
+        config: tutoringConfig
+      });
+      if (selectorResult.type === 'mcq' && selectorResult.mcq) {
+        nextMcq = selectorResult.mcq;
+      } else {
+        nextLeadingPrompt = selectorResult.content || getLeadingPromptForTier(nextItem.leading_questions, 1);
+      }
     }
     if (!pointNowHit && probeCount < 3 && remaining.length > 0 && remaining[0].concept_id === currentConceptId && remaining[0].point_id === currentPointId) {
       nextItem = currentItem;
       nextLeadingTier = Math.min(4, leadingTier + 1);
-      nextLeadingPrompt = getLeadingPromptForTier(currentItem.leading_questions, nextLeadingTier) || getLeadingPromptForTier(currentItem.leading_questions, 4);
+      const selectorResult = selectNextPrompt({
+        concept,
+        currentPoint: currentItem,
+        studentLevel,
+        probeCount,
+        leadingTier: nextLeadingTier,
+        usedMcqIds: snapshot.used_mcq_ids || [],
+        config: tutoringConfig
+      });
+      if (selectorResult.type === 'mcq' && selectorResult.mcq) {
+        nextMcq = selectorResult.mcq;
+        nextLeadingPrompt = null;
+      } else {
+        nextLeadingPrompt = selectorResult.content || getLeadingPromptForTier(currentItem.leading_questions, nextLeadingTier) || getLeadingPromptForTier(currentItem.leading_questions, 4);
+        nextMcq = null;
+      }
     } else if (pointNowHit || probeCount >= 3) {
       nextItem = remaining[0];
       if (nextItem) {
-        nextLeadingPrompt = getLeadingPromptForTier(nextItem.leading_questions, 1);
+        const nextConcept = conceptsData.find(c => c.id === nextItem.concept_id) || concept;
+        const selectorResult = selectNextPrompt({
+          concept: nextConcept,
+          currentPoint: nextItem,
+          studentLevel,
+          probeCount: 0,
+          leadingTier: 1,
+          usedMcqIds: snapshot.used_mcq_ids || [],
+          config: tutoringConfig
+        });
+        if (selectorResult.type === 'mcq' && selectorResult.mcq) {
+          nextMcq = selectorResult.mcq;
+          nextLeadingPrompt = null;
+        } else {
+          nextLeadingPrompt = selectorResult.content || getLeadingPromptForTier(nextItem.leading_questions, 1);
+        }
       }
     }
     const revealedText = !pointNowHit && probeCount >= 3 && currentItem
       ? (getLeadingPromptForTier(currentItem.leading_questions, 4) || currentItem.point_description || '')
       : null;
     if (!nextItem) {
-      const summary = buildCompletionSummary(conceptResults, completedIds);
-      const missedLabels = missedQueue.slice(0, 3).map(m => m.point_label || m.point_id);
-      const mustRepeat = pickMustRepeatMicroQuestion(conceptResults, conceptsData);
+      const summaryRequestText = `Now summarize the full ${session.topic} in 4-5 exam sentences.`;
+      const updatedSnapshot = JSON.stringify({
+        ...snapshot,
+        primary_concept_id: currentConceptId
+      });
       await db.query(
-        `UPDATE concept_map_session SET phase = 'completed', summary_text = $1, missed_points_text = $2, must_repeat_question = $3, completed_point_ids = $4, current_concept_id = $5, current_point_id = $6, probe_count = 0, leading_tier = 1 WHERE id = $7`,
-        [summary, JSON.stringify(missedLabels), mustRepeat || '', JSON.stringify(completedIds), null, null, sessionId]
+        `UPDATE concept_map_session SET phase = 'summary_request', snapshot = $1, completed_point_ids = $2, current_concept_id = $3, current_point_id = $4, probe_count = 0, leading_tier = 1 WHERE id = $5`,
+        [updatedSnapshot, JSON.stringify(completedIds), currentConceptId, currentPointId, sessionId]
       );
-      const conceptIds = (conceptsData || []).map(c => c.id).filter(Boolean);
-      await setConceptMasteryNextDue(userId, conceptIds);
-      const summaryLines = buildCompletionSummaryLines(conceptResults);
       return res.json({
-        phase: 'completed',
-        summary_text: summary,
-        summary_lines: summaryLines,
-        missed_points: missedLabels,
-        must_repeat_question: mustRepeat,
+        phase: 'summary_request',
+        summary_prompt: summaryRequestText,
         point_just_covered: pointNowHit,
         revealed_after_three: !pointNowHit && probeCount >= 3,
-        revealed_text: revealedText
+        revealed_text: revealedText,
+        message: 'All core points covered. Please provide your summary.'
       });
     }
     await db.query(
@@ -559,7 +969,9 @@ router.post('/session/:sessionId/answer', authenticate, async (req, res) => {
         point_label: nextItem.point_label,
         point_description: nextItem.point_description,
         leading_prompt: nextLeadingPrompt,
-        leading_tier: nextLeadingTier
+        leading_tier: nextLeadingTier,
+        prompt_type: nextMcq ? 'mcq' : 'socratic',
+        mcq: nextMcq || undefined
       },
       score_for_current: pointNowHit ? { hit: true } : { hit: false, probe_count: probeCount }
     });
@@ -615,15 +1027,25 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
       subject,
       topic,
       concept_key,
+      concept_map_id,
       name,
       display_order = 0,
+      concept_weight = 1,
+      prerequisite_concept_ids = [],
+      downstream_concept_ids = [],
+      section,
+      chapter,
+      main_topic,
+      subtopic,
       must_know_points = [],
       deep_points = [],
       traps = [],
       leading_questions = [],
       example_phrases = [],
       grading_rubric = [],
-      micro_questions = []
+      micro_questions = [],
+      saqs = [],
+      mcqs = []
     } = req.body;
 
     if (!subject || !topic || !concept_key || !name) {
@@ -633,22 +1055,34 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
     const id = db.generateUUID();
     await db.query(
       `INSERT INTO topic_concept
-       (id, subject, topic, concept_key, name, display_order, must_know_points, deep_points, traps, leading_questions, example_phrases, grading_rubric, micro_questions)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+       (id, subject, topic, concept_key, concept_map_id, name, display_order, concept_weight,
+        prerequisite_concept_ids, downstream_concept_ids, section, chapter, main_topic, subtopic,
+        must_know_points, deep_points, traps, leading_questions, example_phrases, grading_rubric, micro_questions, saqs, mcqs)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`,
       [
         id,
         subject,
         topic,
         concept_key.trim(),
+        concept_map_id || null,
         name.trim(),
         display_order,
+        concept_weight != null ? concept_weight : 1,
+        JSON.stringify(Array.isArray(prerequisite_concept_ids) ? prerequisite_concept_ids : []),
+        JSON.stringify(Array.isArray(downstream_concept_ids) ? downstream_concept_ids : []),
+        section || null,
+        chapter || null,
+        main_topic || null,
+        subtopic || null,
         JSON.stringify(Array.isArray(must_know_points) ? must_know_points : []),
         JSON.stringify(Array.isArray(deep_points) ? deep_points : []),
         JSON.stringify(Array.isArray(traps) ? traps : []),
         JSON.stringify(Array.isArray(leading_questions) ? leading_questions : []),
         JSON.stringify(Array.isArray(example_phrases) ? example_phrases : []),
         JSON.stringify(Array.isArray(grading_rubric) ? grading_rubric : []),
-        JSON.stringify(Array.isArray(micro_questions) ? micro_questions : [])
+        JSON.stringify(Array.isArray(micro_questions) ? micro_questions : []),
+        JSON.stringify(Array.isArray(saqs) ? saqs : []),
+        JSON.stringify(Array.isArray(mcqs) ? mcqs : [])
       ]
     );
 
@@ -673,17 +1107,35 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
       subject = row.subject,
       topic = row.topic,
       concept_key = row.concept_key,
+      concept_map_id,
       name = row.name,
       display_order = row.display_order,
+      concept_weight,
+      prerequisite_concept_ids,
+      downstream_concept_ids,
+      section,
+      chapter,
+      main_topic,
+      subtopic,
       must_know_points,
       deep_points,
       traps,
       leading_questions,
       example_phrases,
       grading_rubric,
-      micro_questions
+      micro_questions,
+      saqs,
+      mcqs
     } = req.body;
 
+    const conceptMapId = concept_map_id !== undefined ? (concept_map_id || null) : row.concept_map_id;
+    const weight = concept_weight !== undefined ? (concept_weight != null ? concept_weight : 1) : row.concept_weight;
+    const prereq = prerequisite_concept_ids !== undefined ? (Array.isArray(prerequisite_concept_ids) ? prerequisite_concept_ids : []) : parseJsonField(row.prerequisite_concept_ids, []);
+    const downstr = downstream_concept_ids !== undefined ? (Array.isArray(downstream_concept_ids) ? downstream_concept_ids : []) : parseJsonField(row.downstream_concept_ids, []);
+    const sec = section !== undefined ? (section || null) : row.section;
+    const ch = chapter !== undefined ? (chapter || null) : row.chapter;
+    const mt = main_topic !== undefined ? (main_topic || null) : row.main_topic;
+    const st = subtopic !== undefined ? (subtopic || null) : row.subtopic;
     const mustKnow = must_know_points !== undefined ? (Array.isArray(must_know_points) ? must_know_points : []) : parseJsonField(row.must_know_points, []);
     const deep = deep_points !== undefined ? (Array.isArray(deep_points) ? deep_points : []) : parseJsonField(row.deep_points, []);
     const trapsArr = traps !== undefined ? (Array.isArray(traps) ? traps : []) : parseJsonField(row.traps, []);
@@ -691,19 +1143,30 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
     const examples = example_phrases !== undefined ? (Array.isArray(example_phrases) ? example_phrases : []) : parseJsonField(row.example_phrases, []);
     const rubric = grading_rubric !== undefined ? (Array.isArray(grading_rubric) ? grading_rubric : []) : parseJsonField(row.grading_rubric, []);
     const micro = micro_questions !== undefined ? (Array.isArray(micro_questions) ? micro_questions : []) : parseJsonField(row.micro_questions, []);
+    const saqsArr = saqs !== undefined ? (Array.isArray(saqs) ? saqs : []) : parseJsonField(row.saqs, []);
+    const mcqsArr = mcqs !== undefined ? (Array.isArray(mcqs) ? mcqs : []) : parseJsonField(row.mcqs, []);
 
     await db.query(
       `UPDATE topic_concept SET
-        subject = $1, topic = $2, concept_key = $3, name = $4, display_order = $5,
-        must_know_points = $6, deep_points = $7, traps = $8, leading_questions = $9,
-        example_phrases = $10, grading_rubric = $11, micro_questions = $12
-       WHERE id = $13`,
+        subject = $1, topic = $2, concept_key = $3, concept_map_id = $4, name = $5, display_order = $6, concept_weight = $7,
+        prerequisite_concept_ids = $8, downstream_concept_ids = $9, section = $10, chapter = $11, main_topic = $12, subtopic = $13,
+        must_know_points = $14, deep_points = $15, traps = $16, leading_questions = $17,
+        example_phrases = $18, grading_rubric = $19, micro_questions = $20, saqs = $21, mcqs = $22
+       WHERE id = $23`,
       [
         subject,
         topic,
         concept_key,
+        conceptMapId,
         name,
         display_order,
+        weight,
+        JSON.stringify(prereq),
+        JSON.stringify(downstr),
+        sec,
+        ch,
+        mt,
+        st,
         JSON.stringify(mustKnow),
         JSON.stringify(deep),
         JSON.stringify(trapsArr),
@@ -711,6 +1174,8 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
         JSON.stringify(examples),
         JSON.stringify(rubric),
         JSON.stringify(micro),
+        JSON.stringify(saqsArr),
+        JSON.stringify(mcqsArr),
         id
       ]
     );

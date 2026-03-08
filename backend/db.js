@@ -520,6 +520,82 @@ const runMigrations = () => {
     createIndexIfMissing('idx_concept_map_session_started_at', 'CREATE INDEX idx_concept_map_session_started_at ON concept_map_session(started_at)');
     addColumnIfMissing('concept_map_session', 'time_limit_minutes', 'INTEGER');
 
+    addColumnIfMissing('topic_concept', 'concept_map_id', 'TEXT');
+    addColumnIfMissing('topic_concept', 'concept_weight', 'INTEGER DEFAULT 1');
+    addColumnIfMissing('topic_concept', 'prerequisite_concept_ids', 'TEXT');
+    addColumnIfMissing('topic_concept', 'downstream_concept_ids', 'TEXT');
+    addColumnIfMissing('topic_concept', 'section', 'TEXT');
+    addColumnIfMissing('topic_concept', 'chapter', 'TEXT');
+    addColumnIfMissing('topic_concept', 'main_topic', 'TEXT');
+    addColumnIfMissing('topic_concept', 'subtopic', 'TEXT');
+    addColumnIfMissing('topic_concept', 'saqs', 'TEXT');
+    addColumnIfMissing('topic_concept', 'mcqs', 'TEXT');
+    createIndexIfMissing('idx_topic_concept_concept_map_id', 'CREATE INDEX idx_topic_concept_concept_map_id ON topic_concept(concept_map_id)');
+
+    createTableIfMissing('topic_pathway_order', `
+      CREATE TABLE topic_pathway_order (
+        id TEXT PRIMARY KEY,
+        subject TEXT NOT NULL,
+        topic TEXT NOT NULL,
+        display_order INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(subject, topic)
+      )
+    `);
+    createIndexIfMissing('idx_topic_pathway_order_subject', 'CREATE INDEX idx_topic_pathway_order_subject ON topic_pathway_order(subject)');
+
+    createTableIfMissing('pathway_concept', `
+      CREATE TABLE pathway_concept (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        subject TEXT NOT NULL,
+        topic TEXT NOT NULL,
+        main_question TEXT NOT NULL,
+        core_points TEXT NOT NULL,
+        common_misconceptions TEXT,
+        expected_final_answer TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    createIndexIfMissing('idx_pathway_concept_subject_topic', 'CREATE INDEX idx_pathway_concept_subject_topic ON pathway_concept(subject, topic)');
+
+    createTableIfMissing('pathway_session', `
+      CREATE TABLE pathway_session (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        pathway_id TEXT NOT NULL,
+        phase TEXT DEFAULT 'initial',
+        current_step_index INTEGER DEFAULT 0,
+        completed_step_ids TEXT DEFAULT '[]',
+        probe_count INTEGER DEFAULT 0,
+        conversation TEXT DEFAULT '[]',
+        started_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    createIndexIfMissing('idx_pathway_session_user_id', 'CREATE INDEX idx_pathway_session_user_id ON pathway_session(user_id)');
+    createIndexIfMissing('idx_pathway_session_pathway_id', 'CREATE INDEX idx_pathway_session_pathway_id ON pathway_session(pathway_id)');
+
+    createTableIfMissing('tutoring_training_examples', `
+      CREATE TABLE tutoring_training_examples (
+        id TEXT PRIMARY KEY,
+        concept_id TEXT,
+        concept_map_id TEXT,
+        subject TEXT,
+        topic TEXT,
+        student_level TEXT,
+        messages TEXT NOT NULL,
+        source_file TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    createIndexIfMissing('idx_tutoring_training_concept', 'CREATE INDEX idx_tutoring_training_concept ON tutoring_training_examples(concept_id)');
+    createIndexIfMissing('idx_tutoring_training_concept_map', 'CREATE INDEX idx_tutoring_training_concept_map ON tutoring_training_examples(concept_map_id)');
+    createIndexIfMissing('idx_tutoring_training_subject_topic', 'CREATE INDEX idx_tutoring_training_subject_topic ON tutoring_training_examples(subject, topic)');
+    createIndexIfMissing('idx_tutoring_training_level', 'CREATE INDEX idx_tutoring_training_level ON tutoring_training_examples(student_level)');
+
     try {
       const triggers = [
         { name: 'update_subtopic_yield_updated_at', table: 'subtopic_yield' },
@@ -533,7 +609,9 @@ const runMigrations = () => {
         { name: 'update_topic_concept_updated_at', table: 'topic_concept' },
         { name: 'update_concept_mastery_updated_at', table: 'concept_mastery' },
         { name: 'update_topic_gross_prompt_updated_at', table: 'topic_gross_prompt' },
-        { name: 'update_concept_map_session_updated_at', table: 'concept_map_session' }
+        { name: 'update_concept_map_session_updated_at', table: 'concept_map_session' },
+        { name: 'update_pathway_concept_updated_at', table: 'pathway_concept' },
+        { name: 'update_pathway_session_updated_at', table: 'pathway_session' }
       ];
       for (const t of triggers) {
         const exists = db.exec(`SELECT name FROM sqlite_master WHERE type='trigger' AND name='${t.name}'`);
@@ -570,6 +648,20 @@ const runMigrations = () => {
       ['competency_core_coverage_weight', 10.0, 'weight', 'competency'],
       ['learning_time_allocation', 0.6, 'weight', 'scheduler'],
       ['practice_time_allocation', 0.3, 'weight', 'scheduler'],
+      ['mcq_preference_excellent', 0.8, 'weight', 'competency'],
+      ['mcq_preference_strong', 0.7, 'weight', 'competency'],
+      ['mcq_preference_average', 0.4, 'weight', 'competency'],
+      ['mcq_preference_weak', 0.2, 'weight', 'competency'],
+      ['mcq_preference_very_weak', 0.1, 'weight', 'competency'],
+      ['mcq_preference_bored', 0.9, 'weight', 'competency'],
+      ['socratic_first_probes', 1.0, 'other', 'competency'],
+      ['force_socratic_until_tier', 2.0, 'other', 'competency'],
+      ['level_threshold_excellent', 90.0, 'threshold', 'competency'],
+      ['level_threshold_strong', 75.0, 'threshold', 'competency'],
+      ['level_threshold_average', 50.0, 'threshold', 'competency'],
+      ['level_threshold_weak', 30.0, 'threshold', 'competency'],
+      ['level_bored_min_words', 15.0, 'other', 'competency'],
+      ['level_bored_compact_similarity', 0.85, 'threshold', 'competency'],
       ['revision_time_allocation', 0.1, 'weight', 'scheduler']
     ];
 

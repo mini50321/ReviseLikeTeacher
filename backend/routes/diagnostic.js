@@ -4,6 +4,8 @@ const { authenticate } = require('../middleware/auth');
 const { requireDailyLimit } = require('../middleware/subscription');
 const { db } = require('../db');
 const { evaluateAnswer } = require('../services/ai');
+const { startConceptMapSessionFromDiagnostic } = require('../services/diagnostic-to-tutoring');
+const { getNextConcept, getFirstConcept } = require('../services/concept-map-pathway');
 
 router.get('/topics', authenticate, async (req, res) => {
   try {
@@ -68,10 +70,28 @@ router.get('/topics', authenticate, async (req, res) => {
 router.post('/start', authenticate, requireDailyLimit('daily_diagnostic_limit'), async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { subject, topic } = req.body;
+    let { subject, topic, next_from_concept_id, first_for_subject } = req.body;
+
+    if (next_from_concept_id) {
+      const nextConcept = await getNextConcept(next_from_concept_id);
+      if (!nextConcept) {
+        return res.status(404).json({ error: 'No next concept in pathway' });
+      }
+      subject = nextConcept.subject;
+      topic = nextConcept.topic;
+    } else if (first_for_subject && !subject) {
+      return res.status(400).json({ error: 'subject required when using first_for_subject' });
+    } else if (first_for_subject) {
+      const firstConcept = await getFirstConcept(subject);
+      if (!firstConcept) {
+        return res.status(404).json({ error: 'No concepts found for subject' });
+      }
+      subject = firstConcept.subject;
+      topic = firstConcept.topic;
+    }
 
     if (!subject || !topic) {
-      return res.status(400).json({ error: 'Subject and topic are required' });
+      return res.status(400).json({ error: 'Subject and topic are required (or use next_from_concept_id)' });
     }
 
     let saqQuestions = await db.query(
@@ -439,6 +459,23 @@ router.post('/:id/complete', authenticate, async (req, res) => {
       );
     }
 
+    let conceptMapSession = null;
+    try {
+      const tutoringResult = await startConceptMapSessionFromDiagnostic(userId, id);
+      if (!tutoringResult.error && tutoringResult.session_id) {
+        conceptMapSession = {
+          session_id: tutoringResult.session_id,
+          subject: tutoringResult.subject,
+          topic: tutoringResult.topic,
+          student_level: tutoringResult.student_level,
+          next_step: tutoringResult.next_step,
+          completed: tutoringResult.completed
+        };
+      }
+    } catch (e) {
+      console.error('Auto-start tutoring from diagnostic:', e.message);
+    }
+
     res.json({
       diagnostic_id: id,
       raw_score: rawScore,
@@ -448,7 +485,8 @@ router.post('/:id/complete', authenticate, async (req, res) => {
       misconception_tags: misconceptionTags,
       focus_buckets: focusBuckets,
       next_phase: 'concept_fixing',
-      recommendation: getRecommendation(diagnosticLevel, focusBuckets)
+      recommendation: getRecommendation(diagnosticLevel, focusBuckets),
+      concept_map_session: conceptMapSession
     });
   } catch (error) {
     console.error('Complete diagnostic error:', error);
