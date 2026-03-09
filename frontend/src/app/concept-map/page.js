@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import Header from '../../components/Header';
 import api, { voiceAPI } from '../../lib/api';
@@ -10,6 +11,9 @@ import TeacherVoicePlayer from '../../components/TeacherVoicePlayer';
 import styles from './concept-map.module.css';
 
 export default function ConceptMapPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const resumeSessionId = searchParams?.get('session_id');
   const [topics, setTopics] = useState([]);
   const [selected, setSelected] = useState(null);
   const [grossPrompt, setGrossPrompt] = useState(null);
@@ -25,6 +29,7 @@ export default function ConceptMapPage() {
   const [submitting, setSubmitting] = useState(false);
   const [completed, setCompleted] = useState(null);
   const [pointFeedback, setPointFeedback] = useState(null);
+  const [summaryRequest, setSummaryRequest] = useState(null);
   const [topicsError, setTopicsError] = useState(null);
   const [probeLanguage, setProbeLanguage] = useState('english');
   const [probeAudioBlob, setProbeAudioBlob] = useState(null);
@@ -52,6 +57,43 @@ export default function ConceptMapPage() {
       })
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!resumeSessionId) return;
+    setLoading(true);
+    api.get(`/concept-map/session/${resumeSessionId}`)
+      .then(res => {
+        const data = res.data;
+        setSessionId(data.session_id);
+        setLearnerLevel(data.learner_level);
+        setSelected({ subject: data.subject, topic: data.topic });
+        if (data.phase === 'summary_request') {
+          setSummaryRequest({
+            summary_prompt: data.summary_prompt || `Summarize the full ${data.topic} in 4-5 exam sentences.`,
+            point_just_covered: false,
+            revealed_after_three: false,
+            revealed_text: null,
+            message: 'All core points covered. Please provide your summary.'
+          });
+          setStep('summary');
+        } else if (data.phase === 'probing' && data.next_step) {
+          setNextStep(data.next_step);
+          setStep('probe');
+        } else if (data.phase === 'completed') {
+          setCompleted({
+            summary_lines: data.summary_text ? data.summary_text.split(/\.\s+/).filter(Boolean).slice(0, 3) : [],
+            missed_points: data.missed_points_text || [],
+            must_repeat_question: data.must_repeat_question
+          });
+          setStep('done');
+        } else {
+          setNextStep(data.next_step || null);
+          setStep(data.next_step ? 'probe' : 'select');
+        }
+      })
+      .catch(() => setError('Session not found or already completed'))
+      .finally(() => setLoading(false));
+  }, [resumeSessionId]);
 
   const onSelectTopic = (subject, topic) => {
     setSelected({ subject, topic });
@@ -172,10 +214,30 @@ export default function ConceptMapPage() {
           summary_lines: data.summary_lines || (data.summary_text ? data.summary_text.split(/\.\s+/).filter(Boolean).slice(0, 3) : []),
           missed_points: data.missed_points || [],
           must_repeat_question: data.must_repeat_question,
+          revealed_text: data.revealed_text,
+          next_concept: data.next_concept || null
+        });
+        setNextStep(null);
+        setSummaryRequest(null);
+        setStep('done');
+      } else if (data.phase === 'summary_request') {
+        setSummaryRequest({
+          summary_prompt: data.summary_prompt,
+          point_just_covered: data.point_just_covered,
+          revealed_after_three: data.revealed_after_three,
+          revealed_text: data.revealed_text,
+          message: data.message
+        });
+        setPointFeedback({
+          point_just_covered: data.point_just_covered,
+          revealed_after_three: data.revealed_after_three,
           revealed_text: data.revealed_text
         });
         setNextStep(null);
-        setStep('done');
+        setProbeAnswer('');
+        setProbeAudioBlob(null);
+        setProbeTranscriptionError('');
+        setStep('summary');
       } else {
         setPointFeedback({
           point_just_covered: data.point_just_covered,
@@ -202,6 +264,32 @@ export default function ConceptMapPage() {
     }
   };
 
+  const submitSummaryAnswer = async () => {
+    if (!sessionId || !probeAnswer.trim()) return;
+    setSubmitting(true);
+    setError('');
+    try {
+      const res = await api.post(`/concept-map/session/${sessionId}/answer`, {
+        answer_text: probeAnswer.trim()
+      });
+      const data = res.data;
+      if (data.phase === 'completed') {
+        setCompleted({
+          summary_lines: data.summary_lines || (data.summary_text ? data.summary_text.split(/\.\s+/).filter(Boolean).slice(0, 3) : []),
+          missed_points: data.missed_points || [],
+          must_repeat_question: data.must_repeat_question,
+          next_concept: data.next_concept || null
+        });
+        setSummaryRequest(null);
+        setStep('done');
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to submit summary');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const resetFlow = () => {
     setStep('select');
     setSelected(null);
@@ -217,6 +305,7 @@ export default function ConceptMapPage() {
     setGrossTranscriptionError('');
     setCompleted(null);
     setPointFeedback(null);
+    setSummaryRequest(null);
     setError('');
   };
 
@@ -391,6 +480,38 @@ export default function ConceptMapPage() {
             </div>
           )}
 
+          {step === 'summary' && summaryRequest && (
+            <div className={styles.card}>
+              <h2 className={styles.cardTitle}>Summary</h2>
+              {summaryRequest.message && <p className={styles.completeMessage}>{summaryRequest.message}</p>}
+              {summaryRequest.revealed_after_three && summaryRequest.revealed_text && (
+                <div className={styles.revealedBlock}>
+                  <span className={styles.feedbackReveal}>Revealed after 3 attempts:</span>
+                  <p className={styles.revealedText}>{summaryRequest.revealed_text}</p>
+                </div>
+              )}
+              <p className={styles.promptLabel}>{summaryRequest.summary_prompt}</p>
+              <textarea
+                className={styles.textarea}
+                value={probeAnswer}
+                onChange={e => setProbeAnswer(e.target.value)}
+                placeholder="Type your summary in 4–5 exam sentences…"
+                rows={6}
+              />
+              <div className={styles.actions}>
+                <button
+                  type="button"
+                  className={styles.primaryBtn}
+                  onClick={submitSummaryAnswer}
+                  disabled={submitting || !probeAnswer.trim()}
+                >
+                  {submitting ? 'Submitting…' : 'Submit summary'}
+                </button>
+              </div>
+              {error && <p className={styles.error}>{error}</p>}
+            </div>
+          )}
+
           {step === 'done' && completed && (
             <div className={styles.card}>
               <h2 className={styles.cardTitle}>Session complete</h2>
@@ -442,8 +563,17 @@ export default function ConceptMapPage() {
                 </div>
               )}
               <div className={styles.actions}>
-                <button type="button" className={styles.primaryBtn} onClick={resetFlow}>
-                  Start another topic
+                {completed.next_concept?.id && (
+                  <button
+                    type="button"
+                    className={styles.primaryBtn}
+                    onClick={() => router.push(`/diagnostic?for_concept_id=${completed.next_concept.id}`)}
+                  >
+                    Continue to Next Concept →
+                  </button>
+                )}
+                <button type="button" className={styles.secondaryBtn} onClick={resetFlow}>
+                  {completed.next_concept?.id ? 'Choose a different topic' : 'Start another topic'}
                 </button>
               </div>
             </div>

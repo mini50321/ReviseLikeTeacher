@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import Header from '../../components/Header';
 import api, { voiceAPI } from '../../lib/api';
@@ -12,6 +12,8 @@ import styles from './diagnostic.module.css';
 
 function DiagnosticContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const autoConceptId = searchParams?.get('for_concept_id');
   const [phase, setPhase] = useState('select');
   const [subjects, setSubjects] = useState([]);
   const [topics, setTopics] = useState([]);
@@ -48,6 +50,42 @@ function DiagnosticContent() {
   useEffect(() => {
     fetchTopics();
   }, []);
+
+  useEffect(() => {
+    if (!autoConceptId) return;
+    const startFromConcept = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const response = await api.post('/diagnostic/start', { for_concept_id: autoConceptId });
+        const data = response.data;
+        setDiagnosticId(data.diagnostic_id);
+        setSessionId(data.session_id);
+        setTlsId(data.topic_learning_session_id);
+        setQuestions(data.questions);
+        setCurrentIndex(0);
+        setAnswers([]);
+        setFeedback(null);
+        setAnswerText('');
+        setAnswerMethod('text');
+        setLanguage('english');
+        setAudioBlob(null);
+        setTranscription('');
+        setTranscriptionError('');
+        transcriptionRef.current = '';
+        setAttemptCount(0);
+        setShowSolution(false);
+        setLastWasCorrect(false);
+        setPhase('answering');
+        startTimeRef.current = Date.now();
+      } catch (err) {
+        setError(err.response?.data?.error || 'Failed to start next concept');
+      } finally {
+        setLoading(false);
+      }
+    };
+    startFromConcept();
+  }, [autoConceptId]);
 
   const fetchTopics = async () => {
     try {
@@ -254,23 +292,30 @@ function DiagnosticContent() {
 
   const getLevelClass = (level) => {
     switch (level) {
+      case 'very_weak':
       case 'weak': return styles.resultLevelWeak;
       case 'average': return styles.resultLevelAverage;
       case 'good': return styles.resultLevelGood;
-      case 'strong': return styles.resultLevelStrong;
+      case 'excellent':
+      case 'strong':
+      case 'bored': return styles.resultLevelStrong;
       default: return '';
     }
   };
 
   if (loading && phase === 'select') {
-    return <div className={styles.loading}>Loading topics...</div>;
+    return (
+      <div className={styles.loading}>
+        {autoConceptId ? 'Starting next concept...' : 'Loading topics...'}
+      </div>
+    );
   }
 
   if (phase === 'select') {
     return (
       <div>
         <h1 className={styles.title}>Diagnostic Assessment</h1>
-        <p className={styles.subtitle}>Select a topic to assess your readiness with 3-4 diagnostic questions</p>
+        <p className={styles.subtitle}>Select a topic — 1 SAQ to infer your level, then Socratic teaching</p>
 
         {error && <div className={styles.error}>{error}</div>}
 
@@ -371,6 +416,15 @@ function DiagnosticContent() {
           <div className={styles.phaseIndicator}>
             <span className={styles.phaseTag}>Diagnostic</span>
             <span className={styles.phaseStep}>Question {currentIndex + 1} of {questions.length}</span>
+            {autoConceptId && (
+              <button
+                type="button"
+                className={styles.chooseTopicLink}
+                onClick={() => router.push('/diagnostic')}
+              >
+                Choose a different topic
+              </button>
+            )}
           </div>
 
           {error && <div className={styles.error}>{error}</div>}
@@ -553,15 +607,15 @@ function DiagnosticContent() {
               <span className={styles.phaseTag}>Diagnostic Complete</span>
             </div>
 
-            <div className={`${styles.resultLevel} ${getLevelClass(results.diagnostic_level)}`}>
-              {results.diagnostic_level}
+            <div className={`${styles.resultLevel} ${getLevelClass(results.student_level || results.diagnostic_level)}`}>
+              {results.student_level || results.diagnostic_level}
             </div>
             <div className={styles.resultScore}>
               {results.correct_count} / {results.total_questions} correct (Raw: {(results.raw_score * 100).toFixed(0)}%)
             </div>
 
             <div className={styles.resultBuckets}>
-              {results.focus_buckets.map(b => (
+              {(results.focus_buckets || []).map(b => (
                 <span key={b} className={styles.bucketTag}>{b}</span>
               ))}
             </div>
@@ -583,12 +637,28 @@ function DiagnosticContent() {
             )}
 
             <div className={styles.resultActions}>
-              <button
-                className={styles.primaryButton}
-                onClick={() => router.push(`/topic-mastery?id=${tlsId}`)}
-              >
-                Continue to Mastery Flow
-              </button>
+              {results.concept_map_session?.session_id && results.concept_map_session?.next_step ? (
+                <button
+                  className={styles.primaryButton}
+                  onClick={() => router.push(`/concept-map?session_id=${results.concept_map_session.session_id}`)}
+                >
+                  Continue to Teaching
+                </button>
+              ) : results.concept_map_session?.session_id && results.concept_map_session?.completed ? (
+                <button
+                  className={styles.primaryButton}
+                  onClick={() => router.push(`/topic-mastery?id=${tlsId}`)}
+                >
+                  Continue to Mastery Flow
+                </button>
+              ) : (
+                <button
+                  className={styles.primaryButton}
+                  onClick={() => router.push(`/topic-mastery?id=${tlsId}`)}
+                >
+                  Continue to Mastery Flow
+                </button>
+              )}
               <button
                 className={styles.secondaryButton}
                 onClick={() => router.push('/dashboard')}

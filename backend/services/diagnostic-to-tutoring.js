@@ -44,7 +44,22 @@ function synthesizeAnswerFromDiagnostic(saqAnswers) {
   return texts.join(' ') || '';
 }
 
-async function startConceptMapSessionFromDiagnostic(userId, diagnosticId) {
+function map6LevelTo3Level(level) {
+  if (!level) return 'mid';
+  switch (level) {
+    case 'excellent':
+    case 'strong':
+    case 'bored':
+      return 'top';
+    case 'weak':
+    case 'very_weak':
+      return 'struggling';
+    default:
+      return 'mid';
+  }
+}
+
+async function startConceptMapSessionFromDiagnostic(userId, diagnosticId, options = {}) {
   const diagResult = await db.query(
     'SELECT * FROM diagnostic_assessment WHERE id = $1 AND user_id = $2',
     [diagnosticId, userId]
@@ -66,19 +81,24 @@ async function startConceptMapSessionFromDiagnostic(userId, diagnosticId) {
     return { error: 'No concepts found for this topic', session_id: null };
   }
   let learnerLevel = 'mid';
-  try {
-    const profileResult = await db.query(
-      'SELECT learner_profile FROM userprofile WHERE user_id = $1',
-      [userId]
-    );
-    const savedProfile = (profileResult.rows && profileResult.rows[0]) ? profileResult.rows[0].learner_profile : null;
-    if (savedProfile && ['top', 'mid', 'struggling'].includes(savedProfile)) {
-      learnerLevel = savedProfile;
-    } else {
-      const { accuracy } = await getRollingAccuracy(userId, subject, topic);
-      learnerLevel = getSuggestedProfile(accuracy);
-    }
-  } catch (e) {}
+  const inferredStudentLevel = options.inferredStudentLevel; // 6-level: excellent/strong/average/weak/very_weak/bored
+  if (inferredStudentLevel && ['excellent', 'strong', 'average', 'weak', 'very_weak', 'bored'].includes(inferredStudentLevel)) {
+    learnerLevel = map6LevelTo3Level(inferredStudentLevel);
+  } else {
+    try {
+      const profileResult = await db.query(
+        'SELECT learner_profile FROM userprofile WHERE user_id = $1',
+        [userId]
+      );
+      const savedProfile = (profileResult.rows && profileResult.rows[0]) ? profileResult.rows[0].learner_profile : null;
+      if (savedProfile && ['top', 'mid', 'struggling'].includes(savedProfile)) {
+        learnerLevel = savedProfile;
+      } else {
+        const { accuracy } = await getRollingAccuracy(userId, subject, topic);
+        learnerLevel = getSuggestedProfile(accuracy);
+      }
+    } catch (e) {}
+  }
   const level = ['top', 'mid', 'struggling'].includes(learnerLevel) ? learnerLevel : 'mid';
   const answer = answerText.trim() || 'No answer provided.';
   const conceptResults = [];
@@ -101,7 +121,9 @@ async function startConceptMapSessionFromDiagnostic(userId, diagnosticId) {
       pointsTotal: scoreResult.pointsTotal
     });
   }
-  const levelClassification = classifyStudentLevelFromAggregate(conceptResults, answer, concepts);
+  const levelClassification = inferredStudentLevel
+    ? { level: inferredStudentLevel, score_percent: totalExpected > 0 ? Math.round((totalHit / totalExpected) * 100) : 0 }
+    : classifyStudentLevelFromAggregate(conceptResults, answer, concepts);
   const missedQueue = buildMissedPointsQueue(conceptResults, concepts);
   const promptResult = await db.query(
     'SELECT prompt_text FROM topic_gross_prompt WHERE subject = $1 AND topic = $2',

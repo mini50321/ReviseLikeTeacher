@@ -9,7 +9,7 @@ import {
   BrainCircuit, FileText, BookOpen, Search, BarChart3, Trophy,
   ScrollText, Zap, Target, Link2, Puzzle, CreditCard,
   PenSquare, FileUp, TrendingUp, RefreshCw, FlaskConical,
-  BadgeCheck, Users, LogOut, ChevronLeft, ChevronRight, Map
+  BadgeCheck, Users, LogOut, ChevronLeft, ChevronRight, Map, GraduationCap
 } from 'lucide-react';
 import styles from './Header.module.css';
 
@@ -48,6 +48,8 @@ export default function Header() {
         { href: '/admin/dashboard', icon: <LayoutDashboard {...iconProps} />, text: 'Dashboard' },
         { href: '/admin/question-studio', icon: <PenSquare {...iconProps} />, text: 'Questions' },
         { href: '/admin/pdf-upload', icon: <FileUp {...iconProps} />, text: 'PDF Upload' },
+        { href: '/admin/training-examples', icon: <GraduationCap {...iconProps} />, text: 'Training Examples' },
+        { href: '/admin/concept-map-test', icon: <Map {...iconProps} />, text: 'Concept Map Test' },
         { href: '/admin/analytics', icon: <TrendingUp {...iconProps} />, text: 'Analytics' },
       ]
     },

@@ -70,9 +70,17 @@ router.get('/topics', authenticate, async (req, res) => {
 router.post('/start', authenticate, requireDailyLimit('daily_diagnostic_limit'), async (req, res) => {
   try {
     const userId = req.user.userId;
-    let { subject, topic, next_from_concept_id, first_for_subject } = req.body;
+    let { subject, topic, next_from_concept_id, for_concept_id, first_for_subject } = req.body;
 
-    if (next_from_concept_id) {
+    if (for_concept_id) {
+      const { resolveConceptId } = require('../services/concept-map-pathway');
+      const resolved = await resolveConceptId(for_concept_id);
+      if (!resolved) {
+        return res.status(404).json({ error: 'Concept not found' });
+      }
+      subject = resolved.subject;
+      topic = resolved.topic;
+    } else if (next_from_concept_id) {
       const nextConcept = await getNextConcept(next_from_concept_id);
       if (!nextConcept) {
         return res.status(404).json({ error: 'No next concept in pathway' });
@@ -94,6 +102,7 @@ router.post('/start', authenticate, requireDailyLimit('daily_diagnostic_limit'),
       return res.status(400).json({ error: 'Subject and topic are required (or use next_from_concept_id)' });
     }
 
+    // Single-SAQ Socratic flow: 1 question to infer level and teach
     let saqQuestions = await db.query(
       `SELECT * FROM question
        WHERE subject = $1 AND topic = $2 AND status = 'active'
@@ -101,29 +110,29 @@ router.post('/start', authenticate, requireDailyLimit('daily_diagnostic_limit'),
          AND (yield_category = 'core' OR yield_category = 'frequent')
        ORDER BY CASE yield_category WHEN 'core' THEN 1 WHEN 'frequent' THEN 2 ELSE 3 END,
                 RANDOM()
-       LIMIT 4`,
+       LIMIT 1`,
       [subject, topic]
     );
 
-    if (saqQuestions.rows.length < 3) {
+    if (saqQuestions.rows.length === 0) {
       saqQuestions = await db.query(
         `SELECT * FROM question
          WHERE subject = $1 AND topic = $2 AND status = 'active'
            AND type = 'saq'
          ORDER BY RANDOM()
-         LIMIT 4`,
+         LIMIT 1`,
         [subject, topic]
       );
     }
 
-    if (saqQuestions.rows.length < 3) {
+    if (saqQuestions.rows.length === 0) {
       const allQuestions = await db.query(
         `SELECT * FROM question
          WHERE subject = $1 AND topic = $2 AND status = 'active'
            AND type IN ('saq', 'mcq', 'case_based', 'true_false', 'assertion_reason')
          ORDER BY CASE type WHEN 'saq' THEN 1 WHEN 'case_based' THEN 2 ELSE 3 END,
                   RANDOM()
-         LIMIT 4`,
+         LIMIT 1`,
         [subject, topic]
       );
       saqQuestions = allQuestions;
@@ -356,21 +365,20 @@ router.post('/:id/complete', authenticate, async (req, res) => {
 
     const scoreValues = Object.values(scores);
     const correctCount = scoreValues.filter(s => s >= 70).length;
-    const rawScore = totalQuestions > 0 ? correctCount / totalQuestions : 0;
+    const rawScore = totalQuestions > 0 ? scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length / 100 : 0;
+    const avgScore = totalQuestions > 0 ? scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length : 0;
 
-    let diagnosticLevel;
-    if (totalQuestions === 4) {
-      if (correctCount <= 1) diagnosticLevel = 'weak';
-      else if (correctCount === 2) diagnosticLevel = 'average';
-      else if (correctCount === 3) diagnosticLevel = 'good';
-      else diagnosticLevel = 'strong';
-    } else {
-      const ratio = rawScore;
-      if (ratio <= 0.25) diagnosticLevel = 'weak';
-      else if (ratio <= 0.5) diagnosticLevel = 'average';
-      else if (ratio <= 0.75) diagnosticLevel = 'good';
-      else diagnosticLevel = 'strong';
-    }
+    // Single-SAQ flow: infer 6-level from score (excellent/strong/average/weak/very_weak; bored requires word count, skip for now)
+    let studentLevel;
+    if (avgScore >= 90) studentLevel = 'excellent';
+    else if (avgScore >= 75) studentLevel = 'strong';
+    else if (avgScore >= 50) studentLevel = 'average';
+    else if (avgScore >= 30) studentLevel = 'weak';
+    else studentLevel = 'very_weak';
+    // topicmastery.diagnostic_level expects weak/average/good/strong
+    const diagnosticLevel = ['excellent', 'strong', 'bored'].includes(studentLevel) ? 'strong'
+      : studentLevel === 'average' ? 'average'
+      : 'weak';
 
     const misconceptionTags = [];
     for (const qId of questions) {
@@ -461,7 +469,7 @@ router.post('/:id/complete', authenticate, async (req, res) => {
 
     let conceptMapSession = null;
     try {
-      const tutoringResult = await startConceptMapSessionFromDiagnostic(userId, id);
+      const tutoringResult = await startConceptMapSessionFromDiagnostic(userId, id, { inferredStudentLevel: studentLevel });
       if (!tutoringResult.error && tutoringResult.session_id) {
         conceptMapSession = {
           session_id: tutoringResult.session_id,
@@ -482,6 +490,7 @@ router.post('/:id/complete', authenticate, async (req, res) => {
       correct_count: correctCount,
       total_questions: totalQuestions,
       diagnostic_level: diagnosticLevel,
+      student_level: studentLevel,
       misconception_tags: misconceptionTags,
       focus_buckets: focusBuckets,
       next_phase: 'concept_fixing',

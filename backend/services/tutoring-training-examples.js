@@ -120,10 +120,18 @@ async function getExamplesForPrompting(conceptIdOrMapId, studentLevel, limit = 3
   return examples.map(ex => ({ messages: ex.messages }));
 }
 
+async function getExamplesForSubjectTopic(subject, topic, studentLevel = null, limit = 3) {
+  const filters = { subject, topic, limit };
+  if (studentLevel) filters.student_level = studentLevel;
+  const examples = await listExamples(filters);
+  return examples.map(ex => ({ messages: ex.messages, student_level: ex.student_level }));
+}
+
 module.exports = {
   importJsonlLines,
   listExamples,
   exportAsJsonl,
   getExamplesForPrompting,
+  getExamplesForSubjectTopic,
   inferStudentLevel
 };

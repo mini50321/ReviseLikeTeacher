@@ -83,29 +83,33 @@ export default function TeacherVoicePlayer({ text, autoPlay = false, label = 'Li
 
   if (!text || !String(text).trim()) return null;
 
+  if (state === 'error') {
+    return (
+      <div className={styles.containerUnavailable}>
+        <span className={styles.unavailableText}>Listen unavailable — read the text below</span>
+        <button type="button" onClick={retry} className={styles.retryLink}>Retry</button>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.container}>
       <div className={styles.icon}>
         {state === 'loading' && <span className={styles.dots}>...</span>}
         {state === 'playing' && <span className={styles.wave}>Speaking</span>}
         {(state === 'ready' || state === 'idle' || state === 'finished') && <span className={styles.speaker}>Listen</span>}
-        {state === 'error' && <span className={styles.err}>Error</span>}
       </div>
       <span className={styles.status}>
         {state === 'loading' && 'Preparing...'}
         {state === 'playing' && 'Speaking...'}
         {state === 'ready' && label}
         {state === 'finished' && 'Replay'}
-        {state === 'error' && 'Voice unavailable'}
       </span>
       <div className={styles.controls}>
         {(state === 'finished' || state === 'playing' || state === 'ready') && (
           <button type="button" onClick={togglePlayback} className={styles.playBtn}>
             {state === 'playing' ? 'Pause' : 'Play'}
           </button>
-        )}
-        {state === 'error' && (
-          <button type="button" onClick={retry} className={styles.retryBtn}>Retry</button>
         )}
       </div>
     </div>

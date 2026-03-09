@@ -2,6 +2,24 @@ const express = require('express');
 const router = express.Router();
 const { authenticate, requireAdmin } = require('../middleware/auth');
 const { db } = require('../db');
+const { seedTuningFork } = require('../services/seed-tuning-fork');
+
+router.post('/seed/tuning-fork', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const result = await seedTuningFork();
+    res.json({
+      success: true,
+      inserted: result.inserted,
+      skipped: result.skipped,
+      subject: result.subject,
+      topic: result.topic,
+      message: `Seeded tuning fork concepts. Inserted: ${result.inserted}, Skipped: ${result.skipped}.`
+    });
+  } catch (error) {
+    console.error('Seed tuning fork error:', error);
+    res.status(500).json({ error: error.message || 'Seed failed' });
+  }
+});
 
 router.get('/questions', authenticate, requireAdmin, async (req, res) => {
   try {

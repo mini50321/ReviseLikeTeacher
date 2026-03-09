@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { getExamplesForSubjectTopic } = require('./tutoring-training-examples');
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
 const voiceCoachCache = new Map();
@@ -64,6 +65,18 @@ async function evaluateAnswer({ question, studentAnswer, currentMastery, userId 
       const conceptTags = question.concept_tags != null
         ? (Array.isArray(question.concept_tags) ? question.concept_tags : (typeof question.concept_tags === 'string' ? (() => { try { const p = JSON.parse(question.concept_tags); return Array.isArray(p) ? p : []; } catch (e) { return []; } })() : []))
         : [];
+
+      let trainingExamples = [];
+      try {
+        const subject = question.subject || '';
+        const topic = question.topic || '';
+        if (subject && topic) {
+          trainingExamples = await getExamplesForSubjectTopic(subject, topic, null, 3);
+        }
+      } catch (e) {
+        console.warn('Training examples fetch failed:', e.message);
+      }
+
       const response = await axios.post(`${AI_SERVICE_URL}/evaluate`, {
         question: {
           id: question.id,
@@ -82,7 +95,8 @@ async function evaluateAnswer({ question, studentAnswer, currentMastery, userId 
         },
         student_answer: studentAnswer,
         current_mastery: currentMastery,
-        user_id: userId
+        user_id: userId,
+        training_examples: trainingExamples
       }, {
         timeout: 30000
       });
@@ -221,8 +235,17 @@ async function textToSpeech(text, voice = 'nova', speed = 1.0) {
 
     return result;
   } catch (error) {
-    console.error('TTS error after retries:', error.message || error);
-    throw new Error(`Speech generation failed: ${error.message || 'Unknown error'}`);
+    let detail = error.message;
+    if (error.response?.status === 500 && error.response?.data) {
+      try {
+        const raw = error.response.data;
+        const text = typeof raw === 'string' ? raw : (raw instanceof ArrayBuffer ? new TextDecoder().decode(raw) : JSON.stringify(raw));
+        const parsed = JSON.parse(text);
+        detail = parsed.detail || parsed.error || detail;
+      } catch (_) {}
+    }
+    console.error('TTS error after retries:', detail);
+    throw new Error(`Speech generation failed: ${detail}`);
   }
 }
 

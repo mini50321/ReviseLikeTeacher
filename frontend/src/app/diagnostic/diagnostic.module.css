@@ -173,6 +173,21 @@
   color: rgba(255, 255, 255, 0.6);
 }
 
+.chooseTopicLink {
+  margin-left: auto;
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.chooseTopicLink:hover {
+  color: rgba(255, 255, 255, 0.9);
+}
+
 .questionStem {
   font-size: 20px;
   font-weight: 600;

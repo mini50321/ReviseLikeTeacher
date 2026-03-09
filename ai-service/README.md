@@ -44,11 +44,13 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Edit `.env` and add your OpenAI API key:
+Edit `.env` and add your OpenAI API key (required for TTS, transcription, evaluation):
 ```
-OPENAI_API_KEY=your_openai_api_key_here
+OPENAI_API_KEY=sk-your-actual-key-here
 PORT=8000
 ```
+
+If `OPENAI_API_KEY` is missing or invalid, Listen (TTS) will show "Listen unavailable" — you can still use the app by reading the text.
 
 ## Running the Service
 

@@ -14,11 +14,41 @@ def get_openai_client():
         _client = OpenAI(api_key=api_key)
     return _client
 
+def _format_training_examples_for_prompt(training_examples: list) -> str:
+    """Extract tutor responses from training examples to use as few-shot style cues."""
+    if not training_examples:
+        return ""
+    blocks = []
+    for ex in training_examples[:3]:  # max 3 examples
+        if isinstance(ex, dict):
+            messages = ex.get("messages") or []
+        elif isinstance(ex, list):
+            messages = ex
+        else:
+            continue
+        if not isinstance(messages, list) or len(messages) < 4:
+            continue
+        # Extract assistant responses that follow user answers (tutor replies)
+        for j in range(1, len(messages)):
+            m = messages[j] or {}
+            prev = messages[j - 1] or {}
+            if m.get("role") == "assistant" and prev.get("role") == "user":
+                content = (m.get("content") or "").strip()
+                if len(content) > 30:
+                    block = "---\nTutor response example:\n" + (content[:500] if len(content) > 500 else content)
+                    blocks.append(block)
+                    break  # one tutor response per example
+    if not blocks:
+        return ""
+    return "\n\nExample tutor responses (match this Socratic style in your teacher_response):\n" + "\n".join(blocks) + "\n\n---\n"
+
+
 async def evaluate_answer(
     question: Dict[str, Any],
     student_answer: str,
     current_mastery: float = 0.0,
-    user_id: Optional[str] = None
+    user_id: Optional[str] = None,
+    training_examples: Optional[list] = None
 ) -> Dict[str, Any]:
     client = get_openai_client()
     
@@ -57,6 +87,9 @@ async def evaluate_answer(
         if not isinstance(concept_tags, list):
             concept_tags = []
 
+        training_examples = training_examples or []
+        examples_block = _format_training_examples_for_prompt(training_examples)
+
         key_points_text = "\n".join([f"- {point}" for point in key_points]) if key_points else "Not specified"
         concept_tags_text = ", ".join(concept_tags) if concept_tags else "Not specified"
         context_parts = [f"Subject: {subject}", f"Topic: {topic}"]
@@ -70,7 +103,8 @@ async def evaluate_answer(
             context_parts.append(f"Common trap: {trap_pattern}")
         context_block = "\n".join(context_parts)
 
-        prompt = f"""You are a warm, knowledgeable NEET PG tutor in an interactive one-on-one session. The goal is to guide the student step-by-step to the answer, not just state it.
+        prompt = f"""You are a warm, Socratic NEET PG tutor in an interactive one-on-one session. Infer the student's competency from their answer alone; do not assume or ask about topic choice. Guide the student step-by-step to the answer, not just state it. Do not offer topic choices or declare mastery prematurely.
+{examples_block}
 
 Question: {question_stem}
 
@@ -125,7 +159,7 @@ Respond in JSON format:
             lambda: client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "You are an expert NEET PG tutor and evaluator. Prioritize active teaching with a short check question. Always respond with valid JSON only."},
+                    {"role": "system", "content": "You are a Socratic NEET PG tutor and evaluator. Infer competency from answers. Prioritize active teaching with hints and short check questions, not topic choice. Always respond with valid JSON only."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.4,

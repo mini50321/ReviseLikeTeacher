@@ -616,6 +616,7 @@ router.post('/session/start', authenticate, async (req, res) => {
       currentPointId = first.point_id;
       leadingPrompt = getLeadingPromptForTier(first.leading_questions, 1);
     }
+    const levelClassification = classifyStudentLevelFromAggregate(conceptResults, answer, concepts);
     const snapshot = JSON.stringify({
       concept_results: conceptResults,
       missed_points_queue: missedQueue,
@@ -634,7 +635,6 @@ router.post('/session/start', authenticate, async (req, res) => {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0, $9, 'probing', $10, $11)`,
       [sessionId, userId, subject, topic, level, snapshot, currentConceptId, currentPointId, leadingTier, JSON.stringify([]), timeLimitMinutes]
     );
-    const levelClassification = classifyStudentLevelFromAggregate(conceptResults, answer, concepts);
     const firstMissed = missedQueue[0];
     res.status(201).json({
       session_id: sessionId,
@@ -690,6 +690,45 @@ router.get('/session/:sessionId', authenticate, async (req, res) => {
     const summaryPrompt = row.phase === 'summary_request'
       ? `Now summarize the full ${row.topic} in 4-5 exam sentences.`
       : null;
+
+    let nextStep = null;
+    if (row.phase === 'probing') {
+      const missedQueue = snapshot.missed_points_queue || [];
+      const conceptsData = snapshot.concepts || [];
+      const remaining = missedQueue.filter(m => !completedIds.includes(`${m.concept_id}|${m.point_id}`));
+      const currentItem = remaining[0];
+      if (currentItem) {
+        const tutoringConfig = getSocraticMcqConfigFromTutoring(await loadTutoringConfig());
+        const studentLevel = snapshot.student_level || 'average';
+        const conceptForPrompt = conceptsData.find(c => c.id === currentItem.concept_id);
+        const probeCount = row.probe_count ?? 0;
+        const leadingTier = row.leading_tier ?? 1;
+        const selectorResult = selectNextPrompt({
+          concept: conceptForPrompt || {},
+          currentPoint: currentItem,
+          studentLevel,
+          probeCount,
+          leadingTier,
+          usedMcqIds: snapshot.used_mcq_ids || [],
+          config: tutoringConfig
+        });
+        const leadingPrompt = selectorResult.type === 'mcq' && selectorResult.mcq
+          ? (selectorResult.mcq.question || null)
+          : (selectorResult.content || getLeadingPromptForTier(currentItem.leading_questions || [], leadingTier));
+        nextStep = {
+          concept_id: currentItem.concept_id,
+          concept_key: currentItem.concept_key,
+          concept_name: currentItem.concept_name,
+          point_id: currentItem.point_id,
+          point_label: currentItem.point_label,
+          point_description: currentItem.point_description,
+          leading_prompt: leadingPrompt,
+          leading_tier: leadingTier,
+          mcq: selectorResult.type === 'mcq' ? selectorResult.mcq : undefined
+        };
+      }
+    }
+
     res.json({
       session_id: row.id,
       subject: row.subject,
@@ -704,6 +743,7 @@ router.get('/session/:sessionId', authenticate, async (req, res) => {
       completed_point_ids: completedIds,
       summary_text: row.summary_text,
       summary_prompt: summaryPrompt,
+      next_step: nextStep,
       missed_points_text: parseJsonField(row.missed_points_text, []),
       must_repeat_question: row.must_repeat_question,
       started_at: row.started_at,
@@ -825,10 +865,15 @@ router.post('/session/:sessionId/answer', authenticate, async (req, res) => {
     const tutoringConfig = getSocraticMcqConfigFromTutoring(await loadTutoringConfig());
     const conceptsData = snapshot.concepts || [];
     const completedIds = parseJsonField(session.completed_point_ids, []);
-    const currentConceptId = session.current_concept_id;
-    const currentPointId = session.current_point_id;
-    let probeCount = (session.probe_count || 0) + 1;
-    let leadingTier = session.leading_tier || 1;
+    let currentConceptId = session.current_concept_id ?? session.currentConceptId;
+    let currentPointId = session.current_point_id ?? session.currentPointId;
+    if ((!currentConceptId || !currentPointId) && missedQueue.length > 0) {
+      const first = missedQueue[0];
+      currentConceptId = currentConceptId || first.concept_id;
+      currentPointId = currentPointId || first.point_id;
+    }
+    let probeCount = (session.probe_count ?? session.probeCount ?? 0) + 1;
+    let leadingTier = session.leading_tier ?? session.leadingTier ?? 1;
     if (!currentConceptId || !currentPointId) {
       const summary = buildCompletionSummary(conceptResults, completedIds);
       await db.query(

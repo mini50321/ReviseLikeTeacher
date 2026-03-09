@@ -139,6 +139,7 @@ async def evaluate(request: dict):
         student_answer = request.get("student_answer")
         current_mastery = request.get("current_mastery", 0)
         user_id = request.get("user_id")
+        training_examples = request.get("training_examples") or []
         
         if not question or not student_answer:
             raise HTTPException(status_code=400, detail="Question and student_answer are required")
@@ -147,7 +148,8 @@ async def evaluate(request: dict):
             question=question,
             student_answer=student_answer,
             current_mastery=current_mastery,
-            user_id=user_id
+            user_id=user_id,
+            training_examples=training_examples
         )
         
         return JSONResponse(content=result)
@@ -212,7 +214,9 @@ async def text_to_speech(request: dict):
     except HTTPException:
         raise
     except Exception as e:
+        import traceback
         print(f"TTS error: {str(e)}")
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Speech generation failed: {str(e)}")
 
 
