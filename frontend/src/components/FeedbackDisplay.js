@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import api, { voiceAPI } from '../lib/api';
 import VoiceChatInput from './VoiceChatInput';
 import ChatConversation from './ChatConversation';
-import SequentialTextReveal from './SequentialTextReveal';
+import QuickCheckChat from './QuickCheckChat';
 import styles from './FeedbackDisplay.module.css';
 
 export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLastQuestion }) {
@@ -30,6 +30,7 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
   const [coachReplyAudioState, setCoachReplyAudioState] = useState('idle');
   const [coachReplyAudioUrl, setCoachReplyAudioUrl] = useState(null);
   const audioRef = useRef(null);
+  const audioUrlRef = useRef(null);
   const fetchedTextRef = useRef(null);
   const coachReplyAudioRef = useRef(null);
   const coachReplyFetchedTextRef = useRef(null);
@@ -42,6 +43,8 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
 
   const [quickCheckAttempts, setQuickCheckAttempts] = useState(0);
   const [showFullExplanation, setShowFullExplanation] = useState(false);
+  const [quickCheckHistory, setQuickCheckHistory] = useState([]);
+  const [playingMessageId, setPlayingMessageId] = useState(null);
 
   let questionKeyPoints = [];
   if (question?.key_points) {
@@ -64,8 +67,13 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
     if (!text) return;
     setAudioState('loading');
     try {
+      if (audioUrlRef.current) {
+        URL.revokeObjectURL(audioUrlRef.current);
+        audioUrlRef.current = null;
+      }
       const audioBlob = await voiceAPI.speak(text);
       const url = URL.createObjectURL(audioBlob);
+      audioUrlRef.current = url;
       setAudioUrl(url);
       setAudioState('ready');
     } catch (error) {
@@ -77,6 +85,7 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
   useEffect(() => {
     if (teacherResponse && fetchedTextRef.current !== teacherResponse) {
       fetchedTextRef.current = teacherResponse;
+      setPlayingMessageId('t0');
       fetchAudio(teacherResponse);
     }
   }, [teacherResponse, fetchAudio, attempt]);
@@ -103,6 +112,8 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
     coachReplyFetchedTextRef.current = null;
     setQuickCheckAttempts(0);
     setShowFullExplanation(score >= 90);
+    setQuickCheckHistory([]);
+    setPlayingMessageId(null);
   }, [attempt?.id]);
 
   useEffect(() => {
@@ -148,6 +159,14 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
       fetchAudio(teacherResponse);
     }
   };
+
+  const quickCheckMessages = [
+    ...(teacherResponse ? [{ id: 't0', role: 'assistant', content: teacherResponse }] : []),
+    ...quickCheckHistory.flatMap((h, i) => [
+      { id: `u${i}`, role: 'user', content: h.user },
+      { id: `a${i}`, role: 'assistant', content: h.assistant }
+    ])
+  ];
 
   const coachChatMessages = [
     ...(teacherResponse ? [{ id: 't0', role: 'assistant', content: teacherResponse }] : []),
@@ -199,7 +218,17 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
         teacher_response: teacherResponse || ''
       });
       const data = response.data;
+      const followUp = data?.follow_up || '';
       setQuickCheckResult(data);
+
+      const newEntry = { user: text, assistant: followUp };
+      const nextHistory = [...quickCheckHistory, newEntry];
+      setQuickCheckHistory(nextHistory);
+      const newAssistantId = `a${nextHistory.length - 1}`;
+      setPlayingMessageId(newAssistantId);
+      if (followUp) {
+        fetchAudio(followUp);
+      }
 
       const level = (data?.understanding_level || '').toLowerCase();
       if (level === 'strong') {
@@ -422,14 +451,15 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
                 )}
               </div>
             </div>
-            <SequentialTextReveal
-              text={teacherResponse}
-              audioRef={audioRef}
-              audioState={audioState}
-              className={styles.teacherText}
-            />
             <div className={styles.quickCheckBox}>
               <div className={styles.quickCheckTitle}>Reply to quick check</div>
+              <QuickCheckChat
+                messages={quickCheckMessages}
+                playingMessageId={playingMessageId}
+                audioRef={audioRef}
+                audioState={audioState}
+                className={styles.quickCheckChat}
+              />
               <div className={styles.quickCheckVoiceRow}>
                 <VoiceChatInput
                   language={quickCheckLanguage}
@@ -446,9 +476,6 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
               )}
               {quickCheckError && (
                 <div className={styles.quickCheckError}>{quickCheckError}</div>
-              )}
-              {quickCheckResult?.follow_up && (
-                <div className={styles.quickCheckFeedback}>{quickCheckResult.follow_up}</div>
               )}
             </div>
             <div className={styles.voiceCoachBox}>

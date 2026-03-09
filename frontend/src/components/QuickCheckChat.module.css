@@ -1,0 +1,63 @@
+.container {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 12px 0;
+  min-height: 180px;
+  max-height: 340px;
+}
+
+.container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.bubble {
+  max-width: 85%;
+  align-self: flex-start;
+  padding: 12px 16px;
+  border-radius: 18px;
+  line-height: 1.6;
+  font-size: 15px;
+}
+
+.bubble.user {
+  max-width: 85%;
+  align-self: flex-end;
+  background: rgba(37, 99, 235, 0.25);
+  border: 1px solid rgba(37, 99, 235, 0.35);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.bubble.assistant {
+  max-width: 100%;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.content {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.revealContent {
+  display: inline;
+  font: inherit;
+  color: inherit;
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  font-style: italic;
+}

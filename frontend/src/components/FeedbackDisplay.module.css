@@ -129,8 +129,12 @@
   margin-bottom: 10px;
 }
 
+.quickCheckChat {
+  margin-top: 4px;
+}
+
 .quickCheckVoiceRow {
-  margin-top: 8px;
+  margin-top: 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
