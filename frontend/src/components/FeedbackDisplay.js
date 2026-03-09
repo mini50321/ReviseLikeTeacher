@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import api, { voiceAPI } from '../lib/api';
 import VoiceChatInput from './VoiceChatInput';
 import ChatConversation from './ChatConversation';
+import SequentialTextReveal from './SequentialTextReveal';
 import styles from './FeedbackDisplay.module.css';
 
 export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLastQuestion }) {
@@ -421,7 +422,12 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
                 )}
               </div>
             </div>
-            <div className={styles.teacherText}>{teacherResponse}</div>
+            <SequentialTextReveal
+              text={teacherResponse}
+              audioRef={audioRef}
+              audioState={audioState}
+              className={styles.teacherText}
+            />
             <div className={styles.quickCheckBox}>
               <div className={styles.quickCheckTitle}>Reply to quick check</div>
               <div className={styles.quickCheckVoiceRow}>
