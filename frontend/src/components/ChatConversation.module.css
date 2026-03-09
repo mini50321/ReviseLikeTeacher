@@ -31,6 +31,7 @@
 }
 
 .bubble.user {
+  max-width: 85%;
   align-self: flex-end;
   background: rgba(37, 99, 235, 0.25);
   border: 1px solid rgba(37, 99, 235, 0.35);
@@ -38,6 +39,8 @@
 }
 
 .bubble.assistant {
+  max-width: 100%;
+  width: 100%;
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.15);
   color: rgba(255, 255, 255, 0.95);
