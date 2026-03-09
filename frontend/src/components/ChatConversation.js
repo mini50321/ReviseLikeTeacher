@@ -5,11 +5,10 @@ import styles from './ChatConversation.module.css';
 
 export default function ChatConversation({ messages = [], className, onPlayAudio }) {
   const scrollRef = useRef(null);
+  const lastMessageRef = useRef(null);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    lastMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages]);
 
   return (
@@ -17,6 +16,7 @@ export default function ChatConversation({ messages = [], className, onPlayAudio
       {messages.map((m, i) => (
         <div
           key={m.id || i}
+          ref={i === messages.length - 1 ? lastMessageRef : null}
           className={`${styles.bubble} ${m.role === 'user' ? styles.user : styles.assistant}`}
         >
           <div className={styles.content}>{m.content}</div>

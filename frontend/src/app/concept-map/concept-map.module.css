@@ -250,7 +250,8 @@
   padding: 28px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   margin-bottom: 24px;
-  min-height: 400px;
+  min-height: min(500px, 65vh);
+  max-height: 85vh;
 }
 
 .chatHeader {
@@ -258,16 +259,21 @@
   align-items: center;
   gap: 12px;
   margin-bottom: 16px;
+  flex-shrink: 0;
 }
 
 .chatArea {
   flex: 1;
-  min-height: 280px;
+  min-height: 200px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .chatMessages {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .chatInputRow {
@@ -275,4 +281,5 @@
   flex-direction: column;
   gap: 10px;
   margin-top: 16px;
+  flex-shrink: 0;
 }
