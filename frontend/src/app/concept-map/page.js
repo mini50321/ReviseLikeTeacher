@@ -398,9 +398,9 @@ export default function ConceptMapPage() {
                 <TeacherVoicePlayer text={nextStep.leading_prompt} autoPlay={true} label="" />
               )}
               <div className={styles.chatInputRow}>
-                <LanguageSelector value={probeLanguage} onChange={setProbeLanguage} />
                 <VoiceChatInput
                   language={probeLanguage}
+                  onLanguageChange={setProbeLanguage}
                   placeholder="Type or speak your answer…"
                   onTranscript={(t) => submitProbeAnswer(t)}
                   onError={(e) => setProbeTranscriptionError(e)}

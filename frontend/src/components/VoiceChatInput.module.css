@@ -52,6 +52,71 @@
   opacity: 0.7;
 }
 
+.langWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.langBtn {
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  cursor: pointer;
+}
+
+.langBtn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.langBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.langBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+}
+
+.langDropdown {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  z-index: 10;
+  min-width: 120px;
+  padding: 6px;
+  background: rgba(30, 30, 35, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.langOption {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 14px;
+  text-align: left;
+  color: rgba(255, 255, 255, 0.9);
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.langOption:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.langOption.langActive {
+  background: rgba(37, 99, 235, 0.3);
+}
+
 .micBtn {
   width: 40px;
   height: 40px;

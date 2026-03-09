@@ -494,9 +494,9 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
                 <ChatConversation messages={coachChatMessages} className={styles.coachChatMessages} />
               </div>
               <div className={styles.coachInputRow}>
-                <LanguageSelector value={coachLanguage} onChange={setCoachLanguage} />
                 <VoiceChatInput
                   language={coachLanguage}
+                  onLanguageChange={setCoachLanguage}
                   placeholder="Type or speak your follow-up…"
                   onTranscript={handleCoachTranscript}
                   onError={(e) => setCoachVoiceError(e)}

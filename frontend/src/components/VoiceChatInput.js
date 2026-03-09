@@ -6,15 +6,23 @@ import styles from './VoiceChatInput.module.css';
 
 const SpeechRecognition = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
 
+const LANGUAGES = [
+  { code: 'english', label: 'English' },
+  { code: 'hindi', label: 'Hindi' },
+  { code: 'hinglish', label: 'Hinglish' }
+];
+
 export default function VoiceChatInput({
   onTranscript,
   onError,
   language = 'english',
+  onLanguageChange,
   placeholder = 'Type',
   disabled = false,
   submitLabel = 'Send'
 }) {
   const [text, setText] = useState('');
+  const [langOpen, setLangOpen] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [interimText, setInterimText] = useState('');
   const [transcribing, setTranscribing] = useState(false);
@@ -190,6 +198,8 @@ export default function VoiceChatInput({
     setInterimText('');
   }, [text, interimText, disabled, onTranscript]);
 
+  const currentLang = LANGUAGES.find(l => l.code === language) || LANGUAGES[0];
+
   return (
     <div className={styles.bar}>
       <button type="button" className={styles.attachBtn} aria-label="Attach" disabled={disabled}>
@@ -204,6 +214,36 @@ export default function VoiceChatInput({
         placeholder={placeholder}
         disabled={disabled}
       />
+      {onLanguageChange && (
+        <div className={styles.langWrap}>
+          <button
+            type="button"
+            className={styles.langBtn}
+            onClick={() => setLangOpen(o => !o)}
+            disabled={disabled}
+            aria-label="Change language"
+          >
+            {currentLang.label}
+          </button>
+          {langOpen && (
+            <>
+              <div className={styles.langBackdrop} onClick={() => setLangOpen(false)} />
+              <div className={styles.langDropdown}>
+                {LANGUAGES.map((l) => (
+                  <button
+                    key={l.code}
+                    type="button"
+                    className={`${styles.langOption} ${language === l.code ? styles.langActive : ''}`}
+                    onClick={() => { onLanguageChange(l.code); setLangOpen(false); }}
+                  >
+                    {l.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
       <button
         type="button"
         className={styles.micBtn}
