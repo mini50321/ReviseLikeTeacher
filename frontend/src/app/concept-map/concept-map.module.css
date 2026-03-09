@@ -239,3 +239,40 @@
   gap: 8px;
   margin-bottom: 16px;
 }
+
+.chatCard {
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 20px;
+  padding: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  margin-bottom: 24px;
+  min-height: 400px;
+}
+
+.chatHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.chatArea {
+  flex: 1;
+  min-height: 280px;
+  overflow: hidden;
+}
+
+.chatMessages {
+  height: 100%;
+}
+
+.chatInputRow {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}

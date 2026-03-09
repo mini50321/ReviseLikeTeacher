@@ -20,6 +20,12 @@ export default function PDFUploadPage() {
   const [error, setError] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
+  const [conceptDraft, setConceptDraft] = useState(null);
+  const [draftLoading, setDraftLoading] = useState(false);
+  const [draftError, setDraftError] = useState('');
+  const [draftSuccess, setDraftSuccess] = useState('');
+  const [draftSubject, setDraftSubject] = useState('');
+  const [draftTopic, setDraftTopic] = useState('');
 
   const groupExtractionsByChunk = (items, chunkSize = pageSize) => {
     const groups = [];
@@ -67,6 +73,58 @@ export default function PDFUploadPage() {
       setExtractions(response.data.extractions || []);
     } catch (err) {
       console.error('Failed to load extractions:', err);
+    }
+  };
+
+  const handleBuildConceptDraft = async () => {
+    if (!selectedPdf) return;
+    if (!draftSubject.trim() || !draftTopic.trim()) {
+      setDraftError('Subject and topic are required to build a concept draft.');
+      return;
+    }
+    setDraftLoading(true);
+    setDraftError('');
+    setDraftSuccess('');
+    setConceptDraft(null);
+    try {
+      const res = await api.post(`/pdf/${selectedPdf.id}/concept-draft`, {
+        subject: draftSubject.trim(),
+        topic: draftTopic.trim(),
+        max_concepts: 6
+      });
+      setConceptDraft(res.data.draft || null);
+    } catch (err) {
+      setDraftError(err.response?.data?.error || 'Failed to build concept draft');
+    } finally {
+      setDraftLoading(false);
+    }
+  };
+
+  const handleSaveConceptsFromDraft = async () => {
+    if (!conceptDraft || !Array.isArray(conceptDraft.concepts) || conceptDraft.concepts.length === 0) {
+      setDraftError('No concept draft available to save.');
+      return;
+    }
+    if (!draftSubject.trim() || !draftTopic.trim()) {
+      setDraftError('Subject and topic are required to save concepts.');
+      return;
+    }
+    setSubmitting(true);
+    setDraftError('');
+    setDraftSuccess('');
+    try {
+      const res = await api.post('/concept-map/import-from-draft', {
+        subject: draftSubject.trim(),
+        topic: draftTopic.trim(),
+        concepts: conceptDraft.concepts
+      });
+      setDraftSuccess(
+        `Saved concepts to Concept Map. Created ${res.data.created_count || 0}, updated ${res.data.updated_count || 0}.`
+      );
+    } catch (err) {
+      setDraftError(err.response?.data?.error || 'Failed to save concepts to Concept Map');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -337,6 +395,13 @@ export default function PDFUploadPage() {
                         {extracting ? 'Extracting with AI...' : 'Extract Questions'}
                       </button>
                       <button
+                        className={styles.secondaryButton}
+                        onClick={handleBuildConceptDraft}
+                        disabled={draftLoading}
+                      >
+                        {draftLoading ? 'Building concept draft…' : 'Build Concept Draft'}
+                      </button>
+                      <button
                         className={styles.addButton}
                         onClick={() => setShowManualForm(true)}
                       >
@@ -368,9 +433,54 @@ export default function PDFUploadPage() {
                   <div className={styles.emptyState}>
                     <p>No questions extracted yet. Click "Extract Questions" to let AI parse this PDF.</p>
                   </div>
-                ) : extractions.length > 0 && (
+                ) : (
                   <div className={styles.extractionList}>
-                    {(() => {
+                    <div className={styles.draftPanel}>
+                      <h3 className={styles.sectionTitle}>Concept Map Draft (from this PDF)</h3>
+                      <div className={styles.draftControls}>
+                        <input
+                          type="text"
+                          placeholder="Subject (e.g. ENT)"
+                          value={draftSubject}
+                          onChange={e => setDraftSubject(e.target.value)}
+                          className={styles.draftInput}
+                        />
+                        <input
+                          type="text"
+                          placeholder="Topic (e.g. Hearing Physiology)"
+                          value={draftTopic}
+                          onChange={e => setDraftTopic(e.target.value)}
+                          className={styles.draftInput}
+                        />
+                        <button
+                          type="button"
+                          className={styles.secondaryButton}
+                          onClick={handleBuildConceptDraft}
+                          disabled={draftLoading}
+                        >
+                          {draftLoading ? 'Building…' : 'Generate draft'}
+                        </button>
+                        {conceptDraft && conceptDraft.concepts?.length > 0 && (
+                          <button
+                            type="button"
+                            className={styles.secondaryButton}
+                            onClick={handleSaveConceptsFromDraft}
+                            disabled={submitting}
+                          >
+                            {submitting ? 'Saving…' : 'Save to Concept Map'}
+                          </button>
+                        )}
+                      </div>
+                      {draftError && <p className={styles.error}>{draftError}</p>}
+                      {draftSuccess && <p className={styles.success}>{draftSuccess}</p>}
+                      {conceptDraft && Array.isArray(conceptDraft.concepts) && conceptDraft.concepts.length > 0 && (
+                        <pre className={styles.draftPreview}>
+{JSON.stringify(conceptDraft, null, 2)}
+                        </pre>
+                      )}
+                    </div>
+
+                    {extractions.length > 0 && (() => {
                       const groups = groupExtractionsByChunk(extractions);
                       const totalPages = groups.length || 1;
                       const safePage = Math.min(Math.max(currentPage, 1), totalPages);

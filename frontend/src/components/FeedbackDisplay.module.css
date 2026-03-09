@@ -212,6 +212,23 @@
   margin-bottom: 10px;
 }
 
+.coachChatArea {
+  min-height: 160px;
+  max-height: 280px;
+  overflow-y: auto;
+  margin-bottom: 12px;
+}
+
+.coachChatMessages {
+  padding: 0;
+}
+
+.coachInputRow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .voiceCoachDivider {
   margin: 12px 0 8px;
   color: #bfdbfe;

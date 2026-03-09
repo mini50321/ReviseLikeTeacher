@@ -447,6 +447,38 @@ async function coachVoiceTurn({ transcript, subject, topic, questionStem, studen
   }
 }
 
+async function buildConceptDraftFromText({ subject, topic, text, maxConcepts = 6 }) {
+  if (!subject || !topic || !text || !text.trim()) {
+    throw new Error('subject, topic, and text are required for concept draft');
+  }
+
+  await ensureAIServiceReady();
+
+  const maxChars = Number(process.env.CONCEPT_BUILDER_MAX_TEXT || 12000);
+  const snippet = text.slice(0, maxChars);
+
+  try {
+    const result = await retryRequest(async () => {
+      const response = await axios.post(`${AI_SERVICE_URL}/concept-map/build-draft`, {
+        subject,
+        topic,
+        text: snippet,
+        max_concepts: maxConcepts
+      }, {
+        timeout: 600000
+      });
+
+      return response.data;
+    }, { maxRetries: 2, initialDelay: 5000, label: 'Concept draft build' });
+
+    return result;
+  } catch (error) {
+    console.error('Concept draft build error:', error.message || error);
+    const detail = error.response?.data?.detail || error.response?.data?.error;
+    throw new Error(detail || error.message || 'Concept draft build failed');
+  }
+}
+
 function startKeepAlive() {
   if (process.env.NODE_ENV !== 'production') return;
 
@@ -473,5 +505,6 @@ module.exports = {
   generateMcqItems,
   evaluateQuickCheck,
   coachVoiceTurn,
+   buildConceptDraftFromText,
   startKeepAlive
 };

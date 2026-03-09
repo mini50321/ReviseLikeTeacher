@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import api, { voiceAPI } from '../lib/api';
 import VoiceRecorder from './VoiceRecorder';
+import VoiceChatInput from './VoiceChatInput';
+import ChatConversation from './ChatConversation';
 import LanguageSelector from './LanguageSelector';
 import styles from './FeedbackDisplay.module.css';
 
@@ -154,27 +156,42 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
     }
   };
 
-  const transcribeQuickCheckVoice = async () => {
-    if (!quickCheckAudioBlob) {
-      setQuickCheckVoiceError('Please record a quick-check reply first.');
-      return;
-    }
+  const coachChatMessages = [
+    ...(teacherResponse ? [{ id: 't0', role: 'assistant', content: teacherResponse }] : []),
+    ...coachHistory.flatMap((h, i) => [
+      { id: `cu${i}`, role: 'user', content: h.student },
+      { id: `ca${i}`, role: 'assistant', content: h.teacher }
+    ])
+  ];
 
-    setQuickCheckTranscribing(true);
-    setQuickCheckVoiceError('');
-
+  const handleCoachTranscript = async (transcript) => {
+    if (!transcript?.trim()) return;
+    setCoachLoading(true);
+    setCoachError('');
     try {
-      const transcriptResult = await voiceAPI.transcribe(quickCheckAudioBlob, quickCheckLanguage);
-      const transcript = (transcriptResult?.transcription || '').trim();
-      if (!transcript) {
-        throw new Error('No speech detected. Please try recording again.');
-      }
-      setQuickCheckAnswer(transcript);
-      setQuickCheckTranscriptReady(true);
+      const contextSubject = question?.subject || attempt?.question_context?.subject || null;
+      const contextTopic = question?.topic || attempt?.question_context?.topic || attempt?.mastery_impact?.topic || null;
+      const contextStem = question?.stem || question?.question_text || attempt?.question_context?.stem || null;
+
+      const response = await voiceAPI.coachTurn({
+        transcript: transcript.trim(),
+        subject: contextSubject,
+        topic: contextTopic,
+        questionStem: contextStem,
+        studentAnswer: attempt?.answer_text || null,
+        topK: 3,
+        latencyMode: 'fast',
+        conversationHistory: coachHistory
+      });
+      setCoachResult(response);
+      setCoachHistory((prev) => [
+        ...prev.slice(-7),
+        { student: transcript.trim(), teacher: response?.teacher_response || '' }
+      ]);
     } catch (error) {
-      setQuickCheckVoiceError(error.response?.data?.error || error.message || 'Voice quick check failed.');
+      setCoachError(error.response?.data?.error || error.message || 'Failed to get coaching response.');
     } finally {
-      setQuickCheckTranscribing(false);
+      setCoachLoading(false);
     }
   };
 
@@ -417,23 +434,28 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
               <div className={styles.quickCheckVoiceRow}>
                 <LanguageSelector value={quickCheckLanguage} onChange={setQuickCheckLanguage} />
                 <VoiceRecorder
-                  onRecordingComplete={(blob) => {
+                  onRecordingComplete={async (blob) => {
                     setQuickCheckAudioBlob(blob);
                     setQuickCheckVoiceError('');
                     setQuickCheckTranscriptReady(false);
+                    setQuickCheckTranscribing(true);
+                    try {
+                      const result = await voiceAPI.transcribe(blob, quickCheckLanguage);
+                      const t = (result?.transcription || '').trim();
+                      if (t) {
+                        setQuickCheckAnswer(t);
+                        setQuickCheckTranscriptReady(true);
+                      }
+                    } catch (e) {
+                      setQuickCheckVoiceError(e?.message || 'Transcription failed');
+                    } finally {
+                      setQuickCheckTranscribing(false);
+                    }
                   }}
                   onError={(error) => setQuickCheckVoiceError(error)}
                 />
               </div>
-              <div className={styles.quickCheckActions}>
-                <button
-                  className={styles.quickCheckButton}
-                  onClick={transcribeQuickCheckVoice}
-                  disabled={quickCheckTranscribing || quickCheckSubmitting || !quickCheckAudioBlob}
-                >
-                  {quickCheckTranscribing ? 'Transcribing...' : 'Transcribe Voice'}
-                </button>
-              </div>
+              {quickCheckTranscribing && <div className={styles.quickCheckHint}>Transcribing…</div>}
               {quickCheckVoiceError && (
                 <div className={styles.quickCheckError}>{quickCheckVoiceError}</div>
               )}
@@ -468,61 +490,32 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
             </div>
             <div className={styles.voiceCoachBox}>
               <div className={styles.voiceCoachTitle}>Ask teacher follow-up</div>
-              <LanguageSelector value={coachLanguage} onChange={setCoachLanguage} />
-              <VoiceRecorder
-                onRecordingComplete={(blob) => {
-                  setCoachAudioBlob(blob);
-                  setCoachVoiceError('');
-                }}
-                onError={(error) => setCoachVoiceError(error)}
-              />
-              <div className={styles.quickCheckActions}>
-                <button
-                  className={styles.quickCheckButton}
-                  onClick={submitCoachVoiceTurn}
-                  disabled={coachTranscribing || coachLoading || !coachAudioBlob}
-                >
-                  {coachTranscribing ? 'Transcribing...' : 'Transcribe Voice'}
-                </button>
+              <div className={styles.coachChatArea}>
+                <ChatConversation messages={coachChatMessages} className={styles.coachChatMessages} />
+              </div>
+              <div className={styles.coachInputRow}>
+                <LanguageSelector value={coachLanguage} onChange={setCoachLanguage} />
+                <VoiceChatInput
+                  language={coachLanguage}
+                  placeholder="Type or speak your follow-up…"
+                  onTranscript={handleCoachTranscript}
+                  onError={(e) => setCoachVoiceError(e)}
+                  disabled={coachLoading}
+                  submitLabel="Ask Teacher"
+                />
               </div>
               {coachVoiceError && <div className={styles.quickCheckError}>{coachVoiceError}</div>}
-              {coachTranscriptReady && (
-                <div className={styles.voiceCoachHint}>
-                  Transcript ready. You can edit it below, then click <strong>Ask Teacher</strong>.
-                </div>
-              )}
-              <textarea
-                className={styles.quickCheckInput}
-                value={coachInput}
-                onChange={(e) => {
-                  setCoachInput(e.target.value);
-                  setCoachTranscriptReady(false);
-                }}
-                placeholder="Type your follow-up here, or edit the transcribed text before asking the teacher."
-                disabled={coachLoading}
-                rows={3}
-              />
-              <div className={styles.quickCheckActions}>
-                <button
-                  className={styles.quickCheckButton}
-                  onClick={submitCoachTurn}
-                  disabled={coachLoading || !coachInput.trim()}
-                >
-                  {coachLoading ? 'Thinking...' : 'Ask Teacher'}
-                </button>
-              </div>
               {coachError && <div className={styles.quickCheckError}>{coachError}</div>}
               {coachResult?.teacher_response && (
                 <div className={styles.voiceCoachResponse}>
                   <div className={styles.voiceCoachReplyHeader}>
-                    <span>Teacher reply</span>
+                    <span>Listen to reply</span>
                     {(coachReplyAudioState === 'finished' || coachReplyAudioState === 'ready' || coachReplyAudioState === 'playing') && (
                       <button onClick={toggleCoachReplyPlayback} className={styles.playButton}>
                         {coachReplyAudioState === 'playing' ? '⏸ Pause' : '▶ Play'}
                       </button>
                     )}
                   </div>
-                  <div className={styles.voiceCoachText}>{coachResult.teacher_response}</div>
                   {showVoiceTelemetry && (
                     <div className={styles.voiceCoachMeta}>
                       Focus: {coachResult.teaching_focus || 'concept_clarity'} | Mode: {coachResult.latency_mode || 'balanced'} | Context: {coachResult.context_confidence || '-'} ({coachResult.context_top_score ?? '-'}) | Latency: {coachResult.latency_ms ?? '-'}ms | Cache: {(coachResult.cache_hit || coachResult.backend_cache_hit) ? 'hit' : 'miss'} | Fallback: {coachResult.fallback_used ? 'yes' : 'no'}

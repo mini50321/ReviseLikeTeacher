@@ -101,6 +101,10 @@ const runMigrations = () => {
     addColumnIfMissing('extractedquestion', 'detected_trap_pattern', 'TEXT');
     createIndexIfMissing('idx_extractedquestion_yield', 'CREATE INDEX idx_extractedquestion_yield ON extractedquestion(yield_category)');
 
+    // Store raw extracted PDF text per upload (for future concept-map building)
+    addColumnIfMissing('pdfupload', 'raw_text', 'TEXT');
+    addColumnIfMissing('pdfupload', 'raw_text_length', 'INTEGER');
+
     addColumnIfMissing('userprofile', 'goal_tier', "TEXT DEFAULT 'good_rank'");
     addColumnIfMissing('userprofile', 'student_category', "TEXT DEFAULT 'average'");
     addColumnIfMissing('userprofile', 'subscription_tier', "TEXT DEFAULT 'free'");

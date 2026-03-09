@@ -804,7 +804,8 @@ async def extract_questions_from_pdf(pdf_bytes: bytes, filename: str = "", start
                 "questions": [],
                 "total_extracted": 0,
                 "summary": "Could not extract meaningful text from this PDF even after AI OCR.",
-                "text_length": len(ocr_text) if ocr_text else (len(text) if text else 0)
+                "text_length": len(ocr_text) if ocr_text else (len(text) if text else 0),
+                "text": ocr_text or text or ""
             }
 
     if not text or len(text.strip()) < 50:
@@ -812,7 +813,8 @@ async def extract_questions_from_pdf(pdf_bytes: bytes, filename: str = "", start
             "questions": [],
             "total_extracted": 0,
             "summary": "Could not extract meaningful text from this PDF. It may be scanned/image-based.",
-            "text_length": len(text) if text else 0
+            "text_length": len(text) if text else 0,
+            "text": text or ""
         }
 
     print(f"Extracted {len(text)} characters from PDF. Parsing questions with AI...")
@@ -847,11 +849,15 @@ async def extract_questions_from_pdf(pdf_bytes: bytes, filename: str = "", start
         if isinstance(q.get('years_appeared'), (list, set)):
             q['years_appeared'] = json.dumps(sorted(list(q['years_appeared'])))
 
+    max_store_chars = int(os.getenv("PDF_STORE_TEXT_CHARS", "60000"))
+    stored_text = text[:max_store_chars]
+
     return {
         "questions": questions,
         "total_extracted": len(questions),
         "summary": summary,
         "text_length": len(text),
+        "text": stored_text,
         "subjects": subjects,
         "importance_breakdown": {
             "high": high_count,

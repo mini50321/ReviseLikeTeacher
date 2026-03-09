@@ -1148,6 +1148,169 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
   }
 });
 
+router.post('/import-from-draft', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { subject, topic, concepts, gross_prompt } = req.body || {};
+
+    if (!subject || !topic || !Array.isArray(concepts) || concepts.length === 0) {
+      return res.status(400).json({ error: 'subject, topic, and a non-empty concepts array are required' });
+    }
+
+    const created = [];
+    const updated = [];
+
+    for (let i = 0; i < concepts.length; i++) {
+      const c = concepts[i] || {};
+      const conceptKey = (c.concept_key || '').trim();
+      const name = (c.name || '').trim();
+      if (!conceptKey || !name) {
+        continue;
+      }
+
+      const displayOrder = c.display_order != null ? c.display_order : i + 1;
+      const conceptWeight = c.concept_weight != null ? c.concept_weight : 1;
+
+      const prerequisiteIds = Array.isArray(c.prerequisite_concept_ids) ? c.prerequisite_concept_ids : [];
+      const downstreamIds = Array.isArray(c.downstream_concept_ids) ? c.downstream_concept_ids : [];
+      const mustKnow = Array.isArray(c.must_know_points) ? c.must_know_points : [];
+      const deepPoints = Array.isArray(c.deep_points) ? c.deep_points : [];
+      const traps = Array.isArray(c.traps) ? c.traps : [];
+      const leading = Array.isArray(c.leading_questions) ? c.leading_questions : [];
+      const examplePhrases = Array.isArray(c.example_phrases) ? c.example_phrases : [];
+      const rubric = Array.isArray(c.grading_rubric) ? c.grading_rubric : [];
+      const microQuestions = Array.isArray(c.micro_questions) ? c.micro_questions : [];
+      const saqs = Array.isArray(c.saqs) ? c.saqs : [];
+      const mcqs = Array.isArray(c.mcqs) ? c.mcqs : [];
+
+      const section = c.section || null;
+      const chapter = c.chapter || null;
+      const mainTopic = c.main_topic || null;
+      const subtopic = c.subtopic || null;
+      const conceptMapId = c.concept_map_id || null;
+
+      const existing = await db.query(
+        'SELECT id FROM topic_concept WHERE subject = $1 AND topic = $2 AND concept_key = $3',
+        [subject, topic, conceptKey]
+      );
+
+      if (existing.rows && existing.rows.length > 0) {
+        const id = existing.rows[0].id;
+        await db.query(
+          `UPDATE topic_concept SET
+            concept_map_id = $1,
+            name = $2,
+            display_order = $3,
+            concept_weight = $4,
+            prerequisite_concept_ids = $5,
+            downstream_concept_ids = $6,
+            section = $7,
+            chapter = $8,
+            main_topic = $9,
+            subtopic = $10,
+            must_know_points = $11,
+            deep_points = $12,
+            traps = $13,
+            leading_questions = $14,
+            example_phrases = $15,
+            grading_rubric = $16,
+            micro_questions = $17,
+            saqs = $18,
+            mcqs = $19,
+            updated_at = CURRENT_TIMESTAMP
+           WHERE id = $20`,
+          [
+            conceptMapId,
+            name,
+            displayOrder,
+            conceptWeight,
+            JSON.stringify(prerequisiteIds),
+            JSON.stringify(downstreamIds),
+            section,
+            chapter,
+            mainTopic,
+            subtopic,
+            JSON.stringify(mustKnow),
+            JSON.stringify(deepPoints),
+            JSON.stringify(traps),
+            JSON.stringify(leading),
+            JSON.stringify(examplePhrases),
+            JSON.stringify(rubric),
+            JSON.stringify(microQuestions),
+            JSON.stringify(saqs),
+            JSON.stringify(mcqs),
+            id
+          ]
+        );
+        updated.push({ id, concept_key: conceptKey, name });
+      } else {
+        const id = db.generateUUID();
+        await db.query(
+          `INSERT INTO topic_concept
+           (id, subject, topic, concept_key, concept_map_id, name, display_order, concept_weight,
+            prerequisite_concept_ids, downstream_concept_ids, section, chapter, main_topic, subtopic,
+            must_know_points, deep_points, traps, leading_questions, example_phrases, grading_rubric,
+            micro_questions, saqs, mcqs)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`,
+          [
+            id,
+            subject,
+            topic,
+            conceptKey,
+            conceptMapId,
+            name,
+            displayOrder,
+            conceptWeight,
+            JSON.stringify(prerequisiteIds),
+            JSON.stringify(downstreamIds),
+            section,
+            chapter,
+            mainTopic,
+            subtopic,
+            JSON.stringify(mustKnow),
+            JSON.stringify(deepPoints),
+            JSON.stringify(traps),
+            JSON.stringify(leading),
+            JSON.stringify(examplePhrases),
+            JSON.stringify(rubric),
+            JSON.stringify(microQuestions),
+            JSON.stringify(saqs),
+            JSON.stringify(mcqs)
+          ]
+        );
+        created.push({ id, concept_key: conceptKey, name });
+      }
+    }
+
+    // Ensure there is a gross prompt entry so Concept Map UI shows this topic
+    const existingPrompt = await db.query(
+      'SELECT id FROM topic_gross_prompt WHERE subject = $1 AND topic = $2',
+      [subject, topic]
+    );
+    if (!existingPrompt.rows || existingPrompt.rows.length === 0) {
+      const promptId = db.generateUUID();
+      const promptText =
+        gross_prompt ||
+        `Describe the core concepts of ${topic} in your own words. Focus on the key steps, mechanisms, and clinical relevance.`;
+      await db.query(
+        'INSERT INTO topic_gross_prompt (id, subject, topic, prompt_text) VALUES ($1, $2, $3, $4)',
+        [promptId, subject, topic, promptText]
+      );
+    }
+
+    res.status(201).json({
+      subject,
+      topic,
+      created_count: created.length,
+      updated_count: updated.length,
+      created,
+      updated
+    });
+  } catch (error) {
+    console.error('Concept draft import error:', error);
+    res.status(500).json({ error: 'Failed to import concepts from draft' });
+  }
+});
+
 router.put('/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;

@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticate, requireAdmin } = require('../middleware/auth');
 const { db } = require('../db');
-const { extractQuestionsFromPDF } = require('../services/ai');
+const { extractQuestionsFromPDF, buildConceptDraftFromText } = require('../services/ai');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs').promises;
@@ -146,6 +146,8 @@ router.post('/:id/extract', authenticate, requireAdmin, async (req, res) => {
 
         let totalExtracted = 0;
         let lastSummary = '';
+        const rawTextParts = [];
+        let rawTextLength = 0;
 
         for (let chunkIndex = 0; chunkIndex < maxChunks; chunkIndex++) {
           const startPage = chunkIndex * chunkSize;
@@ -154,6 +156,12 @@ router.post('/:id/extract', authenticate, requireAdmin, async (req, res) => {
           const result = await extractQuestionsFromPDF(fileBuffer, pdf.file_name, startPage, endPage);
           const questions = result.questions || [];
           const textLength = result.text_length || 0;
+          const rawText = result.text || '';
+
+          if (rawText && rawText.trim()) {
+            rawTextParts.push(rawText);
+            rawTextLength += rawText.length;
+          }
 
           if (questions.length === 0 && textLength < 50) {
             if (chunkIndex === 0) {
@@ -243,10 +251,17 @@ router.post('/:id/extract', authenticate, requireAdmin, async (req, res) => {
           }
         }
 
-        if (totalExtracted > 0) {
+        const combinedRawText = rawTextParts.join('\n\n');
+
+        if (totalExtracted > 0 || combinedRawText) {
           await db.query(
-            "UPDATE pdfupload SET upload_status = 'extracted', extraction_summary = $1, processed_at = CURRENT_TIMESTAMP WHERE id = $2",
-            [lastSummary || `Extracted ${totalExtracted} questions in chunks.`, id]
+            "UPDATE pdfupload SET upload_status = 'extracted', extraction_summary = $1, processed_at = CURRENT_TIMESTAMP, raw_text = $2, raw_text_length = $3 WHERE id = $4",
+            [
+              lastSummary || `Extracted ${totalExtracted} questions in chunks.`,
+              combinedRawText || null,
+              combinedRawText ? rawTextLength : 0,
+              id
+            ]
           );
         }
       } catch (aiError) {
@@ -341,6 +356,48 @@ router.post('/:id/manual-question', authenticate, requireAdmin, async (req, res)
   } catch (error) {
     console.error('Create manual question error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/:id/concept-draft', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { subject, topic, max_concepts } = req.body || {};
+
+    if (!subject || !topic) {
+      return res.status(400).json({ error: 'subject and topic are required' });
+    }
+
+    const pdfResult = await db.query('SELECT * FROM pdfupload WHERE id = $1', [id]);
+    if (pdfResult.rows.length === 0) {
+      return res.status(404).json({ error: 'PDF not found' });
+    }
+
+    const pdf = pdfResult.rows[0];
+    const rawText = pdf.raw_text || '';
+
+    if (!rawText || !rawText.trim()) {
+      return res.status(400).json({ error: 'No extracted text available for this PDF. Run extraction first.' });
+    }
+
+    const maxConceptsNum = Math.min(Math.max(parseInt(max_concepts || '6', 10), 1), 12);
+
+    const draft = await buildConceptDraftFromText({
+      subject,
+      topic,
+      text: rawText,
+      maxConcepts: maxConceptsNum
+    });
+
+    res.json({
+      pdf_id: id,
+      subject,
+      topic,
+      draft
+    });
+  } catch (error) {
+    console.error('Concept draft build route error:', error);
+    res.status(500).json({ error: error.message || 'Failed to build concept draft' });
   }
 });
 

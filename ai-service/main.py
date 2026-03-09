@@ -281,6 +281,33 @@ async def generate_notes(request: dict):
         raise HTTPException(status_code=500, detail=f"Note generation failed: {str(e)}")
 
 
+@app.post("/concept-map/build-draft")
+async def concept_map_build_draft(request: dict):
+    try:
+        from services.concept_builder import build_concept_map_from_text
+        subject = request.get("subject")
+        topic = request.get("topic")
+        text = request.get("text")
+        max_concepts = int(request.get("max_concepts", 6))
+
+        if not subject or not topic or not text or not str(text).strip():
+            raise HTTPException(status_code=400, detail="subject, topic, and text are required")
+
+        result = await build_concept_map_from_text(
+            subject=str(subject),
+            topic=str(topic),
+            text=str(text),
+            max_concepts=max_concepts
+        )
+
+        return JSONResponse(content=result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Concept map build error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Concept map build failed: {str(e)}")
+
+
 @app.post("/generate-rapid-fire")
 async def rapid_fire_endpoint(request: dict):
     try:

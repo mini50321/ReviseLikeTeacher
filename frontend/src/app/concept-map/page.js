@@ -6,6 +6,8 @@ import ProtectedRoute from '../../components/ProtectedRoute';
 import Header from '../../components/Header';
 import api, { voiceAPI } from '../../lib/api';
 import VoiceRecorder from '../../components/VoiceRecorder';
+import VoiceChatInput from '../../components/VoiceChatInput';
+import ChatConversation from '../../components/ChatConversation';
 import LanguageSelector from '../../components/LanguageSelector';
 import TeacherVoicePlayer from '../../components/TeacherVoicePlayer';
 import styles from './concept-map.module.css';
@@ -39,6 +41,7 @@ export default function ConceptMapPage() {
   const [grossAudioBlob, setGrossAudioBlob] = useState(null);
   const [grossTranscribing, setGrossTranscribing] = useState(false);
   const [grossTranscriptionError, setGrossTranscriptionError] = useState('');
+  const [probeChatMessages, setProbeChatMessages] = useState([]);
 
   useEffect(() => {
     setTopicsError(null);
@@ -78,6 +81,7 @@ export default function ConceptMapPage() {
           setStep('summary');
         } else if (data.phase === 'probing' && data.next_step) {
           setNextStep(data.next_step);
+          setProbeChatMessages([{ id: 'q0', role: 'assistant', content: data.next_step.leading_prompt }]);
           setStep('probe');
         } else if (data.phase === 'completed') {
           setCompleted({
@@ -114,46 +118,6 @@ export default function ConceptMapPage() {
       .catch(() => {});
   };
 
-  const handleGrossTranscribe = useCallback(async () => {
-    if (!grossAudioBlob) {
-      setGrossTranscriptionError('No recording available');
-      return null;
-    }
-    setGrossTranscribing(true);
-    setGrossTranscriptionError('');
-    try {
-      const result = await voiceAPI.transcribe(grossAudioBlob, grossLanguage);
-      const text = result.transcription || '';
-      setGrossAnswer(text);
-      return text;
-    } catch (error) {
-      setGrossTranscriptionError(error.message || 'Transcription failed. Please try again.');
-      return null;
-    } finally {
-      setGrossTranscribing(false);
-    }
-  }, [grossAudioBlob, grossLanguage]);
-
-  const handleProbeTranscribe = useCallback(async () => {
-    if (!probeAudioBlob) {
-      setProbeTranscriptionError('No recording available');
-      return null;
-    }
-    setProbeTranscribing(true);
-    setProbeTranscriptionError('');
-    try {
-      const result = await voiceAPI.transcribe(probeAudioBlob, probeLanguage);
-      const text = result.transcription || '';
-      setProbeAnswer(text);
-      return text;
-    } catch (error) {
-      setProbeTranscriptionError(error.message || 'Transcription failed. Please try again.');
-      return null;
-    } finally {
-      setProbeTranscribing(false);
-    }
-  }, [probeAudioBlob, probeLanguage]);
-
   const startSession = async () => {
     if (!selected || !grossAnswer.trim()) return;
     setSubmitting(true);
@@ -182,6 +146,7 @@ export default function ConceptMapPage() {
         setPointFeedback(null);
         setProbeAudioBlob(null);
         setProbeTranscriptionError('');
+        setProbeChatMessages([{ id: 'q0', role: 'assistant', content: data.next_step.leading_prompt }]);
         setStep('probe');
       } else {
         setCompleted({
@@ -199,14 +164,16 @@ export default function ConceptMapPage() {
     }
   };
 
-  const submitProbeAnswer = async () => {
-    if (!sessionId || probeAnswer.trim() === '') return;
+  const submitProbeAnswer = async (answerText) => {
+    const text = ((answerText ?? probeAnswer) || '').trim();
+    if (!sessionId || !text) return;
     setSubmitting(true);
     setError('');
     setPointFeedback(null);
+    setProbeChatMessages(prev => [...prev, { id: `u${Date.now()}`, role: 'user', content: text }]);
     try {
       const res = await api.post(`/concept-map/session/${sessionId}/answer`, {
-        answer_text: probeAnswer.trim()
+        answer_text: text
       });
       const data = res.data;
       if (data.phase === 'completed') {
@@ -244,6 +211,11 @@ export default function ConceptMapPage() {
           revealed_after_three: data.revealed_after_three,
           revealed_text: data.revealed_text
         });
+        const assistantParts = [];
+        if (data.point_just_covered) assistantParts.push('Point covered.');
+        if (data.revealed_after_three && data.revealed_text) assistantParts.push(data.revealed_text);
+        if (data.next_step?.leading_prompt) assistantParts.push(data.next_step.leading_prompt);
+        setProbeChatMessages(prev => [...prev, { id: `a${Date.now()}`, role: 'assistant', content: assistantParts.join('\n\n') }]);
         setNextStep(data.next_step || null);
         setProbeAnswer('');
         setProbeAudioBlob(null);
@@ -259,6 +231,7 @@ export default function ConceptMapPage() {
       }
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to submit answer');
+      setProbeChatMessages(prev => prev.slice(0, -1));
     } finally {
       setSubmitting(false);
     }
@@ -300,6 +273,7 @@ export default function ConceptMapPage() {
     setProbeAnswer('');
     setProbeAudioBlob(null);
     setProbeTranscriptionError('');
+    setProbeChatMessages([]);
     setGrossAnswer('');
     setGrossAudioBlob(null);
     setGrossTranscriptionError('');
@@ -371,22 +345,22 @@ export default function ConceptMapPage() {
               <div className={styles.voiceRow}>
                 <LanguageSelector value={grossLanguage} onChange={setGrossLanguage} />
                 <VoiceRecorder
-                  onRecordingComplete={(blob) => {
+                  onRecordingComplete={async (blob) => {
                     setGrossAudioBlob(blob);
                     setGrossTranscriptionError('');
+                    setGrossTranscribing(true);
+                    try {
+                      const result = await voiceAPI.transcribe(blob, grossLanguage);
+                      setGrossAnswer(result.transcription || '');
+                    } catch (e) {
+                      setGrossTranscriptionError(e.message || 'Transcription failed');
+                    } finally {
+                      setGrossTranscribing(false);
+                    }
                   }}
                   onError={(err) => setGrossTranscriptionError(err)}
                 />
-                {grossAudioBlob && (
-                  <button
-                    type="button"
-                    className={styles.secondaryBtn}
-                    onClick={handleGrossTranscribe}
-                    disabled={grossTranscribing}
-                  >
-                    {grossTranscribing ? 'Transcribing…' : 'Transcribe audio to text'}
-                  </button>
-                )}
+                {grossTranscribing && <p className={styles.muted}>Transcribing…</p>}
                 {grossTranscriptionError && <p className={styles.error}>{grossTranscriptionError}</p>}
               </div>
               <textarea
@@ -412,70 +386,29 @@ export default function ConceptMapPage() {
           )}
 
           {step === 'probe' && nextStep && (
-            <div className={styles.card}>
-              <h2 className={styles.cardTitle}>Guided follow-up</h2>
-              {learnerLevel && (
-                <p className={styles.profileHint}>Level: {learnerLevel}</p>
+            <div className={styles.chatCard}>
+              <div className={styles.chatHeader}>
+                <h2 className={styles.cardTitle}>Voice Practice</h2>
+                {learnerLevel && <span className={styles.profileHint}>Level: {learnerLevel}</span>}
+              </div>
+              <div className={styles.chatArea}>
+                <ChatConversation messages={probeChatMessages} className={styles.chatMessages} />
+              </div>
+              {probeChatMessages.length > 0 && probeChatMessages[probeChatMessages.length - 1].role === 'assistant' && nextStep && (
+                <TeacherVoicePlayer text={nextStep.leading_prompt} autoPlay={true} label="" />
               )}
-              {pointFeedback && (
-                <div className={styles.pointFeedback}>
-                  {pointFeedback.point_just_covered && <span className={styles.feedbackOk}>Point covered.</span>}
-                  {pointFeedback.revealed_after_three && (
-                    <div className={styles.revealedBlock}>
-                      <span className={styles.feedbackReveal}>Revealed after 3 attempts:</span>
-                      {pointFeedback.revealed_text && (
-                        <>
-                          <TeacherVoicePlayer text={pointFeedback.revealed_text} autoPlay={true} label="Listen to answer" />
-                          <p className={styles.revealedText}>{pointFeedback.revealed_text}</p>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-              <p className={styles.promptLabel}>Concept: {nextStep.concept_name}</p>
-              {nextStep.leading_prompt && (
-                <TeacherVoicePlayer text={nextStep.leading_prompt} autoPlay={true} label="Listen to question" />
-              )}
-              <p className={styles.promptText}>{nextStep.leading_prompt}</p>
-              <div className={styles.voiceRow}>
+              <div className={styles.chatInputRow}>
                 <LanguageSelector value={probeLanguage} onChange={setProbeLanguage} />
-                <VoiceRecorder
-                  onRecordingComplete={(blob) => {
-                    setProbeAudioBlob(blob);
-                    setProbeTranscriptionError('');
-                  }}
-                  onError={(err) => setProbeTranscriptionError(err)}
+                <VoiceChatInput
+                  language={probeLanguage}
+                  placeholder="Type or speak your answer…"
+                  onTranscript={(t) => submitProbeAnswer(t)}
+                  onError={(e) => setProbeTranscriptionError(e)}
+                  disabled={submitting}
+                  submitLabel="Submit"
                 />
-                {probeAudioBlob && (
-                  <button
-                    type="button"
-                    className={styles.secondaryBtn}
-                    onClick={handleProbeTranscribe}
-                    disabled={probeTranscribing}
-                  >
-                    {probeTranscribing ? 'Transcribing…' : 'Transcribe audio to text'}
-                  </button>
-                )}
-                {probeTranscriptionError && <p className={styles.error}>{probeTranscriptionError}</p>}
               </div>
-              <textarea
-                className={styles.textarea}
-                value={probeAnswer}
-                onChange={e => setProbeAnswer(e.target.value)}
-                placeholder="Your answer…"
-                rows={4}
-              />
-              <div className={styles.actions}>
-                <button
-                  type="button"
-                  className={styles.primaryBtn}
-                  onClick={submitProbeAnswer}
-                  disabled={submitting || !probeAnswer.trim()}
-                >
-                  {submitting ? 'Submitting…' : 'Submit'}
-                </button>
-              </div>
+              {probeTranscriptionError && <p className={styles.error}>{probeTranscriptionError}</p>}
               {error && <p className={styles.error}>{error}</p>}
             </div>
           )}
