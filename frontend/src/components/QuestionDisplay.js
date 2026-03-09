@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import VoiceRecorder from './VoiceRecorder';
-import LanguageSelector from './LanguageSelector';
+import VoiceChatInput from './VoiceChatInput';
 import { voiceAPI } from '../lib/api';
 import styles from './QuestionDisplay.module.css';
 
@@ -10,17 +9,10 @@ export default function QuestionDisplay({ question, questionNumber, totalQuestio
   const [answerText, setAnswerText] = useState('');
   const [selectedOption, setSelectedOption] = useState('');
   const [timeSpent, setTimeSpent] = useState(0);
-  const [answerMethod, setAnswerMethod] = useState('text');
   const [language, setLanguage] = useState('english');
-  const [audioBlob, setAudioBlob] = useState(null);
-  const [transcribing, setTranscribing] = useState(false);
-  const [transcription, setTranscription] = useState('');
   const [transcriptionError, setTranscriptionError] = useState('');
   const [questionAudioState, setQuestionAudioState] = useState('idle');
   const startTimeRef = useRef(Date.now());
-  const voiceRecorderRef = useRef(null);
-  const transcribeButtonRef = useRef(null);
-  const transcriptionRef = useRef('');
   const questionAudioRef = useRef(null);
   const questionAudioUrlRef = useRef(null);
   const spokenQuestionIdRef = useRef(null);
@@ -44,10 +36,7 @@ export default function QuestionDisplay({ question, questionNumber, totalQuestio
   useEffect(() => {
     setAnswerText('');
     setSelectedOption('');
-    setTranscription('');
-    setAudioBlob(null);
     setTranscriptionError('');
-    transcriptionRef.current = '';
     startTimeRef.current = Date.now();
 
     if (questionAudioRef.current) {
@@ -115,106 +104,23 @@ export default function QuestionDisplay({ question, questionNumber, totalQuestio
     setAnswerText(label);
   };
 
-  const handleRecordingComplete = (blob) => {
-    setAudioBlob(blob);
-    setTranscription('');
-    setTranscriptionError('');
-    transcriptionRef.current = '';
-  };
+  const handleTextSubmit = useCallback((text) => {
+    if (!text?.trim()) return;
+    const spent = Math.floor((Date.now() - startTimeRef.current) / 1000);
+    onSubmit(text.trim(), spent, 'text', language);
+  }, [onSubmit, language]);
 
-  const handleTranscribe = useCallback(async () => {
-    if (!audioBlob) {
-      setTranscriptionError('No recording available');
-      return null;
-    }
-
-    setTranscribing(true);
-    setTranscriptionError('');
-
-    try {
-      const result = await voiceAPI.transcribe(audioBlob, language);
-      const text = result.transcription || '';
-      setTranscription(text);
-      setAnswerText(text);
-      transcriptionRef.current = text;
-      return text;
-    } catch (error) {
-      console.error('Transcription error:', error);
-      setTranscriptionError(error.message || 'Transcription failed. Please try again.');
-      return null;
-    } finally {
-      setTranscribing(false);
-    }
-  }, [audioBlob, language]);
-
-  const handleSubmit = useCallback(async (e) => {
-    e.preventDefault();
-
-    if (isMCQ) {
-      if (!selectedOption) {
-        alert('Please select an option');
-        return;
-      }
-      onSubmit(selectedOption, timeSpent, 'text', null);
-      return;
-    }
-
-    if (answerMethod === 'voice') {
-      if (!audioBlob) {
-        alert('Please record an answer first');
-        return;
-      }
-
-      let finalText = transcriptionRef.current;
-      if (!finalText.trim()) {
-        finalText = await handleTranscribe();
-        if (!finalText || !finalText.trim()) {
-          return;
-        }
-      }
-
-      onSubmit(finalText.trim(), timeSpent, 'voice', language);
-      return;
-    }
-
-    if (!answerText.trim()) {
-      alert('Please enter an answer');
-      return;
-    }
-
-    onSubmit(answerText.trim(), timeSpent, 'text', null);
-  }, [isMCQ, selectedOption, answerMethod, audioBlob, answerText, timeSpent, language, onSubmit, handleTranscribe]);
+  const handleSubmit = useCallback((e) => {
+    e?.preventDefault?.();
+    if (!isMCQ || !selectedOption) return;
+    onSubmit(selectedOption, timeSpent, 'text', null);
+  }, [isMCQ, selectedOption, timeSpent, onSubmit]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (loading) return;
       if (e.target.matches('textarea, input') && e.key !== 'Enter') return;
-
-      if (answerMethod === 'voice') {
-        if (e.key === ' ' && !e.target.matches('textarea, input')) {
-          e.preventDefault();
-          if (voiceRecorderRef.current) {
-            if (voiceRecorderRef.current.isRecording) {
-              voiceRecorderRef.current.stopRecording();
-            } else if (!voiceRecorderRef.current.hasRecording) {
-              voiceRecorderRef.current.startRecording();
-            } else if (audioBlob && !transcriptionRef.current && !transcribing) {
-              if (transcribeButtonRef.current) {
-                transcribeButtonRef.current.click();
-              }
-            }
-          }
-        }
-
-        if ((e.ctrlKey || e.metaKey) && e.key === 't' && audioBlob && !transcribing) {
-          e.preventDefault();
-          if (transcribeButtonRef.current) {
-            transcribeButtonRef.current.click();
-          }
-        }
-      }
-
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && answerText.trim()) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && isMCQ && selectedOption) {
         e.preventDefault();
         handleSubmit(e);
       }
@@ -222,19 +128,15 @@ export default function QuestionDisplay({ question, questionNumber, totalQuestio
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [answerMethod, audioBlob, transcribing, answerText, loading, handleSubmit]);
+  }, [isMCQ, selectedOption, loading, handleSubmit]);
 
   const isSubmitDisabled = () => {
     if (loading) return true;
-    if (isMCQ) return !selectedOption;
-    if (answerMethod === 'voice') return !audioBlob;
-    return !answerText.trim();
+    return !selectedOption;
   };
 
   const getSubmitLabel = () => {
     if (loading) return 'Submitting...';
-    if (isMCQ) return 'Submit Answer';
-    if (answerMethod === 'voice' && !transcriptionRef.current && audioBlob) return 'Transcribe & Submit';
     return 'Submit Answer';
   };
 
@@ -324,95 +226,20 @@ export default function QuestionDisplay({ question, questionNumber, totalQuestio
       </div>
 
       {!isMCQ && (
-        <form onSubmit={handleSubmit} className={styles.answerForm}>
-          <div className={styles.modeToggle}>
-            <button
-              type="button"
-              className={`${styles.modeButton} ${answerMethod === 'text' ? styles.active : ''}`}
-              onClick={() => setAnswerMethod('text')}
-            >
-              Text Answer
-            </button>
-            <button
-              type="button"
-              className={`${styles.modeButton} ${answerMethod === 'voice' ? styles.active : ''}`}
-              onClick={() => setAnswerMethod('voice')}
-            >
-              Voice Answer
-            </button>
+        <div className={styles.answerForm}>
+          <div className={styles.voiceChatInputWrap}>
+            <VoiceChatInput
+              language={language}
+              onLanguageChange={setLanguage}
+              placeholder="Type or speak your answer…"
+              onTranscript={handleTextSubmit}
+              onError={(e) => setTranscriptionError(e)}
+              disabled={loading}
+              submitLabel="Submit Answer"
+            />
           </div>
-
-          {answerMethod === 'text' ? (
-            <div className={styles.textAnswer}>
-              <textarea
-                value={answerText}
-                onChange={(e) => setAnswerText(e.target.value)}
-                placeholder="Type your answer here..."
-                className={styles.textarea}
-                rows={6}
-                disabled={loading}
-              />
-            </div>
-          ) : (
-            <div className={styles.voiceAnswer}>
-              <LanguageSelector value={language} onChange={setLanguage} />
-              <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
-                Keyboard shortcuts: <strong>Space</strong> to start/stop recording, <strong>Ctrl+T</strong> to transcribe
-              </div>
-              <VoiceRecorder
-                ref={voiceRecorderRef}
-                onRecordingComplete={handleRecordingComplete}
-                onError={(error) => setTranscriptionError(error)}
-              />
-
-              {audioBlob && (
-                <div className={styles.transcriptionSection}>
-                  <button
-                    ref={transcribeButtonRef}
-                    type="button"
-                    onClick={handleTranscribe}
-                    disabled={transcribing}
-                    className={styles.transcribeButton}
-                    title="Press Ctrl+T (or Cmd+T on Mac) to transcribe"
-                  >
-                    {transcribing ? 'Transcribing...' : 'Transcribe Audio'}
-                  </button>
-
-                  {transcriptionError && (
-                    <div className={styles.error}>{transcriptionError}</div>
-                  )}
-
-                  {transcription && (
-                    <div className={styles.transcriptionPreview}>
-                      <label>Transcription Preview:</label>
-                      <textarea
-                        value={transcription}
-                        onChange={(e) => {
-                          setTranscription(e.target.value);
-                          setAnswerText(e.target.value);
-                          transcriptionRef.current = e.target.value;
-                        }}
-                        className={styles.transcriptionText}
-                        rows={4}
-                        placeholder="Transcription will appear here..."
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className={styles.actions}>
-            <button
-              type="submit"
-              className={styles.submitButton}
-              disabled={isSubmitDisabled()}
-            >
-              {getSubmitLabel()}
-            </button>
-          </div>
-        </form>
+          {transcriptionError && <div className={styles.error}>{transcriptionError}</div>}
+        </div>
       )}
 
       {isMCQ && (

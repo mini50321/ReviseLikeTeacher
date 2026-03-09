@@ -113,6 +113,10 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
+.voiceChatInputWrap {
+  margin-bottom: 16px;
+}
+
 .modeToggle {
   display: flex;
   gap: 12px;

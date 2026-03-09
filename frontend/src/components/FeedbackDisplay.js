@@ -2,10 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import api, { voiceAPI } from '../lib/api';
-import VoiceRecorder from './VoiceRecorder';
 import VoiceChatInput from './VoiceChatInput';
 import ChatConversation from './ChatConversation';
-import LanguageSelector from './LanguageSelector';
 import styles from './FeedbackDisplay.module.css';
 
 export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLastQuestion }) {
@@ -17,10 +15,7 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
   const [quickCheckResult, setQuickCheckResult] = useState(null);
   const [quickCheckError, setQuickCheckError] = useState('');
   const [quickCheckLanguage, setQuickCheckLanguage] = useState('english');
-  const [quickCheckAudioBlob, setQuickCheckAudioBlob] = useState(null);
-  const [quickCheckTranscribing, setQuickCheckTranscribing] = useState(false);
   const [quickCheckVoiceError, setQuickCheckVoiceError] = useState('');
-  const [quickCheckTranscriptReady, setQuickCheckTranscriptReady] = useState(false);
   const [coachInput, setCoachInput] = useState('');
   const [coachLoading, setCoachLoading] = useState(false);
   const [coachResult, setCoachResult] = useState(null);
@@ -91,10 +86,7 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
     setQuickCheckError('');
     setQuickCheckSubmitting(false);
     setQuickCheckLanguage('english');
-    setQuickCheckAudioBlob(null);
-    setQuickCheckTranscribing(false);
     setQuickCheckVoiceError('');
-    setQuickCheckTranscriptReady(false);
     setCoachInput('');
     setCoachResult(null);
     setCoachError('');
@@ -195,13 +187,14 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
     }
   };
 
-  const submitQuickCheck = async () => {
-    if (!attempt?.id || !quickCheckAnswer.trim()) return;
+  const submitQuickCheck = async (textAnswer) => {
+    const text = ((textAnswer ?? quickCheckAnswer) || '').trim();
+    if (!attempt?.id || !text) return;
     setQuickCheckSubmitting(true);
     setQuickCheckError('');
     try {
       const response = await api.post(`/attempts/${attempt.id}/quick-check`, {
-        quick_check_answer: quickCheckAnswer.trim(),
+        quick_check_answer: text,
         teacher_response: teacherResponse || ''
       });
       const data = response.data;
@@ -432,55 +425,19 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
             <div className={styles.quickCheckBox}>
               <div className={styles.quickCheckTitle}>Reply to quick check</div>
               <div className={styles.quickCheckVoiceRow}>
-                <LanguageSelector value={quickCheckLanguage} onChange={setQuickCheckLanguage} />
-                <VoiceRecorder
-                  onRecordingComplete={async (blob) => {
-                    setQuickCheckAudioBlob(blob);
-                    setQuickCheckVoiceError('');
-                    setQuickCheckTranscriptReady(false);
-                    setQuickCheckTranscribing(true);
-                    try {
-                      const result = await voiceAPI.transcribe(blob, quickCheckLanguage);
-                      const t = (result?.transcription || '').trim();
-                      if (t) {
-                        setQuickCheckAnswer(t);
-                        setQuickCheckTranscriptReady(true);
-                      }
-                    } catch (e) {
-                      setQuickCheckVoiceError(e?.message || 'Transcription failed');
-                    } finally {
-                      setQuickCheckTranscribing(false);
-                    }
-                  }}
-                  onError={(error) => setQuickCheckVoiceError(error)}
+                <VoiceChatInput
+                  language={quickCheckLanguage}
+                  onLanguageChange={setQuickCheckLanguage}
+                  placeholder="Type or speak your reply…"
+                  onTranscript={(t) => submitQuickCheck(t)}
+                  onError={(e) => setQuickCheckVoiceError(e)}
+                  disabled={quickCheckSubmitting}
+                  submitLabel="Submit Reply"
                 />
               </div>
-              {quickCheckTranscribing && <div className={styles.quickCheckHint}>Transcribing…</div>}
               {quickCheckVoiceError && (
                 <div className={styles.quickCheckError}>{quickCheckVoiceError}</div>
               )}
-              {quickCheckTranscriptReady && (
-                <div className={styles.quickCheckHint}>
-                  Transcript ready. You can edit it below, then click <strong>Submit Reply</strong>.
-                </div>
-              )}
-              <textarea
-                className={styles.quickCheckInput}
-                value={quickCheckAnswer}
-                onChange={(e) => setQuickCheckAnswer(e.target.value)}
-                placeholder="Type your reply here..."
-                disabled={quickCheckSubmitting}
-                rows={3}
-              />
-              <div className={styles.quickCheckActions}>
-                <button
-                  className={styles.quickCheckButton}
-                  onClick={submitQuickCheck}
-                  disabled={quickCheckSubmitting || !quickCheckAnswer.trim()}
-                >
-                  {quickCheckSubmitting ? 'Submitting...' : 'Submit Reply'}
-                </button>
-              </div>
               {quickCheckError && (
                 <div className={styles.quickCheckError}>{quickCheckError}</div>
               )}

@@ -5,8 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import Header from '../../components/Header';
 import api, { voiceAPI } from '../../lib/api';
-import VoiceRecorder from '../../components/VoiceRecorder';
-import LanguageSelector from '../../components/LanguageSelector';
+import VoiceChatInput from '../../components/VoiceChatInput';
 import TeacherVoicePlayer from '../../components/TeacherVoicePlayer';
 import styles from './diagnostic.module.css';
 
@@ -40,9 +39,6 @@ function DiagnosticContent() {
 
   const [results, setResults] = useState(null);
   const startTimeRef = useRef(Date.now());
-  const transcriptionRef = useRef('');
-  const transcribeButtonRef = useRef(null);
-  const voiceRecorderRef = useRef(null);
   const [attemptCount, setAttemptCount] = useState(0);
   const [showSolution, setShowSolution] = useState(false);
   const [lastWasCorrect, setLastWasCorrect] = useState(false);
@@ -72,7 +68,6 @@ function DiagnosticContent() {
         setAudioBlob(null);
         setTranscription('');
         setTranscriptionError('');
-        transcriptionRef.current = '';
         setAttemptCount(0);
         setShowSolution(false);
         setLastWasCorrect(false);
@@ -122,7 +117,6 @@ function DiagnosticContent() {
       setAudioBlob(null);
       setTranscription('');
       setTranscriptionError('');
-      transcriptionRef.current = '';
       setAttemptCount(0);
       setShowSolution(false);
       setLastWasCorrect(false);
@@ -135,36 +129,10 @@ function DiagnosticContent() {
     }
   };
 
-  const handleTranscribe = useCallback(async () => {
-    if (!audioBlob) {
-      setTranscriptionError('No recording available');
-      return null;
-    }
-
-    setTranscribing(true);
-    setTranscriptionError('');
-
-    try {
-      const result = await voiceAPI.transcribe(audioBlob, language);
-      const text = result.transcription || '';
-      setTranscription(text);
-      setAnswerText(text);
-      transcriptionRef.current = text;
-      return text;
-    } catch (error) {
-      setTranscriptionError(error.message || 'Transcription failed. Please try again.');
-      return null;
-    } finally {
-      setTranscribing(false);
-    }
-  }, [audioBlob, language]);
-
-  const submitAnswer = async () => {
+  const submitAnswer = async (textAnswer) => {
     const question = questions[currentIndex];
     if (!question) return;
 
-    // Keep submit logic consistent with the rendered UI: if options are missing/invalid,
-    // treat the question as text-answer even when type is MCQ-like.
     let parsedOptions = null;
     if (question.options) {
       try {
@@ -187,20 +155,9 @@ function DiagnosticContent() {
 
     if (isMCQ) {
       answer = selectedOption;
-    } else if (answerMethod === 'voice') {
-      let finalText = transcriptionRef.current || transcription || '';
-      if (!finalText.trim()) {
-        finalText = await handleTranscribe();
-      }
-      if (!finalText || !finalText.trim()) {
-        setError('Please record and transcribe your answer.');
-        return;
-      }
-      answer = finalText;
-      answerMethodToSend = 'voice';
-      languageToSend = language;
     } else {
-      answer = answerText;
+      answer = ((textAnswer ?? answerText) || '').trim();
+      if (answer) languageToSend = language;
     }
 
     if (!answer || !answer.trim()) {
@@ -259,7 +216,6 @@ function DiagnosticContent() {
       setAudioBlob(null);
       setTranscription('');
       setTranscriptionError('');
-      transcriptionRef.current = '';
       setSelectedOption('');
       setFeedback(null);
        setAttemptCount(0);
@@ -454,82 +410,16 @@ function DiagnosticContent() {
                   </div>
                 ) : (
                   <div className={styles.answerArea}>
-                    <div className={styles.answerModeToggle}>
-                      <button
-                        type="button"
-                        className={`${styles.modeButton} ${answerMethod === 'text' ? styles.modeButtonActive : ''}`}
-                        onClick={() => setAnswerMethod('text')}
-                        disabled={isLocked || submitting}
-                      >
-                        Text Answer
-                      </button>
-                      <button
-                        type="button"
-                        className={`${styles.modeButton} ${answerMethod === 'voice' ? styles.modeButtonActive : ''}`}
-                        onClick={() => setAnswerMethod('voice')}
-                        disabled={isLocked || submitting}
-                      >
-                        Voice Answer
-                      </button>
-                    </div>
-
-                    {answerMethod === 'text' ? (
-                      <textarea
-                        className={styles.textarea}
-                        value={answerText}
-                        onChange={(e) => setAnswerText(e.target.value)}
-                        placeholder="Type your answer here..."
-                        disabled={isLocked || submitting}
-                        rows={5}
-                      />
-                    ) : (
-                      <div className={styles.voiceAnswer}>
-                        <LanguageSelector value={language} onChange={setLanguage} />
-                        <VoiceRecorder
-                          ref={voiceRecorderRef}
-                          onRecordingComplete={(blob) => {
-                            setAudioBlob(blob);
-                            setTranscription('');
-                            setTranscriptionError('');
-                            transcriptionRef.current = '';
-                          }}
-                          onError={(err) => setTranscriptionError(err)}
-                        />
-
-                        {audioBlob && (
-                          <div className={styles.transcriptionSection}>
-                            <button
-                              ref={transcribeButtonRef}
-                              type="button"
-                              onClick={handleTranscribe}
-                              disabled={transcribing}
-                              className={styles.transcribeButton}
-                            >
-                              {transcribing ? 'Transcribing...' : 'Transcribe Audio'}
-                            </button>
-                            {transcriptionError && (
-                              <div className={styles.error}>{transcriptionError}</div>
-                            )}
-                            {transcription && (
-                              <div className={styles.transcriptionPreview}>
-                                <label>Transcription Preview:</label>
-                                <textarea
-                                  value={transcription}
-                                  onChange={(e) => {
-                                    setTranscription(e.target.value);
-                                    setAnswerText(e.target.value);
-                                    transcriptionRef.current = e.target.value;
-                                  }}
-                                  className={styles.transcriptionText}
-                                  rows={4}
-                                  placeholder="Transcription will appear here..."
-                                />
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    <VoiceChatInput
+                      language={language}
+                      onLanguageChange={setLanguage}
+                      placeholder="Type or speak your answer…"
+                      onTranscript={(t) => submitAnswer(t)}
+                      onError={(e) => setTranscriptionError(e)}
+                      disabled={isLocked || submitting}
+                      submitLabel="Submit Answer"
+                    />
+                    {transcriptionError && <div className={styles.error}>{transcriptionError}</div>}
                   </div>
                 )}
               </>
@@ -569,20 +459,15 @@ function DiagnosticContent() {
 
             <div className={styles.actions}>
               {!showSolution ? (
-                <button
-                  className={styles.submitButton}
-                  onClick={submitAnswer}
-                  disabled={
-                    submitting ||
-                    (isMCQ
-                      ? !selectedOption
-                      : answerMethod === 'text'
-                        ? !answerText.trim()
-                        : !audioBlob && !transcription.trim())
-                  }
-                >
-                  {submitting ? 'Evaluating...' : 'Submit Answer'}
-                </button>
+                isMCQ ? (
+                  <button
+                    className={styles.submitButton}
+                    onClick={() => submitAnswer()}
+                    disabled={submitting || !selectedOption}
+                  >
+                    {submitting ? 'Evaluating...' : 'Submit Answer'}
+                  </button>
+                ) : null
               ) : (
                 <button
                   className={styles.submitButton}

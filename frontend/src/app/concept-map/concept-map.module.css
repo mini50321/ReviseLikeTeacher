@@ -276,7 +276,16 @@
   overflow-y: auto;
 }
 
-.chatInputRow {
+.grossHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.chatInputRow,
+.grossInputRow {
   display: flex;
   flex-direction: column;
   gap: 10px;

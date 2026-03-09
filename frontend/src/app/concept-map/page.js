@@ -5,10 +5,8 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import Header from '../../components/Header';
 import api, { voiceAPI } from '../../lib/api';
-import VoiceRecorder from '../../components/VoiceRecorder';
 import VoiceChatInput from '../../components/VoiceChatInput';
 import ChatConversation from '../../components/ChatConversation';
-import LanguageSelector from '../../components/LanguageSelector';
 import TeacherVoicePlayer from '../../components/TeacherVoicePlayer';
 import styles from './concept-map.module.css';
 
@@ -118,15 +116,16 @@ export default function ConceptMapPage() {
       .catch(() => {});
   };
 
-  const startSession = async () => {
-    if (!selected || !grossAnswer.trim()) return;
+  const startSession = async (answerText) => {
+    const text = ((answerText ?? grossAnswer) || '').trim();
+    if (!selected || !text) return;
     setSubmitting(true);
     setError('');
     try {
       const res = await api.post('/concept-map/session/start', {
         subject: selected.subject,
         topic: selected.topic,
-        answer_text: grossAnswer.trim()
+        answer_text: text
       });
       const data = res.data;
       setSessionId(data.session_id);
@@ -333,7 +332,10 @@ export default function ConceptMapPage() {
 
           {step === 'gross' && selected && (
             <div className={styles.card}>
-              <h2 className={styles.cardTitle}>{selected.subject} — {selected.topic}</h2>
+              <div className={styles.grossHeader}>
+                <h2 className={styles.cardTitle}>{selected.subject} — {selected.topic}</h2>
+                <button type="button" className={styles.secondaryBtn} onClick={resetFlow}>Back</button>
+              </div>
               {profileHint && (
                 <p className={styles.profileHint}>
                   Profile: {profileHint.suggested_profile || 'mid'}
@@ -342,45 +344,18 @@ export default function ConceptMapPage() {
               )}
               <p className={styles.promptLabel}>Answer this in your own words:</p>
               <p className={styles.promptText}>{grossPrompt}</p>
-              <div className={styles.voiceRow}>
-                <LanguageSelector value={grossLanguage} onChange={setGrossLanguage} />
-                <VoiceRecorder
-                  onRecordingComplete={async (blob) => {
-                    setGrossAudioBlob(blob);
-                    setGrossTranscriptionError('');
-                    setGrossTranscribing(true);
-                    try {
-                      const result = await voiceAPI.transcribe(blob, grossLanguage);
-                      setGrossAnswer(result.transcription || '');
-                    } catch (e) {
-                      setGrossTranscriptionError(e.message || 'Transcription failed');
-                    } finally {
-                      setGrossTranscribing(false);
-                    }
-                  }}
-                  onError={(err) => setGrossTranscriptionError(err)}
+              <div className={styles.grossInputRow}>
+                <VoiceChatInput
+                  language={grossLanguage}
+                  onLanguageChange={setGrossLanguage}
+                  placeholder="Type or speak your answer…"
+                  onTranscript={(t) => startSession(t)}
+                  onError={(e) => setGrossTranscriptionError(e)}
+                  disabled={submitting}
+                  submitLabel="Start session"
                 />
-                {grossTranscribing && <p className={styles.muted}>Transcribing…</p>}
-                {grossTranscriptionError && <p className={styles.error}>{grossTranscriptionError}</p>}
               </div>
-              <textarea
-                className={styles.textarea}
-                value={grossAnswer}
-                onChange={e => setGrossAnswer(e.target.value)}
-                placeholder="Type your answer…"
-                rows={6}
-              />
-              <div className={styles.actions}>
-                <button type="button" className={styles.secondaryBtn} onClick={resetFlow}>Back</button>
-                <button
-                  type="button"
-                  className={styles.primaryBtn}
-                  onClick={startSession}
-                  disabled={submitting || !grossAnswer.trim()}
-                >
-                  {submitting ? 'Starting…' : 'Start session'}
-                </button>
-              </div>
+              {grossTranscriptionError && <p className={styles.error}>{grossTranscriptionError}</p>}
               {error && <p className={styles.error}>{error}</p>}
             </div>
           )}
