@@ -392,11 +392,21 @@ export default function ConceptMapPage() {
                 {learnerLevel && <span className={styles.profileHint}>Level: {learnerLevel}</span>}
               </div>
               <div className={styles.chatArea}>
-                <ChatConversation messages={probeChatMessages} className={styles.chatMessages} />
+                <ChatConversation
+                  messages={probeChatMessages}
+                  className={styles.chatMessages}
+                  onPlayAudio={async (text) => {
+                    if (!text?.trim()) return;
+                    try {
+                      const blob = await voiceAPI.speak(text);
+                      const url = URL.createObjectURL(blob);
+                      const audio = new Audio(url);
+                      audio.onended = () => URL.revokeObjectURL(url);
+                      await audio.play();
+                    } catch (e) {}
+                  }}
+                />
               </div>
-              {probeChatMessages.length > 0 && probeChatMessages[probeChatMessages.length - 1].role === 'assistant' && nextStep && (
-                <TeacherVoicePlayer text={nextStep.leading_prompt} autoPlay={true} label="" />
-              )}
               <div className={styles.chatInputRow}>
                 <VoiceChatInput
                   language={probeLanguage}

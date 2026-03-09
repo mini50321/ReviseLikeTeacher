@@ -491,7 +491,20 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
             <div className={styles.voiceCoachBox}>
               <div className={styles.voiceCoachTitle}>Ask teacher follow-up</div>
               <div className={styles.coachChatArea}>
-                <ChatConversation messages={coachChatMessages} className={styles.coachChatMessages} />
+                <ChatConversation
+                  messages={coachChatMessages}
+                  className={styles.coachChatMessages}
+                  onPlayAudio={async (text) => {
+                    if (!text?.trim()) return;
+                    try {
+                      const blob = await voiceAPI.speak(text);
+                      const url = URL.createObjectURL(blob);
+                      const audio = new Audio(url);
+                      audio.onended = () => URL.revokeObjectURL(url);
+                      await audio.play();
+                    } catch (e) {}
+                  }}
+                />
               </div>
               <div className={styles.coachInputRow}>
                 <VoiceChatInput

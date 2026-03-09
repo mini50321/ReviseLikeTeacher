@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import styles from './ChatConversation.module.css';
 
-export default function ChatConversation({ messages = [], className }) {
+export default function ChatConversation({ messages = [], className, onPlayAudio }) {
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -41,6 +41,18 @@ export default function ChatConversation({ messages = [], className }) {
                   <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
                 </svg>
               </button>
+              {onPlayAudio && m.content && (
+                <button
+                  type="button"
+                  className={styles.playBtn}
+                  onClick={() => onPlayAudio(m.content)}
+                  aria-label="Play"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                  </svg>
+                </button>
+              )}
             </div>
           )}
         </div>

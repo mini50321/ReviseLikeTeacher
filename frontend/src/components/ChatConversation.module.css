@@ -73,3 +73,21 @@
   background: rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.9);
 }
+
+.playBtn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(99, 102, 241, 0.25);
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.95);
+  cursor: pointer;
+}
+
+.playBtn:hover {
+  background: rgba(99, 102, 241, 0.35);
+  color: #fff;
+}
