@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import VoiceChatInput from './VoiceChatInput';
+import SequentialTextReveal from './SequentialTextReveal';
 import { voiceAPI } from '../lib/api';
 import styles from './QuestionDisplay.module.css';
 
@@ -196,7 +197,15 @@ export default function QuestionDisplay({ question, questionNumber, totalQuestio
           </div>
         )}
 
-        <h2 className={styles.questionText}>{question.stem || question.question_text}</h2>
+        <h2 className={styles.questionText}>
+          <SequentialTextReveal
+            text={question.stem || question.question_text}
+            audioRef={questionAudioRef}
+            audioState={questionAudioState === 'done' ? 'finished' : questionAudioState}
+            className=""
+            intervalMs={250}
+          />
+        </h2>
 
         {isMCQ && parsedOptions && (
           <div className={styles.mcqOptions}>
