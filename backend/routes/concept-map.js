@@ -787,6 +787,16 @@ router.post('/session/:sessionId/answer', authenticate, async (req, res) => {
           }
         }
       }
+
+      // If the summary is too weak, stay in summary_request and ask the student to improve it.
+      if (summaryScorePercent < 70) {
+        return res.json({
+          phase: 'summary_request',
+          summary_requested: true,
+          summary_score_percent: summaryScorePercent,
+          message: 'Your summary is not strong enough yet. Focus on the core steps and key clinical points, then try again.'
+        });
+      }
       const conceptResults = snap.concept_results || [];
       const completedIds = parseJsonField(session.completed_point_ids, []);
       const summary = buildCompletionSummary(conceptResults, completedIds);
@@ -901,13 +911,12 @@ router.post('/session/:sessionId/answer', authenticate, async (req, res) => {
     }
     const concept = serializeConcept(conceptRow.rows[0]);
     const scoreResult = scoreAnswerAgainstConcept(concept, String(answer_text).trim(), session.learner_level || 'mid');
-    const pointNowHit = (scoreResult.pointsHit || []).some(p => (p.id || p.label) === currentPointId);
+    const scorePercentForAnswer = typeof scoreResult.scorePercent === 'number' ? scoreResult.scorePercent : 0;
+    const pointNowHit =
+      scorePercentForAnswer >= 70 &&
+      (scoreResult.pointsHit || []).some(p => (p.id || p.label) === currentPointId);
     const currentItem = missedQueue.find(m => m.concept_id === currentConceptId && m.point_id === currentPointId);
     if (pointNowHit) {
-      completedIds.push(`${currentConceptId}|${currentPointId}`);
-      probeCount = 0;
-      leadingTier = 1;
-    } else if (probeCount >= 3) {
       completedIds.push(`${currentConceptId}|${currentPointId}`);
       probeCount = 0;
       leadingTier = 1;
@@ -954,7 +963,7 @@ router.post('/session/:sessionId/answer', authenticate, async (req, res) => {
         nextLeadingPrompt = selectorResult.content || getLeadingPromptForTier(currentItem.leading_questions, nextLeadingTier) || getLeadingPromptForTier(currentItem.leading_questions, 4);
         nextMcq = null;
       }
-    } else if (pointNowHit || probeCount >= 3) {
+    } else if (pointNowHit) {
       nextItem = remaining[0];
       if (nextItem) {
         const nextConcept = conceptsData.find(c => c.id === nextItem.concept_id) || concept;
