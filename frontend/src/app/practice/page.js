@@ -15,13 +15,7 @@ function PracticePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const mode = searchParams?.get('mode');
-  const [sessionSetupOpen, setSessionSetupOpen] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      return !!params.get('mode');
-    }
-    return false;
-  });
+  const [sessionSetupOpen, setSessionSetupOpen] = useState(true);
   const [session, setSession] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -214,34 +208,6 @@ function PracticePageContent() {
               defaultMode={mode}
               loading={loading}
             />
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  if (!session || questions.length === 0) {
-    console.log('Rendering empty state - Session:', session?.id, 'Questions:', questions.length);
-    return (
-      <div>
-        <Header />
-        <main className={styles.main}>
-          <div className={styles.container}>
-            <div className={styles.emptyState}>
-              <h2>Start a Practice Session</h2>
-              <p>Click the button below to configure and start a practice session.</p>
-              <button
-                type="button"
-                className={styles.startButton}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setSessionSetupOpen(true);
-                }}
-              >
-                Start Practice Session
-              </button>
-            </div>
           </div>
         </main>
       </div>
