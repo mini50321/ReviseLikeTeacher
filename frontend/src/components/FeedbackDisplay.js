@@ -461,6 +461,16 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
                 audioRef={audioRef}
                 audioState={audioState}
                 className={styles.quickCheckChat}
+                onPlayAudio={async (text) => {
+                  if (!text?.trim()) return;
+                  try {
+                    const blob = await voiceAPI.speak(text);
+                    const url = URL.createObjectURL(blob);
+                    const audio = new Audio(url);
+                    audio.onended = () => URL.revokeObjectURL(url);
+                    await audio.play();
+                  } catch (e) {}
+                }}
               />
               <div className={styles.quickCheckVoiceRow}>
                 <VoiceChatInput
