@@ -203,15 +203,19 @@ function PracticePageContent() {
     return (
       <div>
         <Header />
-          <SessionSetup
-            onStart={handleSessionStart}
-            onCancel={() => {
-              setSessionSetupOpen(false);
-              if (!session) router.push('/dashboard');
-            }}
-            defaultMode={mode}
-            loading={loading}
-          />
+        <main className={styles.main}>
+          <div className={styles.container}>
+            <SessionSetup
+              onStart={handleSessionStart}
+              onCancel={() => {
+                setSessionSetupOpen(false);
+                if (!session) router.push('/dashboard');
+              }}
+              defaultMode={mode}
+              loading={loading}
+            />
+          </div>
+        </main>
       </div>
     );
   }
