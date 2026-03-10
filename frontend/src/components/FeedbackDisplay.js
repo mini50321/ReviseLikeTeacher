@@ -167,13 +167,10 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
     ])
   ];
 
-  const coachChatMessages = [
-    ...(teacherResponse ? [{ id: 't0', role: 'assistant', content: teacherResponse }] : []),
-    ...coachHistory.flatMap((h, i) => [
-      { id: `cu${i}`, role: 'user', content: h.student },
-      { id: `ca${i}`, role: 'assistant', content: h.teacher }
-    ])
-  ];
+  const coachChatMessages = coachHistory.flatMap((h, i) => [
+    { id: `cu${i}`, role: 'user', content: h.student },
+    { id: `ca${i}`, role: 'assistant', content: h.teacher }
+  ]);
 
   const handleCoachTranscript = async (transcript) => {
     if (!transcript?.trim()) return;
