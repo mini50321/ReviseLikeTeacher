@@ -34,6 +34,7 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
   const fetchedTextRef = useRef(null);
   const coachReplyAudioRef = useRef(null);
   const coachReplyFetchedTextRef = useRef(null);
+  const [coachPlayingMessageId, setCoachPlayingMessageId] = useState(null);
 
   const score = attempt?.score || 0;
   const feedbackData = attempt?.feedback || {};
@@ -318,8 +319,12 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
     if (coachText && coachReplyFetchedTextRef.current !== coachText) {
       coachReplyFetchedTextRef.current = coachText;
       fetchCoachReplyAudio(coachText);
+      if (coachHistory.length > 0) {
+        const lastIndex = coachHistory.length - 1;
+        setCoachPlayingMessageId(`ca${lastIndex}`);
+      }
     }
-  }, [coachResult?.teacher_response, fetchCoachReplyAudio]);
+  }, [coachResult?.teacher_response, fetchCoachReplyAudio, coachHistory.length]);
 
   useEffect(() => {
     if (!coachReplyAudioUrl || coachReplyAudioState !== 'ready') return;
@@ -480,6 +485,10 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
                 <ChatConversation
                   messages={coachChatMessages}
                   className={styles.coachChatMessages}
+                  revealingMessageId={coachPlayingMessageId}
+                  audioRef={coachReplyAudioRef}
+                  audioState={coachReplyAudioState === 'done' ? 'finished' : coachReplyAudioState}
+                  revealIntervalMs={250}
                   onPlayAudio={async (text) => {
                     if (!text?.trim()) return;
                     try {
@@ -505,55 +514,6 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
               </div>
               {coachVoiceError && <div className={styles.quickCheckError}>{coachVoiceError}</div>}
               {coachError && <div className={styles.quickCheckError}>{coachError}</div>}
-              {coachResult?.teacher_response && (
-                <div className={styles.voiceCoachResponse}>
-                  <div className={styles.voiceCoachReplyHeader}>
-                    <span>Listen to reply</span>
-                    {(coachReplyAudioState === 'finished' || coachReplyAudioState === 'ready' || coachReplyAudioState === 'playing') && (
-                      <button onClick={toggleCoachReplyPlayback} className={styles.playButton}>
-                        {coachReplyAudioState === 'playing' ? '⏸ Pause' : '▶ Play'}
-                      </button>
-                    )}
-                  </div>
-                  {showVoiceTelemetry && (
-                    <div className={styles.voiceCoachMeta}>
-                      Focus: {coachResult.teaching_focus || 'concept_clarity'} | Mode: {coachResult.latency_mode || 'balanced'} | Context: {coachResult.context_confidence || '-'} ({coachResult.context_top_score ?? '-'}) | Latency: {coachResult.latency_ms ?? '-'}ms | Cache: {(coachResult.cache_hit || coachResult.backend_cache_hit) ? 'hit' : 'miss'} | Fallback: {coachResult.fallback_used ? 'yes' : 'no'}
-                    </div>
-                  )}
-                  {showVoiceTelemetry && coachResult.quality_checks && (
-                    <div className={styles.voiceCoachMeta}>
-                      Quality: {coachResult.quality_checks.style_passed ? 'pass' : 'review'} | Words: {coachResult.quality_checks.word_count} | Check question: {coachResult.quality_checks.has_check_question ? 'yes' : 'no'}
-                    </div>
-                  )}
-                  {showVoiceTelemetry && Array.isArray(coachResult.query_expansions) && coachResult.query_expansions.length > 0 && (
-                    <div className={styles.voiceCoachGrounding}>
-                      Domain expansions used: {coachResult.query_expansions.join(', ')}
-                    </div>
-                  )}
-                  {coachResult.needs_clarification && (
-                    <div className={styles.voiceCoachClarify}>
-                      Clarification needed: add one precise anchor (drug name, mechanism keyword, or quoted PYQ/textbook line), then ask again.
-                    </div>
-                  )}
-                  {coachResult.grounding_note && (
-                    <div className={styles.voiceCoachGrounding}>{coachResult.grounding_note}</div>
-                  )}
-                  {showVoiceTelemetry && Array.isArray(coachResult.used_source_ids) && coachResult.used_source_ids.length > 0 && (
-                    <div className={styles.voiceCoachSourceIds}>
-                      Sources used: {coachResult.used_source_ids.join(', ')}
-                    </div>
-                  )}
-                  {showVoiceTelemetry && Array.isArray(coachResult.references) && coachResult.references.length > 0 && (
-                    <div className={styles.voiceCoachRefs}>
-                      {coachResult.references.slice(0, 3).map((ref, idx) => (
-                        <div key={`${ref.source_id || 'ref'}-${idx}`} className={styles.voiceCoachRefItem}>
-                          {ref.subject || 'General'} / {ref.topic || 'General'} - {ref.preview || 'Reference'}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           </div>
         )}

@@ -1,13 +1,23 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import SequentialTextReveal from './SequentialTextReveal';
 import styles from './ChatConversation.module.css';
 
-export default function ChatConversation({ messages = [], className, onPlayAudio }) {
+export default function ChatConversation({
+  messages = [],
+  className,
+  onPlayAudio,
+  revealingMessageId,
+  audioRef,
+  audioState,
+  revealIntervalMs = 250
+}) {
   const scrollRef = useRef(null);
   const lastMessageRef = useRef(null);
   const [reactions, setReactions] = useState({});
   const [playingKey, setPlayingKey] = useState(null);
+  const [revealedDone, setRevealedDone] = useState({});
 
   useEffect(() => {
     lastMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -17,15 +27,35 @@ export default function ChatConversation({ messages = [], className, onPlayAudio
     <div className={`${styles.container} ${className || ''}`} ref={scrollRef}>
       {messages.map((m, i) => {
         const key = m.id || i;
+        const isAssistant = m.role === 'assistant';
+        const isLast = i === messages.length - 1;
         const state = reactions[key] || {};
+        const isRevealing = isAssistant && revealingMessageId && m.id === revealingMessageId;
+        const isRevealed = revealedDone[key];
+
         return (
           <div
             key={key}
-            ref={i === messages.length - 1 ? lastMessageRef : null}
+            ref={isLast ? lastMessageRef : null}
             className={`${styles.bubble} ${m.role === 'user' ? styles.user : styles.assistant}`}
           >
-            <div className={styles.content}>{m.content}</div>
-            {m.role === 'assistant' && (
+            <div className={styles.content}>
+              {isRevealing ? (
+                <SequentialTextReveal
+                  text={m.content}
+                  audioRef={audioRef}
+                  audioState={audioState}
+                  className=""
+                  intervalMs={revealIntervalMs}
+                  onComplete={() =>
+                    setRevealedDone(prev => (prev[key] ? prev : { ...prev, [key]: true }))
+                  }
+                />
+              ) : (
+                m.content
+              )}
+            </div>
+            {isAssistant && isLast && isRevealed && (
               <div className={styles.actions}>
                 <button
                   type="button"
