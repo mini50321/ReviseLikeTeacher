@@ -77,20 +77,31 @@
   color: rgba(255, 255, 255, 0.9);
 }
 
+.actionBtnActive {
+  background: rgba(129, 140, 248, 0.28);
+  color: #e5e7eb;
+}
+
 .playBtn {
   width: 32px;
   height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(99, 102, 241, 0.25);
-  border: 1px solid rgba(99, 102, 241, 0.4);
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.6);
   border-radius: 8px;
-  color: rgba(255, 255, 255, 0.95);
+  color: rgba(209, 213, 219, 0.9);
   cursor: pointer;
 }
 
 .playBtn:hover {
-  background: rgba(99, 102, 241, 0.35);
+  background: rgba(148, 163, 184, 0.25);
+  color: #fff;
+}
+
+.playBtnActive {
+  background: rgba(99, 102, 241, 0.9);
+  border-color: rgba(129, 140, 248, 1);
   color: #fff;
 }
