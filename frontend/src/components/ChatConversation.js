@@ -44,10 +44,9 @@ export default function ChatConversation({
                 <SequentialTextReveal
                   text={m.content}
                   audioRef={audioRef}
-                  audioState={audioState || 'playing'}
+                  audioState={audioState}
                   className=""
                   intervalMs={revealIntervalMs}
-                  autoStart={true}
                   onComplete={() =>
                     setRevealedDone(prev => (prev[key] ? prev : { ...prev, [key]: true }))
                   }
@@ -56,6 +55,15 @@ export default function ChatConversation({
                 m.content
               )}
             </div>
+            {isAssistant && isLast && isRevealing && !isRevealed && (
+              <div className={styles.loadingRow}>
+                <span className={styles.loadingDots}>
+                  <span />
+                  <span />
+                  <span />
+                </span>
+              </div>
+            )}
             {isAssistant && isLast && isRevealed && (
               <div className={styles.actions}>
                 <button

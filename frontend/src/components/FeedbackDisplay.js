@@ -303,24 +303,52 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
 
   useEffect(() => {
     const coachText = coachResult?.teacher_response || '';
-    if (coachText && coachReplyFetchedTextRef.current !== coachText) {
-      coachReplyFetchedTextRef.current = coachText;
-      if (coachHistory.length > 0) {
-        const lastIndex = coachHistory.length - 1;
-        setCoachPlayingMessageId(`ca${lastIndex}`);
-      }
-      (async () => {
-        try {
-          const audioBlob = await voiceAPI.speak(coachText);
-          const url = URL.createObjectURL(audioBlob);
-          const audio = new Audio(url);
-          audio.onended = () => URL.revokeObjectURL(url);
-          await audio.play().catch(() => {});
-        } catch (e) {
-          // ignore TTS failure; text response is still shown
-        }
-      })();
+    if (!coachText || coachReplyFetchedTextRef.current === coachText) return;
+
+    coachReplyFetchedTextRef.current = coachText;
+    if (coachHistory.length > 0) {
+      const lastIndex = coachHistory.length - 1;
+      setCoachPlayingMessageId(`ca${lastIndex}`);
     }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        setCoachReplyAudioState('loading');
+        const audioBlob = await voiceAPI.speak(coachText);
+        if (cancelled) return;
+        const url = URL.createObjectURL(audioBlob);
+        const audio = new Audio(url);
+        coachReplyAudioRef.current = audio;
+
+        audio.onplay = () => {
+          if (!cancelled) setCoachReplyAudioState('playing');
+        };
+        audio.onended = () => {
+          URL.revokeObjectURL(url);
+          if (!cancelled) setCoachReplyAudioState('finished');
+        };
+        audio.onerror = () => {
+          URL.revokeObjectURL(url);
+          if (!cancelled) setCoachReplyAudioState('error');
+        };
+
+        await audio.play().catch(() => {
+          if (!cancelled) setCoachReplyAudioState('finished');
+        });
+      } catch (e) {
+        if (!cancelled) setCoachReplyAudioState('error');
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (coachReplyAudioRef.current) {
+        coachReplyAudioRef.current.pause();
+        coachReplyAudioRef.current = null;
+      }
+    };
   }, [coachResult?.teacher_response, coachHistory.length]);
 
   const toggleCoachReplyPlayback = () => {
