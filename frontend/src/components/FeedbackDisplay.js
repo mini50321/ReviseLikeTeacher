@@ -429,23 +429,7 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
                 {audioState === 'idle' && 'Loading voice...'}
                 {audioState === 'error' && 'Voice unavailable'}
               </div>
-              <div className={styles.voiceControls}>
-                {(audioState === 'finished' || audioState === 'playing') && (
-                  <button onClick={togglePlayback} className={styles.playButton}>
-                    {audioState === 'playing' ? '⏸ Pause' : '▶ Replay'}
-                  </button>
-                )}
-                {audioState === 'ready' && (
-                  <button onClick={togglePlayback} className={styles.playButton}>
-                    ▶ Play
-                  </button>
-                )}
-                {audioState === 'error' && (
-                  <button onClick={retryAudio} className={styles.retryButton}>
-                    ↻ Retry
-                  </button>
-                )}
-              </div>
+              {/* Voice controls intentionally removed from header to avoid duplicate replay */}
             </div>
             <div className={styles.quickCheckBox}>
               <div className={styles.quickCheckTitle}>Reply to quick check</div>
