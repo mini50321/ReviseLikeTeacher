@@ -124,11 +124,11 @@
 
 .quickCheckTitle {
   color: rgba(226, 232, 240, 0.9);
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.09em;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .quickCheckSubtitle {
@@ -219,11 +219,11 @@
 
 .voiceCoachTitle {
   color: rgba(224, 231, 255, 0.95);
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.09em;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .voiceCoachSubtitle {
