@@ -113,7 +113,6 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
     setQuickCheckAttempts(0);
     setShowFullExplanation(score >= 90);
     setQuickCheckHistory([]);
-    setPlayingMessageId(null);
   }, [attempt?.id]);
 
   useEffect(() => {
@@ -453,6 +452,9 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
             </div>
             <div className={styles.quickCheckBox}>
               <div className={styles.quickCheckTitle}>Reply to quick check</div>
+              <div className={styles.quickCheckSubtitle}>
+                Answer the teacher&apos;s follow-up question about your last response.
+              </div>
               <QuickCheckChat
                 messages={quickCheckMessages}
                 playingMessageId={playingMessageId}
@@ -480,6 +482,9 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
             </div>
             <div className={styles.voiceCoachBox}>
               <div className={styles.voiceCoachTitle}>Ask teacher follow-up</div>
+              <div className={styles.voiceCoachSubtitle}>
+                Chat with the teacher: ask doubts, clarifications, or extra explanations.
+              </div>
               <div className={styles.coachChatArea}>
                 <ChatConversation
                   messages={coachChatMessages}

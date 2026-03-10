@@ -115,17 +115,25 @@
 }
 
 .quickCheckBox {
-  margin-top: 14px;
-  padding: 12px 0 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 18px;
+  padding: 16px 16px 14px;
+  border-radius: 12px;
+  background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.12), rgba(15, 23, 42, 0.85));
+  border: 1px solid rgba(56, 189, 248, 0.35);
 }
 
 .quickCheckTitle {
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(226, 232, 240, 0.9);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.09em;
+  margin-bottom: 6px;
+}
+
+.quickCheckSubtitle {
+  color: rgba(226, 232, 240, 0.7);
+  font-size: 12px;
   margin-bottom: 10px;
 }
 
@@ -202,18 +210,26 @@
 }
 
 .voiceCoachBox {
-  margin-top: 14px;
-  padding: 12px 0 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 20px;
+  padding: 18px 16px 14px;
+  border-radius: 12px;
+  background: radial-gradient(circle at top left, rgba(129, 140, 248, 0.12), rgba(15, 23, 42, 0.9));
+  border: 1px solid rgba(129, 140, 248, 0.4);
 }
 
 .voiceCoachTitle {
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(224, 231, 255, 0.95);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 10px;
+  letter-spacing: 0.09em;
+  margin-bottom: 6px;
+}
+
+.voiceCoachSubtitle {
+  color: rgba(224, 231, 255, 0.75);
+  font-size: 12px;
+  margin-bottom: 12px;
 }
 
 .coachChatArea {
