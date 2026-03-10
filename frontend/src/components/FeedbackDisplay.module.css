@@ -238,6 +238,7 @@
   max-height: 280px;
   overflow-y: auto;
   margin-bottom: 12px;
+  padding-right: 8px;
 }
 
 .coachChatMessages {
