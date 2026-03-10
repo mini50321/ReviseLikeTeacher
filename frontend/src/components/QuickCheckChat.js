@@ -61,6 +61,15 @@ export default function QuickCheckChat({
                     m.content
                   )}
                 </div>
+                {isLast && playingMessageId === m.id && !isRevealed && (
+                  <div className={styles.loadingRow}>
+                    <span className={styles.loadingDots}>
+                      <span />
+                      <span />
+                      <span />
+                    </span>
+                  </div>
+                )}
                 {isLast && isRevealed && (
                   <div className={styles.actions}>
                     <button
