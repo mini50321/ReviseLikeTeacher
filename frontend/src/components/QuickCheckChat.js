@@ -21,6 +21,7 @@ export default function QuickCheckChat({
   const lastMessageRef = useRef(null);
   const [reactions, setReactions] = useState({});
   const [playingKey, setPlayingKey] = useState(null);
+  const [revealedDone, setRevealedDone] = useState({});
 
   useEffect(() => {
     lastMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -33,6 +34,7 @@ export default function QuickCheckChat({
         const isAssistant = m.role === 'assistant';
         const key = m.id || i;
         const state = reactions[key] || {};
+        const isRevealed = revealedDone[key];
         return (
           <div
             key={key}
@@ -51,13 +53,15 @@ export default function QuickCheckChat({
                       audioState={audioState}
                       className={styles.revealContent}
                       intervalMs={250}
-                      autoStart={true}
+                      onComplete={() =>
+                        setRevealedDone(prev => (prev[key] ? prev : { ...prev, [key]: true }))
+                      }
                     />
                   ) : (
                     m.content
                   )}
                 </div>
-                {isLast && (
+                {isLast && isRevealed && (
                   <div className={styles.actions}>
                     <button
                       type="button"
