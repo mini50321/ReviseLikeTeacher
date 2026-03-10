@@ -44,9 +44,10 @@ export default function ChatConversation({
                 <SequentialTextReveal
                   text={m.content}
                   audioRef={audioRef}
-                  audioState={audioState}
+                  audioState={audioState || 'playing'}
                   className=""
                   intervalMs={revealIntervalMs}
+                  autoStart={true}
                   onComplete={() =>
                     setRevealedDone(prev => (prev[key] ? prev : { ...prev, [key]: true }))
                   }
