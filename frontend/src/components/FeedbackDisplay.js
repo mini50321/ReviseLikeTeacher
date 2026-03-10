@@ -403,44 +403,6 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
 
         {teacherResponse && (
           <div className={styles.voiceFeedback}>
-            <div className={styles.voiceHeader}>
-              <div className={styles.voiceIcon}>
-                {audioState === 'loading' && (
-                  <div className={styles.loadingDots}>
-                    <span></span><span></span><span></span>
-                  </div>
-                )}
-                {audioState === 'playing' && (
-                  <div className={styles.soundWave}>
-                    <span></span><span></span><span></span><span></span><span></span>
-                  </div>
-                )}
-                {(audioState === 'ready' || audioState === 'idle' || audioState === 'finished') && (
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                    <line x1="12" y1="19" x2="12" y2="23"/>
-                    <line x1="8" y1="23" x2="16" y2="23"/>
-                  </svg>
-                )}
-                {audioState === 'error' && (
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="15" y1="9" x2="9" y2="15"/>
-                    <line x1="9" y1="9" x2="15" y2="15"/>
-                  </svg>
-                )}
-              </div>
-              <div className={styles.voiceLabel}>
-                {audioState === 'loading' && 'Teacher is preparing...'}
-                {audioState === 'playing' && 'Teacher is speaking...'}
-                {audioState === 'ready' && 'Click play to listen'}
-                {audioState === 'finished' && 'Teacher finished speaking'}
-                {audioState === 'idle' && 'Loading voice...'}
-                {audioState === 'error' && 'Voice unavailable'}
-              </div>
-              {/* Voice controls intentionally removed from header to avoid duplicate replay */}
-            </div>
             <div className={styles.quickCheckBox}>
               <div className={styles.quickCheckTitle}>Reply to quick check</div>
               <div className={styles.quickCheckSubtitle}>
