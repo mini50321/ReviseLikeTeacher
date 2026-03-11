@@ -222,17 +222,28 @@
 .mobileToggle {
   display: none;
   position: fixed;
-  top: 12px;
-  left: 12px;
+  top: 26px;
+  left: 28px;
   z-index: 1100;
-  width: 40px;
-  height: 40px;
-  background: rgba(20, 20, 28, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 999px;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  color: #e5e7eb;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+
+.mobileToggle:hover {
+  background: rgba(15, 23, 42, 0.98);
+  border-color: rgba(129, 140, 248, 0.7);
+  transform: translateY(-1px);
 }
 
 .hamburger {
@@ -259,20 +270,6 @@
 
 .hamburger::before { top: -6px; }
 .hamburger::after { top: 6px; }
-
-.hamburgerOpen {
-  background: transparent;
-}
-
-.hamburgerOpen::before {
-  top: 0;
-  transform: rotate(45deg);
-}
-
-.hamburgerOpen::after {
-  top: 0;
-  transform: rotate(-45deg);
-}
 
 .overlay {
   display: none;

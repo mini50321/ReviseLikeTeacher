@@ -9,7 +9,7 @@ import {
   BrainCircuit, FileText, BookOpen, Search, BarChart3, Trophy,
   ScrollText, Zap, Target, Link2, Puzzle, CreditCard,
   PenSquare, FileUp, TrendingUp, RefreshCw, FlaskConical,
-  BadgeCheck, Users, LogOut, ChevronLeft, ChevronRight, Map, GraduationCap
+  BadgeCheck, Users, LogOut, ChevronLeft, ChevronRight, Map, GraduationCap, X
 } from 'lucide-react';
 import styles from './Header.module.css';
 
@@ -144,7 +144,11 @@ export default function Header() {
         onClick={() => setMobileOpen(!mobileOpen)}
         aria-label="Toggle menu"
       >
-        <span className={`${styles.hamburger} ${mobileOpen ? styles.hamburgerOpen : ''}`} />
+        {mobileOpen ? (
+          <X size={22} strokeWidth={2} />
+        ) : (
+          <span className={styles.hamburger} />
+        )}
       </button>
 
       {mobileOpen && <div className={styles.overlay} onClick={() => setMobileOpen(false)} />}
