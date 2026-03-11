@@ -153,19 +153,9 @@ ${historyText}
     const sessionConfig = {
       type: 'realtime',
       model: 'gpt-realtime',
-      instructions,
-      output_modalities: ['audio'],
-      audio: {
-        input: {
-          format: { type: 'audio/pcm', rate: 24000 },
-          turn_detection: { type: 'server_vad', threshold: 0.5, prefix_padding_ms: 300, silence_duration_ms: 500 },
-          transcription: { model: 'whisper-1', language: 'en' }
-        },
-        output: { format: { type: 'audio/pcm' }, voice: 'marin' }
-      }
+      instructions
     };
 
-    // Use the native FormData from Node's fetch/undici implementation
     const fd = new FormData();
     fd.set('sdp', sdp);
     fd.set('session', JSON.stringify(sessionConfig));
