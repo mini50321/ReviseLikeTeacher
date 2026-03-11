@@ -6,17 +6,17 @@
 }
 
 .statCard {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  padding: 16px;
-  text-align: center;
-  transition: all 0.2s;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 12px;
+  padding: 14px 16px;
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
 }
 
 .statCard:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(15, 23, 42, 0.9);
+  border-color: rgba(96, 165, 250, 0.7);
   transform: translateY(-1px);
 }
 
@@ -31,13 +31,29 @@
 
 .statValue {
   color: #ffffff;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.5px;
 }
 
 @media (max-width: 640px) {
   .container {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .statCard {
+    padding: 10px 12px;
+    border-radius: 10px;
+  }
+
+  .statLabel {
+    font-size: 9px;
+    margin-bottom: 4px;
+  }
+
+  .statValue {
+    font-size: 16px;
   }
 }
