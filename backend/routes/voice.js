@@ -165,17 +165,16 @@ ${historyText}
       }
     };
 
-    const FormData = require('form-data');
+    // Use the native FormData from Node's fetch/undici implementation
     const fd = new FormData();
-    fd.append('sdp', sdp);
-    fd.append('session', JSON.stringify(sessionConfig));
+    fd.set('sdp', sdp);
+    fd.set('session', JSON.stringify(sessionConfig));
 
     const response = await fetch('https://api.openai.com/v1/realtime/calls', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${openaiKey}`,
         'OpenAI-Beta': 'realtime=v1',
-        ...fd.getHeaders()
       },
       body: fd
     });
