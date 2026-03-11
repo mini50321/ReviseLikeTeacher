@@ -151,7 +151,6 @@ ${historyText}
 - Match the student's language (English, Hindi, or Hinglish) if they use it.`;
 
     const sessionConfig = {
-      type: 'realtime',
       model: 'gpt-realtime',
       instructions
     };
