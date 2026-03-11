@@ -547,3 +547,29 @@
 .autoAdvanceCancel:hover {
   background: rgba(239, 68, 68, 0.3);
 }
+
+/* Mobile: flatten cards so chat uses most of the screen width */
+@media (max-width: 640px) {
+  .container {
+    max-width: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  .card {
+    padding: 16px 8px 20px;
+    border-radius: 10px;
+  }
+
+  .voiceFeedback {
+    padding: 12px 8px;
+    border-radius: 10px;
+  }
+
+  .quickCheckBox,
+  .voiceCoachBox {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+}
