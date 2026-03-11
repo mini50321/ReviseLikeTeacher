@@ -192,7 +192,7 @@ Respond in JSON format:
         
         teacher_response = result.get("teacher_response", "")
         if not teacher_response:
-            teacher_response = "You made a good attempt. Your main gap is missing key concepts from this topic. Focus on the core mechanism and one clinical application now. Can you explain that mechanism in one line?"
+            teacher_response = "You made a good attempt. Your main gap is missing key concepts from this topic. In one short line, state the core mechanism and a single clinical clue."
 
         mastery_delta = calculate_mastery_delta(score, current_mastery, difficulty)
 
@@ -276,7 +276,7 @@ async def evaluate_quick_check(
     if not client:
         return {
             "understanding_level": "partial",
-            "follow_up": "Good effort. You are close, but refine the discriminator concept and answer in one precise line.",
+            "follow_up": "Good effort. You are close; refine the discriminator concept and answer it in just one short line.",
             "can_proceed": True
         }
 
@@ -297,7 +297,7 @@ Student quick-check reply: {quick_check_answer}
 Return JSON:
 {{
   "understanding_level": "strong|partial|weak",
-  "follow_up": "2-3 short sentences: acknowledge, correct, then one actionable tip",
+  "follow_up": "1-2 short sentences: acknowledge, correct, then one actionable tip",
   "can_proceed": true
 }}
 
@@ -317,7 +317,7 @@ Rules:
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.3,
-                max_tokens=300,
+                max_tokens=220,
                 response_format={"type": "json_object"}
             )
         )

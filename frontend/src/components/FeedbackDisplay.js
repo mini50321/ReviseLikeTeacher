@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import api, { voiceAPI } from '../lib/api';
 import VoiceChatInput from './VoiceChatInput';
+import RealtimeVoiceCoach from './RealtimeVoiceCoach';
 import ChatConversation from './ChatConversation';
 import QuickCheckChat from './QuickCheckChat';
 import styles from './FeedbackDisplay.module.css';
@@ -463,13 +464,26 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
                 />
               </div>
               <div className={styles.coachInputRow}>
-                <VoiceChatInput
-                  language={coachLanguage}
-                  onLanguageChange={setCoachLanguage}
-                  placeholder="Type or speak your follow-up…"
-                  onTranscript={handleCoachTranscript}
+                <RealtimeVoiceCoach
+                  context={{
+                    subject: question?.subject || attempt?.question_context?.subject || null,
+                    topic: question?.topic || attempt?.question_context?.topic || attempt?.mastery_impact?.topic || null,
+                    questionStem: question?.stem || question?.question_text || attempt?.question_context?.stem || null,
+                    studentAnswer: attempt?.answer_text || null,
+                    conversationHistory: coachHistory
+                  }}
+                  onTurnComplete={({ student, teacher, fromRealtime }) => {
+                    const nextHistory = [...coachHistory.slice(-7), { student, teacher }];
+                    setCoachHistory(nextHistory);
+                    const lastIdx = nextHistory.length - 1;
+                    setCoachPlayingMessageId(`ca${lastIdx}`);
+                    if (!fromRealtime) {
+                      setCoachResult({ teacher_response: teacher });
+                    }
+                  }}
                   onError={(e) => setCoachVoiceError(e)}
                   disabled={coachLoading}
+                  placeholder="Type or use mic for live voice…"
                   submitLabel="Ask Teacher"
                 />
               </div>

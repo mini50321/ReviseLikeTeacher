@@ -113,9 +113,12 @@ Create `backend/.env` if you need custom settings (defaults work for development
 DB_PATH=./database.sqlite
 JWT_SECRET=your_secret_key_here
 AI_SERVICE_URL=http://localhost:8000
+OPENAI_API_KEY=your_openai_api_key_here
 PORT=3000
 NODE_ENV=development
 ```
+
+**Note:** `OPENAI_API_KEY` is required for the **Realtime voice** feature (Ask teacher follow-up with sub-second latency). Use the same key as your ai-service.
 
 The database file (`database.sqlite`) will be created automatically in the `backend/` directory when you first run the server.
 

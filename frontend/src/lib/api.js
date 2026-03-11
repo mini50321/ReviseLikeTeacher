@@ -122,6 +122,21 @@ export const voiceAPI = {
     return response.data;
   },
 
+  createRealtimeSession: async (sdp, context) => {
+    const response = await api.post('/voice/realtime-session', {
+      sdp,
+      subject: context?.subject,
+      topic: context?.topic,
+      questionStem: context?.questionStem,
+      studentAnswer: context?.studentAnswer,
+      conversationHistory: context?.conversationHistory || []
+    }, {
+      responseType: 'text',
+      timeout: 15000
+    });
+    return response.data;
+  },
+
   coachTurn: async ({
     transcript,
     subject,

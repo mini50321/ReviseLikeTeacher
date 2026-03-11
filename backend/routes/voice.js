@@ -113,6 +113,92 @@ router.post('/tts', authenticate, async (req, res) => {
   }
 });
 
+router.post('/realtime-session', authenticate, async (req, res) => {
+  try {
+    const { sdp, subject, topic, questionStem, studentAnswer, conversationHistory = [] } = req.body;
+
+    if (!sdp || typeof sdp !== 'string') {
+      return res.status(400).json({ error: 'SDP offer is required' });
+    }
+
+    const openaiKey = process.env.OPENAI_API_KEY;
+    if (!openaiKey) {
+      return res.status(500).json({
+        error: 'Realtime API not configured. Set OPENAI_API_KEY on the backend.'
+      });
+    }
+
+    const history = Array.isArray(conversationHistory) ? conversationHistory.slice(-6) : [];
+    const historyText = history.length
+      ? history.map((h) => `Student: ${(h.student || '').slice(0, 200)}\nTeacher: ${(h.teacher || '').slice(0, 300)}`).join('\n\n')
+      : '(none yet)';
+
+    const instructions = `You are a concise, supportive teacher helping a student with a practice question.
+
+## Context
+- Subject: ${subject || 'general'}
+- Topic: ${topic || 'general'}
+- Question: ${(questionStem || '').slice(0, 400)}
+- Student's original answer: ${(studentAnswer || '').slice(0, 300)}
+
+## Conversation so far
+${historyText}
+
+## Rules
+- Keep responses to 1-2 sentences. Be brief.
+- Speak clearly. Respond quickly.
+- Help clarify concepts, do not lecture.
+- Match the student's language (English, Hindi, or Hinglish) if they use it.`;
+
+    const sessionConfig = {
+      type: 'realtime',
+      model: 'gpt-realtime',
+      instructions,
+      output_modalities: ['audio'],
+      audio: {
+        input: {
+          format: { type: 'audio/pcm', rate: 24000 },
+          turn_detection: { type: 'server_vad', threshold: 0.5, prefix_padding_ms: 300, silence_duration_ms: 500 },
+          transcription: { model: 'whisper-1', language: 'en' }
+        },
+        output: { format: { type: 'audio/pcm' }, voice: 'marin' }
+      }
+    };
+
+    const FormData = require('form-data');
+    const fd = new FormData();
+    fd.append('sdp', sdp);
+    fd.append('session', JSON.stringify(sessionConfig));
+
+    const response = await fetch('https://api.openai.com/v1/realtime/calls', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${openaiKey}`,
+        ...fd.getHeaders()
+      },
+      body: fd
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error('OpenAI Realtime error:', response.status, errText);
+      return res.status(response.status).json({
+        error: 'Failed to create Realtime session',
+        details: process.env.NODE_ENV === 'development' ? errText : undefined
+      });
+    }
+
+    const answerSdp = await response.text();
+    res.set('Content-Type', 'application/sdp');
+    res.send(answerSdp);
+  } catch (error) {
+    console.error('Realtime session error:', error);
+    res.status(500).json({
+      error: error.message || 'Failed to create Realtime session'
+    });
+  }
+});
+
 router.post('/coach-turn', authenticate, async (req, res) => {
   try {
     const {

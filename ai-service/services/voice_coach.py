@@ -85,7 +85,7 @@ def _context_confidence(references):
     return "low", top_score
 
 
-def _ensure_teacher_style(text: str, max_words: int = 95) -> str:
+def _ensure_teacher_style(text: str, max_words: int = 60) -> str:
     cleaned = " ".join((text or "").strip().split())
     if not cleaned:
         return "Let's rebuild this step by step. Quick check: what is the single key clue in the stem?"
@@ -126,8 +126,8 @@ def _fallback_response(transcript: str, retrieval: Dict[str, Any], reason: str =
     references = _build_references(retrieval, limit=3)
     confidence, top_score = _context_confidence(references)
     teacher_response = _ensure_teacher_style(
-        "Good attempt. You are close, but refine the core concept and state one discriminator clue clearly.",
-        max_words=95
+        "Good attempt. You are close, but refine the core concept in one short line and state a single discriminator clue clearly.",
+        max_words=60
     )
     return {
         "teacher_response": teacher_response,
@@ -146,7 +146,7 @@ def _fallback_response(transcript: str, retrieval: Dict[str, Any], reason: str =
         "fallback_used": True,
         "fallback_reason": reason,
         "latency_mode": "balanced",
-        "quality_checks": _build_quality_checks(teacher_response, max_words=95)
+        "quality_checks": _build_quality_checks(teacher_response, max_words=60)
     }
 
 
@@ -181,8 +181,8 @@ async def coach_voice_turn(
     bounded_top_k = max(1, min(int(top_k), 8))
     if latency_mode == "fast":
         bounded_top_k = min(bounded_top_k, 3)
-    context_char_limit = 380 if latency_mode == "fast" else 650
-    max_tokens = 180 if latency_mode == "fast" else 260
+    context_char_limit = 320 if latency_mode == "fast" else 520
+    max_tokens = 120 if latency_mode == "fast" else 180
     timeout_seconds = min(VOICE_COACH_TIMEOUT_SECONDS, 8.0) if latency_mode == "fast" else VOICE_COACH_TIMEOUT_SECONDS
 
     cache_payload = {
