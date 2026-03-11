@@ -433,6 +433,26 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
                   disabled={quickCheckSubmitting}
                   submitLabel="Submit Reply"
                 />
+                  <RealtimeVoiceCoach
+                    context={{
+                      subject: question?.subject || attempt?.question_context?.subject || null,
+                      topic: question?.topic || attempt?.question_context?.topic || attempt?.mastery_impact?.topic || null,
+                      questionStem: question?.stem || question?.question_text || attempt?.question_context?.stem || null,
+                      studentAnswer: attempt?.answer_text || null,
+                      conversationHistory: quickCheckHistory.map((h) => ({
+                        student: h.user,
+                        teacher: h.assistant
+                      }))
+                    }}
+                    onTurnComplete={({ student, teacher }) => {
+                      const newEntry = { user: student, assistant: teacher };
+                      setQuickCheckHistory((prev) => [...prev, newEntry]);
+                    }}
+                    onError={(e) => setQuickCheckVoiceError(e)}
+                    disabled={quickCheckSubmitting}
+                    placeholder="Use mic for live quick-check help…"
+                    submitLabel="Ask live"
+                  />
               </div>
               {quickCheckVoiceError && (
                 <div className={styles.quickCheckError}>{quickCheckVoiceError}</div>
