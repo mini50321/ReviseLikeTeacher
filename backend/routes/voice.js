@@ -174,6 +174,7 @@ ${historyText}
       method: 'POST',
       headers: {
         Authorization: `Bearer ${openaiKey}`,
+        'OpenAI-Beta': 'realtime=v1',
         ...fd.getHeaders()
       },
       body: fd
