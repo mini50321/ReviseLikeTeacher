@@ -232,11 +232,12 @@ router.post('/', authenticate, async (req, res) => {
       [userId, question_id, masteryUpdate]
     );
 
+    const defaultTeacherResponse = "You made a sincere attempt. Your main gap is concept precision. Rebuild the core idea first, then link it to the stem. What is the one clue that should guide your answer next time?";
     res.status(201).json({
       id: insertedAttempt.rows[0]?.id || null,
       feedback: evaluation.feedback,
       score: evaluation.score,
-      teacher_response: evaluation.teacher_response || null,
+      teacher_response: evaluation.teacher_response ?? defaultTeacherResponse,
       question_context: {
         question_id: question.id,
         stem: question.stem || null,

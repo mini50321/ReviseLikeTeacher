@@ -122,6 +122,7 @@ async function evaluateAnswer({ question, studentAnswer, currentMastery, userId 
         improvements: "Keep practicing to improve.",
         model_explanation: question.ideal_answer || "Review the topic for a complete answer."
       },
+      teacher_response: "You made a sincere attempt. Your main gap is concept precision. Rebuild the core idea first, then link it to the stem. What is the one clue that should guide your answer next time?",
       mastery_impact: {
         delta: (fallbackScore / 100) * 0.1
       }
