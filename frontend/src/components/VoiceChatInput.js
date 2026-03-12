@@ -205,12 +205,22 @@ export default function VoiceChatInput({
       <button type="button" className={styles.attachBtn} aria-label="Attach" disabled={disabled}>
         +
       </button>
-      <input
-        type="text"
+      <textarea
+        rows={1}
         className={styles.input}
         value={text || interimText}
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
+        onChange={(e) => {
+          const el = e.target;
+          el.style.height = 'auto';
+          el.style.height = `${el.scrollHeight}px`;
+          setText(e.target.value);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSubmit();
+          }
+        }}
         placeholder={placeholder}
         disabled={disabled}
       />
@@ -244,28 +254,30 @@ export default function VoiceChatInput({
           )}
         </div>
       )}
-      <button
-        type="button"
-        className={styles.micBtn}
-        onClick={handleMicClick}
-        disabled={disabled}
-        aria-label={isListening ? 'End' : 'Microphone'}
-      >
-        {transcribing ? (
-          <span className={styles.spinner} />
-        ) : isListening ? (
-          <span className={styles.endBtn}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <rect x="6" y="6" width="12" height="12" rx="2" />
+      {(isListening || transcribing || !(text || interimText).trim()) && (
+        <button
+          type="button"
+          className={styles.micBtn}
+          onClick={handleMicClick}
+          disabled={disabled}
+          aria-label={isListening ? 'End' : 'Microphone'}
+        >
+          {transcribing ? (
+            <span className={styles.spinner} />
+          ) : isListening ? (
+            <span className={styles.endBtn}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="6" y="6" width="12" height="12" rx="2" />
+              </svg>
+            </span>
+          ) : (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+              <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
             </svg>
-          </span>
-        ) : (
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
-            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
-          </svg>
-        )}
-      </button>
+          )}
+        </button>
+      )}
       {!isListening && !transcribing && (text || interimText).trim() && (
         <button
           type="button"

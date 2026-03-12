@@ -36,12 +36,15 @@
 .input {
   flex: 1;
   min-width: 0;
-  padding: 10px 4px;
+  padding: 8px 4px;
   font-size: 15px;
+  line-height: 1.4;
   color: rgba(255, 255, 255, 0.95);
   background: transparent;
   border: none;
   outline: none;
+  resize: none;
+  overflow: hidden;
 }
 
 .input::placeholder {
