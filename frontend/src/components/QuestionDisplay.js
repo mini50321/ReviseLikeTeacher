@@ -227,11 +227,18 @@ export default function QuestionDisplay({ question, questionNumber, totalQuestio
           </div>
         )}
 
-        {question.subject && (
-          <div className={styles.meta}>
+        <div className={styles.meta}>
+          {question.subject && (
             <span className={styles.subject}>{question.subject}</span>
-          </div>
-        )}
+          )}
+          <button
+            type="button"
+            className={styles.langPill}
+            onClick={() => setLanguage(prev => prev === 'english' ? 'hindi' : prev === 'hindi' ? 'hinglish' : 'english')}
+          >
+            {language === 'english' ? 'English' : language === 'hindi' ? 'Hindi' : 'Hinglish'}
+          </button>
+        </div>
       </div>
 
       {!isMCQ && (
@@ -239,7 +246,7 @@ export default function QuestionDisplay({ question, questionNumber, totalQuestio
           <div className={styles.voiceChatInputWrap}>
             <VoiceChatInput
               language={language}
-              onLanguageChange={setLanguage}
+              onLanguageChange={null}
               placeholder="Type or speak your answer…"
               onTranscript={handleTextSubmit}
               onError={(e) => setTranscriptionError(e)}
