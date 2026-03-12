@@ -19,6 +19,8 @@ export default function RealtimeVoiceCoach({
   const [isConnecting, setIsConnecting] = useState(false);
   const [lastUserTranscript, setLastUserTranscript] = useState('');
   const [lastAssistantTranscript, setLastAssistantTranscript] = useState('');
+  const [userStream, setUserStream] = useState('');
+  const [assistantStream, setAssistantStream] = useState('');
   const pcRef = useRef(null);
   const dcRef = useRef(null);
   const audioRef = useRef(null);
@@ -61,16 +63,19 @@ export default function RealtimeVoiceCoach({
         }
         if (t === 'conversation.item.input_audio_transcription.delta' && ev.delta) {
           pendingUserRef.current += ev.delta;
+          setUserStream(pendingUserRef.current);
         }
 
         if (t === 'response.output_audio_transcript.delta' && ev.delta) {
           assistantTranscriptRef.current += ev.delta;
+          setAssistantStream(assistantTranscriptRef.current);
         }
         if (t === 'response.output_audio_transcript.done') {
           const full = (ev.transcript || assistantTranscriptRef.current || '').trim();
           if (full) {
             assistantTranscriptRef.current = full;
             setLastAssistantTranscript(full);
+            setAssistantStream(full);
           }
         }
 
@@ -84,6 +89,8 @@ export default function RealtimeVoiceCoach({
           }
           pendingUserRef.current = '';
           assistantTranscriptRef.current = '';
+          setUserStream('');
+          setAssistantStream('');
         }
 
         if (t === 'error') {
@@ -192,55 +199,73 @@ export default function RealtimeVoiceCoach({
   }, [text, disabled, context, onTurnComplete, onError]);
 
   return (
-    <div className={styles.bar}>
-      <input
-        type="text"
-        className={styles.input}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleTextSubmit()}
-        placeholder={placeholder}
-        disabled={disabled || isConnected}
-      />
-      {isConnecting ? (
-        <span className={styles.status}>Connecting…</span>
-      ) : isConnected ? (
-        <button
-          type="button"
-          className={styles.stopBtn}
-          onClick={disconnect}
-          aria-label="Stop live voice"
-        >
-          Stop
-        </button>
-      ) : (
-        <button
-          type="button"
-          className={styles.micBtn}
-          onClick={startRealtime}
-          disabled={disabled}
-          aria-label="Start live voice"
-          title="Live voice — faster response"
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
-            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
-          </svg>
-          <span className={styles.liveBadge}>Live</span>
-        </button>
-      )}
-      {!isConnected && (text || '').trim() && (
-        <button
-          type="button"
-          className={styles.sendBtn}
-          onClick={handleTextSubmit}
-          disabled={disabled}
-          aria-label={submitLabel}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M4 20l16-8L4 4v5.5L13 12 4 14.5V20z" />
-          </svg>
-        </button>
+    <div className={styles.wrapper}>
+      <div className={styles.bar}>
+        <input
+          type="text"
+          className={styles.input}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleTextSubmit()}
+          placeholder={placeholder}
+          disabled={disabled || isConnected}
+        />
+        {isConnecting ? (
+          <span className={styles.status}>Connecting…</span>
+        ) : isConnected ? (
+          <button
+            type="button"
+            className={styles.stopBtn}
+            onClick={disconnect}
+            aria-label="Stop live voice"
+          >
+            Stop
+          </button>
+        ) : (
+          <button
+            type="button"
+            className={styles.micBtn}
+            onClick={startRealtime}
+            disabled={disabled}
+            aria-label="Start live voice"
+            title="Live voice — faster response"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+              <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+            </svg>
+            <span className={styles.liveBadge}>Live</span>
+          </button>
+        )}
+        {!isConnected && (text || '').trim() && (
+          <button
+            type="button"
+            className={styles.sendBtn}
+            onClick={handleTextSubmit}
+            disabled={disabled}
+            aria-label={submitLabel}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M4 20l16-8L4 4v5.5L13 12 4 14.5V20z" />
+            </svg>
+          </button>
+        )}
+      </div>
+      {(userStream || assistantStream) && (
+        <div className={styles.liveTranscript}>
+          {userStream && (
+            <div className={styles.userLine}>
+              <span className={styles.userLabel}>You</span>
+              <span className={styles.text}>{userStream}</span>
+            </div>
+          )}
+          {assistantStream && (
+            <div className={styles.assistantLine}>
+              <span className={styles.assistantLabel}>Teacher</span>
+              <span className={styles.text}>{assistantStream}</span>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

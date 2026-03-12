@@ -1,3 +1,9 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .bar {
   display: flex;
   align-items: center;
@@ -98,4 +104,43 @@
 .sendBtn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.liveTranscript {
+  padding: 10px 14px 8px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.userLine,
+.assistantLine {
+  display: flex;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.userLabel,
+.assistantLabel {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  opacity: 0.85;
+}
+
+.userLabel {
+  color: #a5b4fc;
+}
+
+.assistantLabel {
+  color: #fbbf24;
+}
+
+.text {
+  color: rgba(249, 250, 251, 0.9);
 }
