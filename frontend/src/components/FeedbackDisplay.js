@@ -403,8 +403,19 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
         </div>
 
         {teacherResponse && (
-          <div className={styles.voiceFeedback}>
-            <div className={styles.quickCheckTitle}>Reply to quick check</div>
+            <div className={styles.voiceFeedback}>
+            <div className={styles.quickCheckTitleRow}>
+              <div className={styles.quickCheckTitle}>Reply to quick check</div>
+              <div>
+                <button
+                  type="button"
+                  className={styles.langPill}
+                  onClick={() => setQuickCheckLanguage(prev => prev === 'english' ? 'hindi' : prev === 'hindi' ? 'hinglish' : 'english')}
+                >
+                  {quickCheckLanguage === 'english' ? 'English' : quickCheckLanguage === 'hindi' ? 'Hindi' : 'Hinglish'}
+                </button>
+              </div>
+            </div>
             <div className={styles.quickCheckBox}>
               <QuickCheckChat
                 messages={quickCheckMessages}
@@ -426,7 +437,7 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
               <div className={styles.quickCheckVoiceRow}>
                 <VoiceChatInput
                   language={quickCheckLanguage}
-                  onLanguageChange={setQuickCheckLanguage}
+                  onLanguageChange={null}
                   placeholder="Type or speak your reply…"
                   onTranscript={(t) => submitQuickCheck(t)}
                   onError={(e) => setQuickCheckVoiceError(e)}

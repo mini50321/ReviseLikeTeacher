@@ -201,101 +201,105 @@ export default function VoiceChatInput({
   const currentLang = LANGUAGES.find(l => l.code === language) || LANGUAGES[0];
 
   return (
-    <div className={styles.bar}>
-      <button type="button" className={styles.attachBtn} aria-label="Attach" disabled={disabled}>
-        +
-      </button>
-      <textarea
-        rows={1}
-        className={styles.input}
-        value={text || interimText}
-        onChange={(e) => {
-          const el = e.target;
-          el.style.height = 'auto';
-          el.style.height = `${el.scrollHeight}px`;
-          setText(e.target.value);
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSubmit();
-          }
-        }}
-        placeholder={placeholder}
-        disabled={disabled}
-      />
+    <div className={styles.wrapper}>
       {onLanguageChange && (
-        <div className={styles.langWrap}>
-          <button
-            type="button"
-            className={styles.langBtn}
-            onClick={() => setLangOpen(o => !o)}
-            disabled={disabled}
-            aria-label="Change language"
-          >
-            {currentLang.label}
-          </button>
-          {langOpen && (
-            <>
-              <div className={styles.langBackdrop} onClick={() => setLangOpen(false)} />
-              <div className={styles.langDropdown}>
-                {LANGUAGES.map((l) => (
-                  <button
-                    key={l.code}
-                    type="button"
-                    className={`${styles.langOption} ${language === l.code ? styles.langActive : ''}`}
-                    onClick={() => { onLanguageChange(l.code); setLangOpen(false); }}
-                  >
-                    {l.label}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
+        <div className={styles.langRow}>
+          <div className={styles.langWrap}>
+            <button
+              type="button"
+              className={styles.langBtn}
+              onClick={() => setLangOpen(o => !o)}
+              disabled={disabled}
+              aria-label="Change language"
+            >
+              {currentLang.label}
+            </button>
+            {langOpen && (
+              <>
+                <div className={styles.langBackdrop} onClick={() => setLangOpen(false)} />
+                <div className={styles.langDropdown}>
+                  {LANGUAGES.map((l) => (
+                    <button
+                      key={l.code}
+                      type="button"
+                      className={`${styles.langOption} ${language === l.code ? styles.langActive : ''}`}
+                      onClick={() => { onLanguageChange(l.code); setLangOpen(false); }}
+                    >
+                      {l.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
-      {(isListening || transcribing || !(text || interimText).trim()) && (
-        <button
-          type="button"
-          className={styles.micBtn}
-          onClick={handleMicClick}
-          disabled={disabled}
-          aria-label={isListening ? 'End' : 'Microphone'}
-        >
-          {transcribing ? (
-            <span className={styles.spinner} />
-          ) : isListening ? (
-            <span className={styles.endBtn}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <rect x="6" y="6" width="12" height="12" rx="2" />
-              </svg>
-            </span>
-          ) : (
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
-              <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
-            </svg>
-          )}
+      <div className={styles.bar}>
+        <button type="button" className={styles.attachBtn} aria-label="Attach" disabled={disabled}>
+          +
         </button>
-      )}
-      {!isListening && !transcribing && (text || interimText).trim() && (
-        <button
-          type="button"
-          className={styles.sendBtn}
-          onClick={handleSubmit}
+        <textarea
+          rows={1}
+          className={styles.input}
+          value={text || interimText}
+          onChange={(e) => {
+            const el = e.target;
+            el.style.height = 'auto';
+            el.style.height = `${el.scrollHeight}px`;
+            setText(e.target.value);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              handleSubmit();
+            }
+          }}
+          placeholder={placeholder}
           disabled={disabled}
-          aria-label={submitLabel}
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="currentColor"
+        />
+        {(isListening || transcribing || !(text || interimText).trim()) && (
+          <button
+            type="button"
+            className={styles.micBtn}
+            onClick={handleMicClick}
+            disabled={disabled}
+            aria-label={isListening ? 'End' : 'Microphone'}
           >
-            <path d="M4 20l16-8L4 4v5.5L13 12 4 14.5V20z" />
-          </svg>
-        </button>
-      )}
+            {transcribing ? (
+              <span className={styles.spinner} />
+            ) : isListening ? (
+              <span className={styles.endBtn}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <rect x="6" y="6" width="12" height="12" rx="2" />
+                </svg>
+              </span>
+            ) : (
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+                <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+              </svg>
+            )}
+          </button>
+        )}
+        {!isListening && !transcribing && (text || interimText).trim() && (
+          <button
+            type="button"
+            className={styles.sendBtn}
+            onClick={handleSubmit}
+            disabled={disabled}
+            aria-label={submitLabel}
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path d="M4 20l16-8L4 4v5.5L13 12 4 14.5V20z" />
+            </svg>
+          </button>
+        )}
+      </div>
     </div>
   );
 }
