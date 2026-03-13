@@ -154,3 +154,12 @@
   border-color: rgba(129, 140, 248, 1);
   color: #fff;
 }
+
+@media (max-width: 640px) {
+  .container {
+    max-height: none;
+    min-height: 0;
+    overflow-y: visible;
+    padding: 12px 0;
+  }
+}
