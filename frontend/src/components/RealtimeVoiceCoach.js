@@ -74,60 +74,66 @@ export default function RealtimeVoiceCoach({
         // eslint-disable-next-line no-console
         console.log('Realtime event', t, ev);
 
-        const extractItemText = (item) => {
-          if (!item) return '';
-          if (Array.isArray(item.content) && item.content.length > 0) {
-            const c0 = item.content[0];
-            if (typeof c0 === 'string') return c0;
-            if (c0.transcript) return c0.transcript;
-            if (c0.text?.value) return c0.text.value;
-            if (c0.text) return c0.text;
+        // USER STREAMING: your speech while you talk
+        if (t === 'conversation.item.input_audio_transcription.delta' && ev.delta) {
+          const piece =
+            ev.delta.transcript ||
+            ev.delta.text ||
+            (typeof ev.delta === 'string' ? ev.delta : '');
+          if (piece) {
+            pendingUserRef.current += piece;
+            updateStreams(pendingUserRef.current, assistantTranscriptRef.current);
           }
-          if (item.transcript) return item.transcript;
-          if (item.text) return item.text;
-          return '';
-        };
-
-        const extractResponseText = (response) => {
-          if (!response) return '';
-          const out = response.output || response.outputs;
-          if (!Array.isArray(out) || out.length === 0) return '';
-          return extractItemText(out[0]);
-        };
-
-        // User messages (conversation.item.*)
-        if (t.startsWith('conversation.item') && ev.item) {
-          const txt = extractItemText(ev.item);
-          if (txt) {
-            pendingUserRef.current = txt;
+        }
+        if (t === 'conversation.item.input_audio_transcription.completed') {
+          const full = (ev.transcript || '').trim();
+          if (full) {
+            pendingUserRef.current = full;
             updateStreams(pendingUserRef.current, assistantTranscriptRef.current);
           }
         }
 
-        // Assistant messages (response.output_item.* or response.*)
-        if (t.startsWith('response.output_item') && ev.item) {
-          const txt = extractItemText(ev.item);
-          if (txt) {
-            assistantTranscriptRef.current = txt;
-            setLastAssistantTranscript(txt);
+        // ASSISTANT STREAMING: AI speech while it talks
+        if (t === 'response.audio_transcript.delta' && ev.delta) {
+          const piece =
+            ev.delta.transcript ||
+            ev.delta.text ||
+            (typeof ev.delta === 'string' ? ev.delta : '');
+          if (piece) {
+            assistantTranscriptRef.current += piece;
+            setLastAssistantTranscript(assistantTranscriptRef.current);
             updateStreams(pendingUserRef.current, assistantTranscriptRef.current);
           }
         }
 
-        if (t === 'response.done' && ev.response) {
-          const txt = extractResponseText(ev.response);
-          if (txt) {
-            assistantTranscriptRef.current = txt;
-            setLastAssistantTranscript(txt);
+        if (t === 'response.output_item.done' && ev.item) {
+          const content = Array.isArray(ev.item.content) ? ev.item.content[0] : null;
+          const full =
+            content?.transcript ||
+            content?.text?.value ||
+            content?.text ||
+            ev.item.transcript ||
+            ev.item.text ||
+            '';
+          if (full) {
+            assistantTranscriptRef.current = full;
+            setLastAssistantTranscript(full);
             updateStreams(pendingUserRef.current, assistantTranscriptRef.current);
           }
+        }
 
+        // Commit a full turn into history
+        if (t === 'response.done') {
           const userText = (pendingUserRef.current || '').trim();
           const assistantText = (assistantTranscriptRef.current || '').trim();
           if (userText || assistantText) {
             setLastUserTranscript(userText);
             setLastAssistantTranscript(assistantText);
-            onTurnCompleteCb?.({ student: userText, teacher: assistantText, fromRealtime: true });
+            onTurnCompleteCb?.({
+              student: userText,
+              teacher: assistantText,
+              fromRealtime: true
+            });
           }
           pendingUserRef.current = '';
           assistantTranscriptRef.current = '';
