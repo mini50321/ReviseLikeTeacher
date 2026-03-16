@@ -74,80 +74,54 @@ export default function RealtimeVoiceCoach({
         // eslint-disable-next-line no-console
         console.log('Realtime event', t, ev);
 
-        const extractDelta = () => {
-          const d = ev.delta || ev.output || ev.output_text || ev.output_audio_transcript || null;
-          if (!d) return '';
-          if (typeof d === 'string') return d;
-          if (Array.isArray(d) && d.length > 0) {
-            const first = d[0];
-            const content = first.content?.[0];
-            return (
-              content?.text?.value ||
-              content?.text ||
-              first.text ||
-              first.transcript ||
-              ''
-            );
+        const extractItemText = (item) => {
+          if (!item) return '';
+          if (Array.isArray(item.content) && item.content.length > 0) {
+            const c0 = item.content[0];
+            if (typeof c0 === 'string') return c0;
+            if (c0.transcript) return c0.transcript;
+            if (c0.text?.value) return c0.text.value;
+            if (c0.text) return c0.text;
           }
-          if (d.text) return d.text;
-          if (d.transcript) return d.transcript;
+          if (item.transcript) return item.transcript;
+          if (item.text) return item.text;
           return '';
         };
 
-        if (t === 'conversation.item.input_audio_transcription.completed') {
-          const transcript = (ev.transcript || '').trim();
-          if (transcript) pendingUserRef.current = transcript;
-        }
-        if (t === 'conversation.item.input_audio_transcription.delta') {
-          const piece = extractDelta();
-          pendingUserRef.current += piece;
-          updateStreams(pendingUserRef.current, assistantTranscriptRef.current);
-        }
-        if (t === 'conversation.item.input_text.delta') {
-          const piece = extractDelta();
-          pendingUserRef.current += piece;
-          updateStreams(pendingUserRef.current, assistantTranscriptRef.current);
-        }
-        if (t === 'conversation.item.input_text.completed') {
-          const text = (ev.text || '').trim();
-          if (text) {
-            pendingUserRef.current = text;
+        const extractResponseText = (response) => {
+          if (!response) return '';
+          const out = response.output || response.outputs;
+          if (!Array.isArray(out) || out.length === 0) return '';
+          return extractItemText(out[0]);
+        };
+
+        // User messages (conversation.item.*)
+        if (t.startsWith('conversation.item') && ev.item) {
+          const txt = extractItemText(ev.item);
+          if (txt) {
+            pendingUserRef.current = txt;
             updateStreams(pendingUserRef.current, assistantTranscriptRef.current);
           }
         }
 
-        if (t === 'response.output_audio_transcript.delta') {
-          const piece = extractDelta();
-          assistantTranscriptRef.current += piece;
-          updateStreams(pendingUserRef.current, assistantTranscriptRef.current);
-        }
-        if (t === 'response.output_audio_transcript.done') {
-          const full = (ev.transcript || assistantTranscriptRef.current || '').trim();
-          if (full) {
-            assistantTranscriptRef.current = full;
-            setLastAssistantTranscript(full);
-            updateStreams(pendingUserRef.current, full);
-          }
-        }
-        if (t === 'response.output_text.delta') {
-          const piece = extractDelta();
-          assistantTranscriptRef.current += piece;
-          updateStreams(pendingUserRef.current, assistantTranscriptRef.current);
-        }
-        if (t === 'response.output_text.done') {
-          const full =
-            (ev.output_text?.join(' ') ||
-              ev.text ||
-              assistantTranscriptRef.current ||
-              '').trim();
-          if (full) {
-            assistantTranscriptRef.current = full;
-            setLastAssistantTranscript(full);
-            updateStreams(pendingUserRef.current, full);
+        // Assistant messages (response.output_item.* or response.*)
+        if (t.startsWith('response.output_item') && ev.item) {
+          const txt = extractItemText(ev.item);
+          if (txt) {
+            assistantTranscriptRef.current = txt;
+            setLastAssistantTranscript(txt);
+            updateStreams(pendingUserRef.current, assistantTranscriptRef.current);
           }
         }
 
-        if (t === 'response.done') {
+        if (t === 'response.done' && ev.response) {
+          const txt = extractResponseText(ev.response);
+          if (txt) {
+            assistantTranscriptRef.current = txt;
+            setLastAssistantTranscript(txt);
+            updateStreams(pendingUserRef.current, assistantTranscriptRef.current);
+          }
+
           const userText = (pendingUserRef.current || '').trim();
           const assistantText = (assistantTranscriptRef.current || '').trim();
           if (userText || assistantText) {
