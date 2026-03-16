@@ -12,7 +12,8 @@ export default function RealtimeVoiceCoach({
   onError,
   disabled = false,
   placeholder = 'Type or use mic for live voice…',
-  submitLabel = 'Ask Teacher'
+  submitLabel = 'Ask Teacher',
+  onStreamUpdate
 }) {
   const [text, setText] = useState('');
   const [isConnected, setIsConnected] = useState(false);
@@ -29,6 +30,19 @@ export default function RealtimeVoiceCoach({
   const assistantTranscriptRef = useRef('');
   const onTurnCompleteRef = useRef(onTurnComplete);
   onTurnCompleteRef.current = onTurnComplete;
+  const onStreamUpdateRef = useRef(onStreamUpdate);
+  onStreamUpdateRef.current = onStreamUpdate;
+
+  const updateStreams = useCallback((userText, assistantText) => {
+    setUserStream(userText);
+    setAssistantStream(assistantText);
+    if (onStreamUpdateRef.current) {
+      onStreamUpdateRef.current({
+        studentPartial: userText,
+        teacherPartial: assistantText
+      });
+    }
+  }, []);
 
   const disconnect = useCallback(() => {
     if (dcRef.current) {
@@ -63,19 +77,19 @@ export default function RealtimeVoiceCoach({
         }
         if (t === 'conversation.item.input_audio_transcription.delta' && ev.delta) {
           pendingUserRef.current += ev.delta;
-          setUserStream(pendingUserRef.current);
+          updateStreams(pendingUserRef.current, assistantTranscriptRef.current);
         }
 
         if (t === 'response.output_audio_transcript.delta' && ev.delta) {
           assistantTranscriptRef.current += ev.delta;
-          setAssistantStream(assistantTranscriptRef.current);
+          updateStreams(pendingUserRef.current, assistantTranscriptRef.current);
         }
         if (t === 'response.output_audio_transcript.done') {
           const full = (ev.transcript || assistantTranscriptRef.current || '').trim();
           if (full) {
             assistantTranscriptRef.current = full;
             setLastAssistantTranscript(full);
-            setAssistantStream(full);
+            updateStreams(pendingUserRef.current, full);
           }
         }
 
@@ -89,8 +103,7 @@ export default function RealtimeVoiceCoach({
           }
           pendingUserRef.current = '';
           assistantTranscriptRef.current = '';
-          setUserStream('');
-          setAssistantStream('');
+          updateStreams('', '');
         }
 
         if (t === 'error') {
@@ -100,7 +113,7 @@ export default function RealtimeVoiceCoach({
         console.warn('Realtime event parse error:', e);
       }
     },
-    []
+    [updateStreams]
   );
 
   const startRealtime = useCallback(async () => {

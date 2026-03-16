@@ -36,6 +36,10 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
   const coachReplyAudioRef = useRef(null);
   const coachReplyFetchedTextRef = useRef(null);
   const [coachPlayingMessageId, setCoachPlayingMessageId] = useState(null);
+  const [quickCheckLiveUser, setQuickCheckLiveUser] = useState('');
+  const [quickCheckLiveAssistant, setQuickCheckLiveAssistant] = useState('');
+  const [coachLiveUser, setCoachLiveUser] = useState('');
+  const [coachLiveAssistant, setCoachLiveAssistant] = useState('');
 
   const score = attempt?.score || 0;
   const feedbackData = attempt?.feedback || {};
@@ -166,13 +170,23 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
     ...quickCheckHistory.flatMap((h, i) => [
       { id: `u${i}`, role: 'user', content: h.user },
       { id: `a${i}`, role: 'assistant', content: h.assistant }
-    ])
+    ]),
+    ...(quickCheckLiveUser ? [{ id: 'live-u', role: 'user', content: quickCheckLiveUser }] : []),
+    ...(quickCheckLiveAssistant
+      ? [{ id: 'live-a', role: 'assistant', content: quickCheckLiveAssistant }]
+      : [])
   ];
 
-  const coachChatMessages = coachHistory.flatMap((h, i) => [
-    { id: `cu${i}`, role: 'user', content: h.student },
-    { id: `ca${i}`, role: 'assistant', content: h.teacher }
-  ]);
+  const coachChatMessages = [
+    ...coachHistory.flatMap((h, i) => [
+      { id: `cu${i}`, role: 'user', content: h.student },
+      { id: `ca${i}`, role: 'assistant', content: h.teacher }
+    ]),
+    ...(coachLiveUser ? [{ id: 'live-cu', role: 'user', content: coachLiveUser }] : []),
+    ...(coachLiveAssistant
+      ? [{ id: 'live-ca', role: 'assistant', content: coachLiveAssistant }]
+      : [])
+  ];
 
   const handleCoachTranscript = async (transcript) => {
     if (!transcript?.trim()) return;
@@ -459,6 +473,10 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
                       const newEntry = { user: student, assistant: teacher };
                       setQuickCheckHistory((prev) => [...prev, newEntry]);
                     }}
+                    onStreamUpdate={({ studentPartial, teacherPartial }) => {
+                      setQuickCheckLiveUser(studentPartial || '');
+                      setQuickCheckLiveAssistant(teacherPartial || '');
+                    }}
                     onError={(e) => setQuickCheckVoiceError(e)}
                     disabled={quickCheckSubmitting}
                     placeholder="Use mic for live quick-check help…"
@@ -511,6 +529,10 @@ export default function FeedbackDisplay({ attempt, question, onNext, onEnd, isLa
                     if (!fromRealtime) {
                       setCoachResult({ teacher_response: teacher });
                     }
+                  }}
+                  onStreamUpdate={({ studentPartial, teacherPartial }) => {
+                    setCoachLiveUser(studentPartial || '');
+                    setCoachLiveAssistant(teacherPartial || '');
                   }}
                   onError={(e) => setCoachVoiceError(e)}
                   disabled={coachLoading}
