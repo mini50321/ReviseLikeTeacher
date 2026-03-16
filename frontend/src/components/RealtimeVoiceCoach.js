@@ -71,22 +71,41 @@ export default function RealtimeVoiceCoach({
         const ev = JSON.parse(event.data);
         const t = ev.type;
 
-        // Temporary logging to debug what events we actually get in the browser
-        // (visible only in DevTools Console).
         // eslint-disable-next-line no-console
         console.log('Realtime event', t, ev);
 
-        // User speech/text transcripts
+        const extractDelta = () => {
+          const d = ev.delta || ev.output || ev.output_text || ev.output_audio_transcript || null;
+          if (!d) return '';
+          if (typeof d === 'string') return d;
+          if (Array.isArray(d) && d.length > 0) {
+            const first = d[0];
+            const content = first.content?.[0];
+            return (
+              content?.text?.value ||
+              content?.text ||
+              first.text ||
+              first.transcript ||
+              ''
+            );
+          }
+          if (d.text) return d.text;
+          if (d.transcript) return d.transcript;
+          return '';
+        };
+
         if (t === 'conversation.item.input_audio_transcription.completed') {
-          const transcript = ev.transcript?.trim() || '';
+          const transcript = (ev.transcript || '').trim();
           if (transcript) pendingUserRef.current = transcript;
         }
-        if (t === 'conversation.item.input_audio_transcription.delta' && ev.delta) {
-          pendingUserRef.current += ev.delta;
+        if (t === 'conversation.item.input_audio_transcription.delta') {
+          const piece = extractDelta();
+          pendingUserRef.current += piece;
           updateStreams(pendingUserRef.current, assistantTranscriptRef.current);
         }
-        if (t === 'conversation.item.input_text.delta' && ev.delta) {
-          pendingUserRef.current += ev.delta;
+        if (t === 'conversation.item.input_text.delta') {
+          const piece = extractDelta();
+          pendingUserRef.current += piece;
           updateStreams(pendingUserRef.current, assistantTranscriptRef.current);
         }
         if (t === 'conversation.item.input_text.completed') {
@@ -97,9 +116,9 @@ export default function RealtimeVoiceCoach({
           }
         }
 
-        // Assistant speech/text transcripts
-        if (t === 'response.output_audio_transcript.delta' && ev.delta) {
-          assistantTranscriptRef.current += ev.delta;
+        if (t === 'response.output_audio_transcript.delta') {
+          const piece = extractDelta();
+          assistantTranscriptRef.current += piece;
           updateStreams(pendingUserRef.current, assistantTranscriptRef.current);
         }
         if (t === 'response.output_audio_transcript.done') {
@@ -110,8 +129,9 @@ export default function RealtimeVoiceCoach({
             updateStreams(pendingUserRef.current, full);
           }
         }
-        if (t === 'response.output_text.delta' && ev.delta) {
-          assistantTranscriptRef.current += ev.delta;
+        if (t === 'response.output_text.delta') {
+          const piece = extractDelta();
+          assistantTranscriptRef.current += piece;
           updateStreams(pendingUserRef.current, assistantTranscriptRef.current);
         }
         if (t === 'response.output_text.done') {
