@@ -71,6 +71,7 @@ export default function RealtimeVoiceCoach({
         const ev = JSON.parse(event.data);
         const t = ev.type;
 
+        // User speech/text transcripts
         if (t === 'conversation.item.input_audio_transcription.completed') {
           const transcript = ev.transcript?.trim() || '';
           if (transcript) pendingUserRef.current = transcript;
@@ -79,13 +80,41 @@ export default function RealtimeVoiceCoach({
           pendingUserRef.current += ev.delta;
           updateStreams(pendingUserRef.current, assistantTranscriptRef.current);
         }
+        if (t === 'conversation.item.input_text.delta' && ev.delta) {
+          pendingUserRef.current += ev.delta;
+          updateStreams(pendingUserRef.current, assistantTranscriptRef.current);
+        }
+        if (t === 'conversation.item.input_text.completed') {
+          const text = (ev.text || '').trim();
+          if (text) {
+            pendingUserRef.current = text;
+            updateStreams(pendingUserRef.current, assistantTranscriptRef.current);
+          }
+        }
 
+        // Assistant speech/text transcripts
         if (t === 'response.output_audio_transcript.delta' && ev.delta) {
           assistantTranscriptRef.current += ev.delta;
           updateStreams(pendingUserRef.current, assistantTranscriptRef.current);
         }
         if (t === 'response.output_audio_transcript.done') {
           const full = (ev.transcript || assistantTranscriptRef.current || '').trim();
+          if (full) {
+            assistantTranscriptRef.current = full;
+            setLastAssistantTranscript(full);
+            updateStreams(pendingUserRef.current, full);
+          }
+        }
+        if (t === 'response.output_text.delta' && ev.delta) {
+          assistantTranscriptRef.current += ev.delta;
+          updateStreams(pendingUserRef.current, assistantTranscriptRef.current);
+        }
+        if (t === 'response.output_text.done') {
+          const full =
+            (ev.output_text?.join(' ') ||
+              ev.text ||
+              assistantTranscriptRef.current ||
+              '').trim();
           if (full) {
             assistantTranscriptRef.current = full;
             setLastAssistantTranscript(full);
