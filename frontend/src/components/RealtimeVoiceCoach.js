@@ -71,6 +71,11 @@ export default function RealtimeVoiceCoach({
         const ev = JSON.parse(event.data);
         const t = ev.type;
 
+        // Temporary logging to debug what events we actually get in the browser
+        // (visible only in DevTools Console).
+        // eslint-disable-next-line no-console
+        console.log('Realtime event', t, ev);
+
         // User speech/text transcripts
         if (t === 'conversation.item.input_audio_transcription.completed') {
           const transcript = ev.transcript?.trim() || '';
