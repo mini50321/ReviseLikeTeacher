@@ -20,6 +20,7 @@
   border-radius: 20px;
   padding: 40px 36px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  position: relative;
 }
 
 .title {
@@ -115,5 +116,40 @@
 .startButton:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.loadingOverlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  background: radial-gradient(circle at top, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.95));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  z-index: 10;
+}
+
+.loadingSpinner {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 3px solid rgba(148, 163, 184, 0.4);
+  border-top-color: #60a5fa;
+  animation: spin 0.8s linear infinite;
+}
+
+.loadingText {
+  color: #e5e7eb;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 

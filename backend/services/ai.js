@@ -2,6 +2,7 @@ const axios = require('axios');
 const { getExamplesForSubjectTopic } = require('./tutoring-training-examples');
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
+const EVAL_TIMEOUT_MS = Number(process.env.EVAL_TIMEOUT_MS || 5000);
 const voiceCoachCache = new Map();
 const VOICE_COACH_CACHE_TTL_MS = Number(process.env.VOICE_COACH_CACHE_TTL_MS || 120000);
 const VOICE_COACH_CACHE_MAX_ITEMS = Number(process.env.VOICE_COACH_CACHE_MAX_ITEMS || 300);
@@ -98,7 +99,7 @@ async function evaluateAnswer({ question, studentAnswer, currentMastery, userId 
         user_id: userId,
         training_examples: trainingExamples
       }, {
-        timeout: 30000
+        timeout: EVAL_TIMEOUT_MS
       });
 
       if (response.data && response.data.score !== undefined && response.data.feedback) {
@@ -106,7 +107,7 @@ async function evaluateAnswer({ question, studentAnswer, currentMastery, userId 
       }
 
       throw new Error('Invalid response from AI service');
-    }, { maxRetries: 3, initialDelay: 3000, label: 'AI evaluation' });
+    }, { maxRetries: 1, initialDelay: 1000, label: 'AI evaluation' });
 
     return result;
   } catch (error) {

@@ -51,6 +51,12 @@ export default function SessionSetup({ onStart, onCancel, defaultMode, loading }
     <main className={styles.main}>
       <div className={styles.container}>
         <div className={styles.card}>
+          {loading && (
+            <div className={styles.loadingOverlay}>
+              <div className={styles.loadingSpinner} />
+              <div className={styles.loadingText}>Loading</div>
+            </div>
+          )}
           <h2 className={styles.title}>Start Practice Session</h2>
           
           <div className={styles.formGroup}>

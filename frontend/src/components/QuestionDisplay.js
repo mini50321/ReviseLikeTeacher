@@ -150,6 +150,14 @@ export default function QuestionDisplay({ question, questionNumber, totalQuestio
       </div>
 
       <div className={styles.questionCard}>
+        {loading && (
+          <div className={styles.statusRow}>
+            <div className={styles.loadingBadge}>
+              <span className={styles.loadingDot} />
+              <span>Loading</span>
+            </div>
+          </div>
+        )}
         {(questionAudioState === 'loading' || questionAudioState === 'playing') && (
           <div className={styles.questionVoice}>
             <div className={styles.questionVoiceIcon}>

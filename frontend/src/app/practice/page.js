@@ -23,7 +23,14 @@ function PracticePageContent() {
   const [showFeedback, setShowFeedback] = useState(false);
   const [sessionStats, setSessionStats] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [initializing, setInitializing] = useState(false);
   const initializedFromUrl = useRef(false);
+
+  useEffect(() => {
+    if (session && questions.length > 0) {
+      setInitializing(false);
+    }
+  }, [session, questions.length]);
 
   useEffect(() => {
     if (mode && !initializedFromUrl.current) {
@@ -38,6 +45,7 @@ function PracticePageContent() {
 
   const handleSessionStart = async (config) => {
     setLoading(true);
+    setInitializing(true);
     try {
       const response = await api.post('/sessions/practice-start', {
         number_of_questions: config.number_of_questions,
@@ -56,6 +64,7 @@ function PracticePageContent() {
       if (!Array.isArray(fetchedQuestions) || fetchedQuestions.length === 0) {
         alert('No questions found matching your criteria. Please try different subjects or check if questions exist in the database.');
         setLoading(false);
+        setInitializing(false);
         return;
       }
 
@@ -194,19 +203,7 @@ function PracticePageContent() {
   
   const currentQuestion = questions[currentQuestionIndex];
   if (!currentQuestion) {
-    console.error('No current question!');
-    return (
-      <div>
-        <Header />
-        <main className={styles.main}>
-          <div className={styles.container}>
-            <div className={styles.emptyState}>
-              <h2>Error loading question</h2>
-            </div>
-          </div>
-        </main>
-      </div>
-    );
+    return null;
   }
   
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
@@ -228,7 +225,7 @@ function PracticePageContent() {
               questionNumber={currentQuestionIndex + 1}
               totalQuestions={questions.length}
               onSubmit={handleAnswerSubmit}
-              loading={loading}
+              loading={loading || initializing}
             />
           ) : (
             <FeedbackDisplay
