@@ -24,6 +24,7 @@ function PracticePageContent() {
   const [sessionStats, setSessionStats] = useState(null);
   const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(false);
+  const [questionReady, setQuestionReady] = useState(false);
   const initializedFromUrl = useRef(false);
 
   useEffect(() => {
@@ -46,6 +47,7 @@ function PracticePageContent() {
   const handleSessionStart = async (config) => {
     setLoading(true);
     setInitializing(true);
+    setQuestionReady(false);
     try {
       const response = await api.post('/sessions/practice-start', {
         number_of_questions: config.number_of_questions,
@@ -225,7 +227,8 @@ function PracticePageContent() {
               questionNumber={currentQuestionIndex + 1}
               totalQuestions={questions.length}
               onSubmit={handleAnswerSubmit}
-              loading={loading || initializing}
+              loading={loading || initializing || !questionReady}
+              onQuestionReady={() => setQuestionReady(true)}
             />
           ) : (
             <FeedbackDisplay

@@ -6,7 +6,7 @@ import SequentialTextReveal from './SequentialTextReveal';
 import { voiceAPI } from '../lib/api';
 import styles from './QuestionDisplay.module.css';
 
-export default function QuestionDisplay({ question, questionNumber, totalQuestions, onSubmit, loading }) {
+export default function QuestionDisplay({ question, questionNumber, totalQuestions, onSubmit, loading, onQuestionReady }) {
   const [answerText, setAnswerText] = useState('');
   const [selectedOption, setSelectedOption] = useState('');
   const [timeSpent, setTimeSpent] = useState(0);
@@ -93,6 +93,14 @@ export default function QuestionDisplay({ question, questionNumber, totalQuestio
   }, [question.id]);
 
   useEffect(() => {
+    if (!question.id) return;
+    const frame = requestAnimationFrame(() => {
+      onQuestionReady?.();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [question.id, onQuestionReady]);
+
+  useEffect(() => {
     const interval = setInterval(() => {
       setTimeSpent(Math.floor((Date.now() - startTimeRef.current) / 1000));
     }, 1000);
@@ -152,9 +160,12 @@ export default function QuestionDisplay({ question, questionNumber, totalQuestio
       <div className={styles.questionCard}>
         {loading && (
           <div className={styles.statusRow}>
-            <div className={styles.loadingBadge}>
-              <span className={styles.loadingDot} />
-              <span>Loading</span>
+            <div className={styles.loadingBadge} role="status" aria-live="polite" aria-label="Loading question">
+              <span className={styles.loadingIcon}>
+                <span className={styles.loadingRing} />
+                <span className={styles.loadingCore} />
+              </span>
+              <span className={styles.loadingText}>Loading question</span>
             </div>
           </div>
         )}
