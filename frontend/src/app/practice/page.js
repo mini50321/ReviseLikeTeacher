@@ -39,55 +39,31 @@ function PracticePageContent() {
   const handleSessionStart = async (config) => {
     setLoading(true);
     try {
-      console.log('Creating session with config:', config);
-      const sessionResponse = await api.post('/sessions', {
-        session_type: 'practice',
-        configuration: config
+      const response = await api.post('/sessions/practice-start', {
+        number_of_questions: config.number_of_questions,
+        subjects: config.subjects || []
       });
-      const newSession = sessionResponse.data;
-      console.log('Session created - full response:', JSON.stringify(newSession, null, 2));
+
+      const newSession = response.data?.session || null;
+      const fetchedQuestions = response.data?.questions || [];
 
       if (!newSession || !newSession.id) {
-        console.error('Invalid session object received:', newSession);
         alert('Failed to create session. Please try again.');
         setLoading(false);
         return;
       }
 
-      const questionsParams = {
-        limit: config.number_of_questions || 10,
-        status: 'active'
-      };
-      
-      if (config.subjects && config.subjects.length > 0) {
-        questionsParams.subject = config.subjects[0];
-      }
-
-      console.log('Fetching questions with params:', questionsParams);
-      const questionsResponse = await api.get('/questions', {
-        params: questionsParams
-      });
-
-      const fetchedQuestions = questionsResponse.data.questions || [];
-      console.log('Questions fetched:', fetchedQuestions.length);
-
-      if (fetchedQuestions.length === 0) {
+      if (!Array.isArray(fetchedQuestions) || fetchedQuestions.length === 0) {
         alert('No questions found matching your criteria. Please try different subjects or check if questions exist in the database.');
         setLoading(false);
         return;
       }
 
-      console.log('About to set state - Session ID:', newSession.id, 'Questions count:', fetchedQuestions.length);
-      console.log('Current state before update - Session:', session?.id, 'Questions:', questions.length);
-      
       setSession(newSession);
       setQuestions(fetchedQuestions);
       setCurrentQuestionIndex(0);
       setSessionSetupOpen(false);
-      
-      console.log('State setters called - Session:', newSession.id, 'Questions:', fetchedQuestions.length);
     } catch (error) {
-      console.error('Failed to start session:', error);
       const errorMessage = error.response?.data?.error || error.message || 'Failed to start session. Please try again.';
       alert(`Error: ${errorMessage}`);
     } finally {

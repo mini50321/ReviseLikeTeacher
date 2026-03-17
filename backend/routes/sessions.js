@@ -39,6 +39,56 @@ router.post('/', authenticate, async (req, res) => {
   }
 });
 
+router.post('/practice-start', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const {
+      number_of_questions = 10,
+      subjects = []
+    } = req.body || {};
+
+    const sessionId = db.generateUUID();
+
+    await db.query(
+      `INSERT INTO session (id, user_id, session_type, configuration, status) 
+       VALUES ($1, $2, $3, $4, 'in_progress')`,
+      [sessionId, userId, 'practice', JSON.stringify({ number_of_questions, subjects })]
+    );
+
+    const sessionResult = await db.query(
+      'SELECT * FROM session WHERE id = $1',
+      [sessionId]
+    );
+
+    if (sessionResult.rows.length === 0) {
+      return res.status(500).json({ error: 'Failed to create session' });
+    }
+
+    const params = ['active'];
+    let query = 'SELECT * FROM question WHERE status = $1';
+    let paramIndex = 2;
+
+    if (Array.isArray(subjects) && subjects.length > 0 && subjects[0]) {
+      query += ` AND subject = $${paramIndex}`;
+      params.push(subjects[0]);
+      paramIndex += 1;
+    }
+
+    query += ` ORDER BY created_at DESC LIMIT $${paramIndex}`;
+    params.push(parseInt(number_of_questions) || 10);
+
+    const questionsResult = await db.query(query, params);
+
+    res.status(201).json({
+      session: sessionResult.rows[0],
+      questions: questionsResult.rows || []
+    });
+  } catch (error) {
+    console.error('Practice start session error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 router.get('/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
