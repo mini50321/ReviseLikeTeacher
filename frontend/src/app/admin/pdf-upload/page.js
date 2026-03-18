@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import ProtectedRoute from '../../../components/ProtectedRoute';
 import Header from '../../../components/Header';
 import api from '../../../lib/api';
@@ -9,6 +10,7 @@ import ExtractionReview from '../../../components/ExtractionReview';
 import styles from './pdf-upload.module.css';
 
 export default function PDFUploadPage() {
+  const router = useRouter();
   const [pdfs, setPdfs] = useState([]);
   const [selectedPdf, setSelectedPdf] = useState(null);
   const [extractions, setExtractions] = useState([]);
@@ -840,6 +842,26 @@ export default function PDFUploadPage() {
                         )}
                       </div>
                     ))}
+                  </div>
+
+                  <div className={styles.modalFooter}>
+                    <button
+                      type="button"
+                      className={styles.secondaryButton}
+                      onClick={closeBulkImportModal}
+                    >
+                      Close
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.addButton}
+                      onClick={() => {
+                        closeBulkImportModal();
+                        router.push('https://reviseliketeacher-frontend.onrender.com/admin/concept-map-test');
+                      }}
+                    >
+                      Go to Concept Map
+                    </button>
                   </div>
                 </>
               ) : (
