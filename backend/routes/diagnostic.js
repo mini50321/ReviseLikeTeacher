@@ -512,7 +512,7 @@ router.post('/:id/answer', authenticate, async (req, res) => {
       score: finalScore,
       feedback: evaluation.feedback,
       student_level: studentLevelResult.level,
-      mastery_status: levelToMasteryStatus(studentLevelResult.level),
+      mastery_status: 'in_progress',
       concept_id: questionConcept?.id || diagnostic.concept_id || null,
       concept_name: questionConcept?.name || null,
       next_teacher_prompt: tutorFlow?.next_teacher_prompt || null,
@@ -611,7 +611,7 @@ router.post('/:id/saq-answer', authenticate, async (req, res) => {
       `UPDATE diagnostic_assessment
        SET student_level = $1, mastery_status = $2, phase = $3, mcq_plan = COALESCE($4, mcq_plan)
        WHERE id = $5`,
-      [studentLevelResult.level, levelToMasteryStatus(studentLevelResult.level), nextPhase, mcqPlanToStore, id]
+      [studentLevelResult.level, 'in_progress', nextPhase, mcqPlanToStore, id]
     );
 
     const finalScore = typeof scoreResult.scorePercent === 'number'
@@ -629,7 +629,7 @@ router.post('/:id/saq-answer', authenticate, async (req, res) => {
       event_type: 'diagnostic_saq_answer',
       student_level: studentLevelResult.level,
       score: finalScore,
-      mastery_status: levelToMasteryStatus(studentLevelResult.level),
+      mastery_status: 'in_progress',
       next_phase: nextPhase,
       retry_count: 0,
       metadata: {
@@ -660,7 +660,7 @@ router.post('/:id/socratic-turn', authenticate, async (req, res) => {
   try {
     const userId = req.user.userId;
     const { id } = req.params;
-    const { student_answer } = req.body;
+    const { student_answer, teacher_prompt } = req.body;
 
     if (!student_answer || !student_answer.trim()) {
       return res.status(400).json({ error: 'Student answer is required' });
@@ -680,7 +680,8 @@ router.post('/:id/socratic-turn', authenticate, async (req, res) => {
       : null;
 
     const turns = diagnostic.socratic_turns ? safeParseJson(diagnostic.socratic_turns, []) : [];
-    const updatedTurns = [...turns, { student_answer }];
+    const promptText = (teacher_prompt && typeof teacher_prompt === 'string') ? teacher_prompt.trim() : '';
+    const updatedTurns = [...turns, { teacher_prompt: promptText || null, student_answer }];
 
     const conceptForScoring = concept || {
       grading_rubric: [],
@@ -746,7 +747,7 @@ router.post('/:id/socratic-turn', authenticate, async (req, res) => {
 
     await db.query(
       'UPDATE diagnostic_assessment SET socratic_turns = $1, phase = $2, student_level = $3, mastery_status = $4 WHERE id = $5',
-      [JSON.stringify(updatedTurns), nextPhase, studentLevelResult.level, levelToMasteryStatus(studentLevelResult.level), id]
+      [JSON.stringify(updatedTurns), nextPhase, studentLevelResult.level, 'in_progress', id]
     );
 
     await logTutorEvent({
@@ -760,7 +761,7 @@ router.post('/:id/socratic-turn', authenticate, async (req, res) => {
       event_type: 'diagnostic_socratic_turn',
       student_level: studentLevelResult.level,
       score: typeof scoreResult.scorePercent === 'number' ? scoreResult.scorePercent : null,
-      mastery_status: levelToMasteryStatus(studentLevelResult.level),
+      mastery_status: 'in_progress',
       retry_count: updatedTurns.length,
       next_phase: nextPhase,
       metadata: {
@@ -838,7 +839,7 @@ router.post('/:id/final-recall', authenticate, async (req, res) => {
 
     await db.query(
       'UPDATE diagnostic_assessment SET final_recall_answer = $1, phase = $2, student_level = $3, mastery_status = $4, mcq_plan = COALESCE($5, mcq_plan) WHERE id = $6',
-      [answer_text, 'mcq', studentLevelResult.level, levelToMasteryStatus(studentLevelResult.level), mcqPlanToStore, id]
+      [answer_text, 'mcq', studentLevelResult.level, 'in_progress', mcqPlanToStore, id]
     );
 
     await logTutorEvent({
@@ -852,7 +853,7 @@ router.post('/:id/final-recall', authenticate, async (req, res) => {
       event_type: 'diagnostic_final_recall',
       student_level: studentLevelResult.level,
       score: typeof scoreResult.scorePercent === 'number' ? scoreResult.scorePercent : null,
-      mastery_status: levelToMasteryStatus(studentLevelResult.level),
+      mastery_status: 'in_progress',
       next_phase: 'mcq',
       metadata: {
         word_count: answer_text.trim().split(/\s+/).filter(Boolean).length,
@@ -1002,8 +1003,8 @@ router.post('/:id/complete-block', authenticate, async (req, res) => {
     }
 
     await db.query(
-      'UPDATE diagnostic_assessment SET phase = $1, mastery_decision = $2 WHERE id = $3',
-      ['completed', masteryDecision, id]
+      'UPDATE diagnostic_assessment SET phase = $1, mastery_decision = $2, mastery_status = $3 WHERE id = $4',
+      ['completed', masteryDecision, masteryDecision === 'mastered' ? 'mastered' : 'needs_reinforcement', id]
     );
 
     await logTutorEvent({

@@ -221,16 +221,20 @@ export default function PDFUploadPage() {
             api.get(`/extractions/${selectedPdf.id}`)
           ]);
 
-          setSelectedPdf(pdfRes.data.pdf);
+          const updatedPdf = pdfRes.data.pdf;
+          setSelectedPdf(updatedPdf);
+          setPdfs(prev =>
+            prev.map(p => (p.id === updatedPdf.id ? { ...p, ...updatedPdf } : p))
+          );
           setExtractions(extRes.data.extractions || []);
 
-          const status = pdfRes.data.pdf.upload_status;
+          const status = updatedPdf.upload_status;
           if (status === 'processing') {
             setTimeout(poll, 7000);
           } else {
             setExtracting(false);
             setExtractionResult({
-              summary: pdfRes.data.pdf.extraction_summary || '',
+              summary: updatedPdf.extraction_summary || '',
               importance_breakdown: {},
               yield_breakdown: {}
             });
@@ -503,19 +507,6 @@ export default function PDFUploadPage() {
                       >
                         {extracting ? 'Extracting with AI...' : 'Extract Questions'}
                       </button>
-                      <button
-                        className={styles.secondaryButton}
-                        onClick={handleBuildConceptDraft}
-                        disabled={draftLoading}
-                      >
-                        {draftLoading ? 'Building concept draft…' : 'Build Concept Draft'}
-                      </button>
-                      <button
-                        className={styles.addButton}
-                        onClick={() => setShowManualForm(true)}
-                      >
-                        Add Manual
-                      </button>
                     </div>
                   )}
                 </div>
@@ -544,38 +535,40 @@ export default function PDFUploadPage() {
                   </div>
                 ) : (
                   <div className={styles.extractionList}>
-                    <div className={styles.draftPanel}>
-                      <h3 className={styles.sectionTitle}>Concept Map Draft (from this PDF)</h3>
-                      <div className={styles.draftControls}>
-                        <input
-                          type="text"
-                          placeholder="Subject (e.g. ENT)"
-                          value={draftSubject}
-                          onChange={e => setDraftSubject(e.target.value)}
-                          className={styles.draftInput}
-                        />
-                        <input
-                          type="text"
-                          placeholder="Topic (e.g. Hearing Physiology)"
-                          value={draftTopic}
-                          onChange={e => setDraftTopic(e.target.value)}
-                          className={styles.draftInput}
-                        />
-                        <button
-                          type="button"
-                          className={styles.secondaryButton}
-                          onClick={handleBuildConceptDraft}
-                          disabled={draftLoading}
-                        >
-                          {draftLoading ? 'Building…' : 'Generate draft'}
-                        </button>
+                    {selectedPdf?.upload_status === 'extracted' && (
+                      <div className={styles.draftPanel}>
+                        <h3 className={styles.sectionTitle}>Concept Map Draft (from this PDF)</h3>
+                        <div className={styles.draftControls}>
+                          <input
+                            type="text"
+                            placeholder="Subject (e.g. ENT)"
+                            value={draftSubject}
+                            onChange={e => setDraftSubject(e.target.value)}
+                            className={styles.draftInput}
+                          />
+                          <input
+                            type="text"
+                            placeholder="Topic (e.g. Hearing Physiology)"
+                            value={draftTopic}
+                            onChange={e => setDraftTopic(e.target.value)}
+                            className={styles.draftInput}
+                          />
+                          <button
+                            type="button"
+                            className={styles.secondaryButton}
+                            onClick={handleBuildConceptDraft}
+                            disabled={draftLoading}
+                          >
+                            {draftLoading ? 'Building…' : 'Generate draft'}
+                          </button>
+                        </div>
+                        <p className={styles.draftHint}>
+                          The generated draft will open in a modal so you can review the concepts before saving them.
+                        </p>
+                        {draftError && <p className={styles.error}>{draftError}</p>}
+                        {draftSuccess && <p className={styles.success}>{draftSuccess}</p>}
                       </div>
-                      <p className={styles.draftHint}>
-                        The generated draft will open in a modal so you can review the concepts before saving them.
-                      </p>
-                      {draftError && <p className={styles.error}>{draftError}</p>}
-                      {draftSuccess && <p className={styles.success}>{draftSuccess}</p>}
-                    </div>
+                    )}
 
                     {extractions.length > 0 && (() => {
                       const groups = groupExtractionsByChunk(extractions);

@@ -728,6 +728,7 @@ CREATE TABLE topic_concept (
     deep_points TEXT,
     traps TEXT,
     leading_questions TEXT,
+    concept_explanation TEXT,
     example_phrases TEXT,
     grading_rubric TEXT,
     micro_questions TEXT,

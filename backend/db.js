@@ -506,6 +506,7 @@ const runMigrations = () => {
         deep_points TEXT,
         traps TEXT,
         leading_questions TEXT,
+        concept_explanation TEXT,
         example_phrases TEXT,
         grading_rubric TEXT,
         micro_questions TEXT,
@@ -585,6 +586,7 @@ const runMigrations = () => {
     addColumnIfMissing('topic_concept', 'chapter', 'TEXT');
     addColumnIfMissing('topic_concept', 'main_topic', 'TEXT');
     addColumnIfMissing('topic_concept', 'subtopic', 'TEXT');
+    addColumnIfMissing('topic_concept', 'concept_explanation', 'TEXT');
     addColumnIfMissing('topic_concept', 'saqs', 'TEXT');
     addColumnIfMissing('topic_concept', 'mcqs', 'TEXT');
     createIndexIfMissing('idx_topic_concept_concept_map_id', 'CREATE INDEX idx_topic_concept_concept_map_id ON topic_concept(concept_map_id)');

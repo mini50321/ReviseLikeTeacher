@@ -20,6 +20,7 @@ function normalizeConceptRecord(input, fallback = {}) {
   const topic = (source.topic || fallback.topic || '').trim();
   const conceptKey = (source.concept_key || source.concept_id || fallback.concept_key || '').trim();
   const name = (source.name || fallback.name || '').trim();
+  const conceptExplanation = source.concept_explanation || fallback.concept_explanation || null;
 
   const normalized = {
     subject,
@@ -44,7 +45,8 @@ function normalizeConceptRecord(input, fallback = {}) {
     grading_rubric: normalizeConceptConcepts(source.grading_rubric || fallback.grading_rubric),
     example_phrases: normalizeConceptConcepts(source.example_phrases || fallback.example_phrases),
     micro_questions: normalizeConceptConcepts(source.micro_questions || fallback.micro_questions),
-    gross_prompt: source.gross_prompt || fallback.gross_prompt || null
+    gross_prompt: source.gross_prompt || fallback.gross_prompt || null,
+    concept_explanation: conceptExplanation
   };
 
   if (!normalized.subject || !normalized.topic || !normalized.concept_key || !normalized.name) {
@@ -104,7 +106,8 @@ function computeConceptSnapshot(concept) {
     grading_rubric: concept.grading_rubric,
     example_phrases: concept.example_phrases,
     micro_questions: concept.micro_questions,
-    gross_prompt: concept.gross_prompt
+    gross_prompt: concept.gross_prompt,
+    concept_explanation: concept.concept_explanation || null
   };
   return crypto.createHash('sha256').update(stableStringify(payload)).digest('hex');
 }
@@ -200,6 +203,7 @@ function serializeConceptRow(row) {
     grading_rubric: parsed('grading_rubric', []),
     example_phrases: parsed('example_phrases', []),
     micro_questions: parsed('micro_questions', []),
+    concept_explanation: row.concept_explanation || null,
     created_at: row.created_at,
     updated_at: row.updated_at
   };
@@ -253,7 +257,8 @@ async function upsertMicroPdfConcept(rawInput, fallback = {}) {
     leading_questions: JSON.stringify(concept.leading_questions),
     grading_rubric: JSON.stringify(concept.grading_rubric),
     example_phrases: JSON.stringify(concept.example_phrases),
-    micro_questions: JSON.stringify(concept.micro_questions)
+    micro_questions: JSON.stringify(concept.micro_questions),
+    concept_explanation: concept.concept_explanation || null
   };
 
   if (existing.rows && existing.rows.length > 0) {
@@ -287,8 +292,9 @@ async function upsertMicroPdfConcept(rawInput, fallback = {}) {
           grading_rubric = $17,
           example_phrases = $18,
           micro_questions = $19,
+          concept_explanation = $20,
           updated_at = CURRENT_TIMESTAMP
-         WHERE id = $20`,
+         WHERE id = $21`,
         [
           fields.concept_map_id,
           fields.name,
@@ -309,6 +315,7 @@ async function upsertMicroPdfConcept(rawInput, fallback = {}) {
           fields.grading_rubric,
           fields.example_phrases,
           fields.micro_questions,
+          fields.concept_explanation,
           row.id
         ]
       );
@@ -339,8 +346,8 @@ async function upsertMicroPdfConcept(rawInput, fallback = {}) {
       section, chapter, main_topic, subtopic,
       prerequisite_concept_ids, downstream_concept_ids,
       must_know_points, deep_points, traps, saqs, mcqs,
-      leading_questions, grading_rubric, example_phrases, micro_questions)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`,
+      leading_questions, grading_rubric, example_phrases, micro_questions, concept_explanation)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)`,
     [
       id,
       concept.subject,
@@ -364,7 +371,8 @@ async function upsertMicroPdfConcept(rawInput, fallback = {}) {
       fields.leading_questions,
       fields.grading_rubric,
       fields.example_phrases,
-      fields.micro_questions
+      fields.micro_questions,
+      fields.concept_explanation
     ]
   );
   const promptResult = await ensureGrossPrompt(concept);

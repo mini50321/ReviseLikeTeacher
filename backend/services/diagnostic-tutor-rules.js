@@ -28,6 +28,7 @@ function serializeTopicConcept(row) {
     deep_points: safeParseJson(row.deep_points, []),
     traps: safeParseJson(row.traps, []),
     leading_questions: safeParseJson(row.leading_questions, []),
+    concept_explanation: row.concept_explanation || null,
     example_phrases: safeParseJson(row.example_phrases, []),
     grading_rubric: safeParseJson(row.grading_rubric, []),
     micro_questions: safeParseJson(row.micro_questions, []),

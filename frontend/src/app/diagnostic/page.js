@@ -279,7 +279,8 @@ function DiagnosticContent() {
     if (!text || !diagnosticId) return;
     try {
       const response = await api.post(`/diagnostic/${diagnosticId}/socratic-turn`, {
-        student_answer: text
+        student_answer: text,
+        teacher_prompt: nextTeacherPrompt || null
       });
       const data = response.data || {};
       setTutorPhase(data.phase || 'socratic');
@@ -623,7 +624,7 @@ function DiagnosticContent() {
                     <div className={styles.feedbackTeacher}>{normalizePromptValue(feedback.teacher_response)}</div>
                   </>
                 )}
-                {showSolution && (feedback.feedback?.model_explanation || question.ideal_answer) && (
+                {showSolution && tutorPhase === 'done' && (feedback.feedback?.model_explanation || question.ideal_answer) && (
                   <>
                     <TeacherVoicePlayer
                       text={`Explanation: ${feedback.feedback?.model_explanation || question.ideal_answer}`}
@@ -675,7 +676,14 @@ function DiagnosticContent() {
                   <div className={styles.socraticHistory}>
                     {socraticTurns.map((t, idx) => (
                       <div key={idx} className={styles.socraticTurn}>
-                        <span className={styles.socraticLabel}>You:</span> {t.student_answer}
+                        {t.teacher_prompt && (
+                          <div className={styles.socraticTurnLine}>
+                            <span className={styles.socraticLabel}>Tutor:</span> {t.teacher_prompt}
+                          </div>
+                        )}
+                        <div className={styles.socraticTurnLine}>
+                          <span className={styles.socraticLabel}>You:</span> {t.student_answer}
+                        </div>
                       </div>
                     ))}
                   </div>
