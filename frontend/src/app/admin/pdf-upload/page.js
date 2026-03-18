@@ -26,6 +26,13 @@ export default function PDFUploadPage() {
   const [draftSuccess, setDraftSuccess] = useState('');
   const [draftSubject, setDraftSubject] = useState('');
   const [draftTopic, setDraftTopic] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [showConceptDraftModal, setShowConceptDraftModal] = useState(false);
+  const [bulkFiles, setBulkFiles] = useState([]);
+  const [bulkImporting, setBulkImporting] = useState(false);
+  const [bulkImportError, setBulkImportError] = useState('');
+  const [bulkImportResult, setBulkImportResult] = useState(null);
+  const [showBulkImportModal, setShowBulkImportModal] = useState(false);
 
   const groupExtractionsByChunk = (items, chunkSize = pageSize) => {
     const groups = [];
@@ -86,6 +93,7 @@ export default function PDFUploadPage() {
     setDraftError('');
     setDraftSuccess('');
     setConceptDraft(null);
+    setShowConceptDraftModal(true);
     try {
       const res = await api.post(`/pdf/${selectedPdf.id}/concept-draft`, {
         subject: draftSubject.trim(),
@@ -93,6 +101,7 @@ export default function PDFUploadPage() {
         max_concepts: 6
       });
       setConceptDraft(res.data.draft || null);
+      setShowConceptDraftModal(true);
     } catch (err) {
       setDraftError(err.response?.data?.error || 'Failed to build concept draft');
     } finally {
@@ -125,6 +134,32 @@ export default function PDFUploadPage() {
       setDraftError(err.response?.data?.error || 'Failed to save concepts to Concept Map');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleBulkImport = async () => {
+    if (!bulkFiles.length) {
+      setBulkImportError('Choose one or more concept files first.');
+      setShowBulkImportModal(true);
+      return;
+    }
+
+    setBulkImporting(true);
+    setBulkImportError('');
+    setBulkImportResult(null);
+    setShowBulkImportModal(true);
+
+    try {
+      const formData = new FormData();
+      bulkFiles.forEach(file => {
+        formData.append('files', file);
+      });
+      const response = await api.post('/concept-map/bulk-import', formData);
+      setBulkImportResult(response.data || null);
+    } catch (err) {
+      setBulkImportError(err.response?.data?.error || 'Bulk concept import failed');
+    } finally {
+      setBulkImporting(false);
     }
   };
 
@@ -258,6 +293,43 @@ export default function PDFUploadPage() {
     }
   };
 
+  const closeBulkImportModal = () => {
+    setShowBulkImportModal(false);
+  };
+
+  const closeConceptDraftModal = () => {
+    setShowConceptDraftModal(false);
+  };
+
+  const getConceptDraftStats = () => {
+    const concepts = Array.isArray(conceptDraft?.concepts) ? conceptDraft.concepts : [];
+    const conceptCount = concepts.length;
+    const saqCount = concepts.reduce((total, concept) => total + (Array.isArray(concept.saqs) ? concept.saqs.length : 0), 0);
+    const mcqCount = concepts.reduce((total, concept) => total + (Array.isArray(concept.mcqs) ? concept.mcqs.length : 0), 0);
+    const dependencyCount = concepts.reduce((total, concept) => {
+      const deps = Array.isArray(concept.prerequisite_concept_ids) ? concept.prerequisite_concept_ids.length : 0;
+      return total + deps;
+    }, 0);
+    return { conceptCount, saqCount, mcqCount, dependencyCount };
+  };
+
+  const formatLeadingPrompts = (leadingQuestions) => {
+    if (!Array.isArray(leadingQuestions) || leadingQuestions.length === 0) {
+      return 'No leading prompts available';
+    }
+    const texts = leadingQuestions
+      .map((item) => {
+        if (!item) return null;
+        if (typeof item === 'string') return item;
+        if (typeof item.prompt === 'string') return item.prompt;
+        if (typeof item.content === 'string') return item.content;
+        return null;
+      })
+      .filter(Boolean);
+    if (!texts.length) return 'No leading prompts available';
+    return texts.slice(0, 3).join(' • ');
+  };
+
   if (showManualForm && selectedPdf) {
     return (
       <ProtectedRoute requireAdmin>
@@ -290,7 +362,7 @@ export default function PDFUploadPage() {
 
   return (
     <ProtectedRoute requireAdmin>
-      <div>
+      <div className={styles.pageShell}>
         <Header />
         <main className={styles.main}>
           <div className={styles.container}>
@@ -331,6 +403,43 @@ export default function PDFUploadPage() {
                 )}
               </div>
             )}
+
+            <div className={styles.bulkPanel}>
+              <div className={styles.bulkHeader}>
+                <div>
+                  <h3 className={styles.summaryTitle}>Bulk Concept Import</h3>
+                  <p className={styles.summaryText}>
+                    Upload structured micro-PDF concept PDFs or JSON files to create or update concept rows in one batch.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className={styles.secondaryButton}
+                  onClick={handleBulkImport}
+                  disabled={bulkImporting}
+                >
+                  {bulkImporting ? 'Importing…' : 'Import Files'}
+                </button>
+              </div>
+              <div className={styles.bulkControls}>
+                <input
+                  type="file"
+                  accept=".json,.pdf,application/json,application/pdf"
+                  multiple
+                  onChange={(e) => setBulkFiles(Array.from(e.target.files || []))}
+                  className={styles.bulkFileInput}
+                />
+                {bulkFiles.length > 0 && (
+                  <div className={styles.bulkFileList}>
+                    {bulkFiles.map((file) => (
+                      <span key={`${file.name}-${file.size}`} className={styles.bulkFileChip}>
+                        {file.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
 
             <div className={styles.content}>
               <aside className={styles.leftPanel}>
@@ -460,24 +569,12 @@ export default function PDFUploadPage() {
                         >
                           {draftLoading ? 'Building…' : 'Generate draft'}
                         </button>
-                        {conceptDraft && conceptDraft.concepts?.length > 0 && (
-                          <button
-                            type="button"
-                            className={styles.secondaryButton}
-                            onClick={handleSaveConceptsFromDraft}
-                            disabled={submitting}
-                          >
-                            {submitting ? 'Saving…' : 'Save to Concept Map'}
-                          </button>
-                        )}
                       </div>
+                      <p className={styles.draftHint}>
+                        The generated draft will open in a modal so you can review the concepts before saving them.
+                      </p>
                       {draftError && <p className={styles.error}>{draftError}</p>}
                       {draftSuccess && <p className={styles.success}>{draftSuccess}</p>}
-                      {conceptDraft && Array.isArray(conceptDraft.concepts) && conceptDraft.concepts.length > 0 && (
-                        <pre className={styles.draftPreview}>
-{JSON.stringify(conceptDraft, null, 2)}
-                        </pre>
-                      )}
                     </div>
 
                     {extractions.length > 0 && (() => {
@@ -610,6 +707,292 @@ export default function PDFUploadPage() {
               </section>
             </div>
           </div>
+        {showBulkImportModal && (
+          <div className={styles.modalBackdrop} onClick={closeBulkImportModal}>
+            <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+              <div className={styles.modalHeader}>
+                <div>
+                  <div className={styles.modalEyebrow}>Bulk Concept Import</div>
+                  <h3 className={styles.modalTitle}>Import Results</h3>
+                </div>
+                <button type="button" className={styles.modalCloseButton} onClick={closeBulkImportModal}>
+                  ×
+                </button>
+              </div>
+
+              {bulkImporting ? (
+                <div className={styles.modalLoading}>
+                  <div className={styles.modalSpinner} />
+                  <div>
+                    <div className={styles.modalStatusTitle}>Importing files</div>
+                    <div className={styles.modalStatusText}>Parsing the selected micro-PDFs and saving concepts...</div>
+                  </div>
+                </div>
+              ) : bulkImportError ? (
+                <div className={styles.modalError}>
+                  {bulkImportError}
+                </div>
+              ) : bulkImportResult ? (
+                <>
+                  <div className={styles.modalSummaryGrid}>
+                    <div className={styles.modalSummaryChip}>
+                      <span>Files</span>
+                      <strong>{bulkImportResult.summary?.files || 0}</strong>
+                    </div>
+                    <div className={styles.modalSummaryChip}>
+                      <span>Created</span>
+                      <strong>{bulkImportResult.summary?.created || 0}</strong>
+                    </div>
+                    <div className={styles.modalSummaryChip}>
+                      <span>Updated</span>
+                      <strong>{bulkImportResult.summary?.updated || 0}</strong>
+                    </div>
+                    <div className={styles.modalSummaryChip}>
+                      <span>Skipped</span>
+                      <strong>{bulkImportResult.summary?.skipped || 0}</strong>
+                    </div>
+                    <div className={styles.modalSummaryChip}>
+                      <span>Failed</span>
+                      <strong>{bulkImportResult.summary?.failed || 0}</strong>
+                    </div>
+                  </div>
+
+                  <div className={styles.modalList}>
+                    {(bulkImportResult.files || []).map((fileResult, idx) => (
+                      <div key={`${fileResult.file_name}-${idx}`} className={styles.modalResultCard}>
+                        <div className={styles.modalResultHeader}>
+                          <div>
+                            <div className={styles.modalFileName}>{fileResult.file_name}</div>
+                            <div className={styles.modalFileMeta}>
+                              Created {fileResult.created || 0} • Updated {fileResult.updated || 0} • Skipped {fileResult.skipped || 0} • Failed {fileResult.failed || 0}
+                            </div>
+                          </div>
+                          <span className={`${styles.status} ${styles[fileResult.status] || ''}`}>
+                            {fileResult.status}
+                          </span>
+                        </div>
+
+                        {Array.isArray(fileResult.results) && fileResult.results.length > 0 && (
+                          <div className={styles.modalSubList}>
+                            {fileResult.results.map((item, itemIdx) => (
+                              <div key={`${fileResult.file_name}-${itemIdx}`} className={styles.modalSubItem}>
+                                <div className={styles.bulkSubItemTop}>
+                                  <span className={styles.bulkSubItemLabel}>
+                                    {item.subject} / {item.topic} / {item.concept_key}
+                                  </span>
+                                  <span className={styles.bulkSubItemStatus}>{item.status}</span>
+                                </div>
+                                {item.warnings && item.warnings.length > 0 && (
+                                  <div className={styles.bulkWarnings}>{item.warnings.join(' • ')}</div>
+                                )}
+                                {item.error && (
+                                  <div className={styles.bulkWarnings}>{item.error}</div>
+                                )}
+                                {item.extracted && (
+                                  <details className={styles.extractedDetails}>
+                                    <summary className={styles.extractedSummary}>
+                                      Extracted: Core {item.extracted.counts?.core_points ?? 0}, SAQs {item.extracted.counts?.saqs ?? 0}, MCQs {item.extracted.counts?.mcqs ?? 0}, Prompts {item.extracted.counts?.leading_prompts ?? 0}
+                                    </summary>
+                                    <div className={styles.extractedBody}>
+                                      {item.extracted.gross_prompt && (
+                                        <div className={styles.extractedRow}>
+                                          <span className={styles.extractedLabel}>Gross prompt</span>
+                                          <div className={styles.extractedValue}>{item.extracted.gross_prompt}</div>
+                                        </div>
+                                      )}
+                                      <div className={styles.extractedGrid}>
+                                        <div className={styles.extractedBlock}>
+                                          <div className={styles.extractedBlockTitle}>Core points</div>
+                                          <ul className={styles.extractedList}>
+                                            {(item.extracted.samples?.core_points || []).map((t, i2) => (
+                                              <li key={`core-${i2}`}>{t}</li>
+                                            ))}
+                                            {(item.extracted.samples?.core_points || []).length === 0 && <li>None</li>}
+                                          </ul>
+                                        </div>
+                                        <div className={styles.extractedBlock}>
+                                          <div className={styles.extractedBlockTitle}>SAQs</div>
+                                          <ul className={styles.extractedList}>
+                                            {(item.extracted.samples?.saqs || []).map((t, i2) => (
+                                              <li key={`saq-${i2}`}>{t}</li>
+                                            ))}
+                                            {(item.extracted.samples?.saqs || []).length === 0 && <li>None</li>}
+                                          </ul>
+                                        </div>
+                                        <div className={styles.extractedBlock}>
+                                          <div className={styles.extractedBlockTitle}>MCQs</div>
+                                          <ul className={styles.extractedList}>
+                                            {(item.extracted.samples?.mcqs || []).map((t, i2) => (
+                                              <li key={`mcq-${i2}`}>{t}</li>
+                                            ))}
+                                            {(item.extracted.samples?.mcqs || []).length === 0 && <li>None</li>}
+                                          </ul>
+                                        </div>
+                                        <div className={styles.extractedBlock}>
+                                          <div className={styles.extractedBlockTitle}>Leading prompts</div>
+                                          <ul className={styles.extractedList}>
+                                            {(item.extracted.samples?.leading_prompts || []).map((t, i2) => (
+                                              <li key={`lead-${i2}`}>{t}</li>
+                                            ))}
+                                            {(item.extracted.samples?.leading_prompts || []).length === 0 && <li>None</li>}
+                                          </ul>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </details>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className={styles.modalStatusText}>No import result available yet.</div>
+              )}
+            </div>
+          </div>
+        )}
+        {showConceptDraftModal && (
+          <div className={styles.modalBackdrop} onClick={closeConceptDraftModal}>
+            <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+              <div className={styles.modalHeader}>
+                <div>
+                  <div className={styles.modalEyebrow}>Concept Draft</div>
+                  <h3 className={styles.modalTitle}>Draft Preview</h3>
+                </div>
+                <button type="button" className={styles.modalCloseButton} onClick={closeConceptDraftModal}>
+                  ×
+                </button>
+              </div>
+
+              {draftLoading ? (
+                <div className={styles.modalLoading}>
+                  <div className={styles.modalSpinner} />
+                  <div>
+                    <div className={styles.modalStatusTitle}>Generating draft</div>
+                    <div className={styles.modalStatusText}>Analyzing the PDF and shaping a concept draft...</div>
+                  </div>
+                </div>
+              ) : draftError ? (
+                <div className={styles.modalError}>{draftError}</div>
+              ) : conceptDraft && Array.isArray(conceptDraft.concepts) && conceptDraft.concepts.length > 0 ? (
+                <>
+                  <div className={styles.conceptDraftMetaGrid}>
+                    <div className={styles.conceptDraftMetaCard}>
+                      <span>Subject</span>
+                      <strong>{conceptDraft.subject || draftSubject || 'Untitled'}</strong>
+                    </div>
+                    <div className={styles.conceptDraftMetaCard}>
+                      <span>Topic</span>
+                      <strong>{conceptDraft.topic || draftTopic || 'Untitled'}</strong>
+                    </div>
+                    <div className={styles.conceptDraftMetaCard}>
+                      <span>Concepts</span>
+                      <strong>{getConceptDraftStats().conceptCount}</strong>
+                    </div>
+                    <div className={styles.conceptDraftMetaCard}>
+                      <span>SAQs</span>
+                      <strong>{getConceptDraftStats().saqCount}</strong>
+                    </div>
+                    <div className={styles.conceptDraftMetaCard}>
+                      <span>MCQs</span>
+                      <strong>{getConceptDraftStats().mcqCount}</strong>
+                    </div>
+                    <div className={styles.conceptDraftMetaCard}>
+                      <span>Dependencies</span>
+                      <strong>{getConceptDraftStats().dependencyCount}</strong>
+                    </div>
+                  </div>
+
+                  <div className={styles.conceptDraftList}>
+                    {conceptDraft.concepts.map((concept, idx) => (
+                      <section key={`${concept.concept_key || concept.name || idx}`} className={styles.conceptDraftCard}>
+                        <div className={styles.conceptDraftCardHeader}>
+                          <div>
+                            <div className={styles.conceptDraftKey}>{concept.concept_key || 'Concept key unavailable'}</div>
+                            <h4 className={styles.conceptDraftName}>{concept.name || 'Untitled concept'}</h4>
+                          </div>
+                          <div className={styles.conceptDraftBadgeRow}>
+                            <span className={styles.conceptDraftBadge}>Order {concept.display_order ?? idx + 1}</span>
+                            <span className={styles.conceptDraftBadge}>Weight {concept.concept_weight ?? 1}</span>
+                          </div>
+                        </div>
+
+                        <div className={styles.conceptDraftDetailGrid}>
+                          <div>
+                            <div className={styles.conceptDraftDetailLabel}>Core points</div>
+                            <div className={styles.conceptDraftPillGroup}>
+                              {(concept.must_know_points || []).map((point, pointIdx) => (
+                                <span key={`${concept.concept_key}-core-${pointIdx}`} className={styles.conceptDraftPill}>
+                                  {point.label || point.description || String(point)}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <div className={styles.conceptDraftDetailLabel}>Deep points</div>
+                            <div className={styles.conceptDraftPillGroup}>
+                              {(concept.deep_points || []).map((point, pointIdx) => (
+                                <span key={`${concept.concept_key}-deep-${pointIdx}`} className={styles.conceptDraftPill}>
+                                  {point.label || point.description || String(point)}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <div className={styles.conceptDraftDetailLabel}>Leading prompts</div>
+                            <div className={styles.conceptDraftTextBlock}>
+                              {formatLeadingPrompts(concept.leading_questions || [])}
+                            </div>
+                          </div>
+                          <div>
+                            <div className={styles.conceptDraftDetailLabel}>Traps</div>
+                            <div className={styles.conceptDraftTextBlock}>
+                              {(concept.traps || []).length > 0
+                                ? concept.traps.slice(0, 3).join(' • ')
+                                : 'No traps listed'}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className={styles.conceptDraftFooterRow}>
+                          <span className={styles.conceptDraftFooterMeta}>
+                            SAQs: {(concept.saqs || []).length}
+                          </span>
+                          <span className={styles.conceptDraftFooterMeta}>
+                            MCQs: {(concept.mcqs || []).length}
+                          </span>
+                          <span className={styles.conceptDraftFooterMeta}>
+                            Topic: {concept.topic || concept.main_topic || draftTopic || 'Unassigned'}
+                          </span>
+                        </div>
+                      </section>
+                    ))}
+                  </div>
+
+                  <div className={styles.modalFooter}>
+                    <button type="button" className={styles.secondaryButton} onClick={closeConceptDraftModal}>
+                      Close
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.addButton}
+                      onClick={handleSaveConceptsFromDraft}
+                      disabled={submitting}
+                    >
+                      {submitting ? 'Saving…' : 'Save to Concept Map'}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className={styles.modalStatusText}>No concept draft is available yet.</div>
+              )}
+            </div>
+          </div>
+        )}
         </main>
       </div>
     </ProtectedRoute>

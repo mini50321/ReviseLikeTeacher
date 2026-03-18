@@ -376,6 +376,16 @@ CREATE TABLE diagnostic_assessment (
     user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     subject TEXT NOT NULL,
     topic TEXT NOT NULL,
+    concept_id TEXT REFERENCES topic_concept(id),
+    concept_plan TEXT,
+    student_level TEXT,
+    mastery_status TEXT CHECK (mastery_status IN ('in_progress', 'mastered', 'needs_reinforcement')),
+    phase TEXT DEFAULT 'saq' CHECK (phase IN ('saq', 'socratic', 'final_recall', 'mcq', 'completed')),
+    socratic_turns TEXT,
+    final_recall_answer TEXT,
+    mcq_plan TEXT,
+    mcq_results TEXT,
+    mastery_decision TEXT,
     saq_questions TEXT,
     saq_answers TEXT,
     saq_scores TEXT,
@@ -508,6 +518,38 @@ CREATE TABLE competency_score_log (
 
 CREATE INDEX idx_competency_score_log_user_id ON competency_score_log(user_id);
 CREATE INDEX idx_competency_score_log_subject_topic ON competency_score_log(subject, topic);
+
+CREATE TABLE tutor_event_log (
+    id TEXT PRIMARY KEY,
+    user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+    session_type TEXT,
+    session_id TEXT,
+    diagnostic_id TEXT REFERENCES diagnostic_assessment(id) ON DELETE SET NULL,
+    topic_learning_session_id TEXT REFERENCES topic_learning_session(id) ON DELETE SET NULL,
+    subject TEXT,
+    topic TEXT,
+    concept_id TEXT REFERENCES topic_concept(id) ON DELETE SET NULL,
+    concept_map_id TEXT REFERENCES topic_concept(id) ON DELETE SET NULL,
+    phase TEXT,
+    event_type TEXT NOT NULL,
+    student_level TEXT,
+    score REAL,
+    mastery_status TEXT,
+    retry_count INTEGER,
+    attempt_id TEXT REFERENCES attempt(id) ON DELETE SET NULL,
+    next_phase TEXT,
+    message TEXT,
+    metadata TEXT DEFAULT '{}',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_tutor_event_log_user_id ON tutor_event_log(user_id);
+CREATE INDEX idx_tutor_event_log_created_at ON tutor_event_log(created_at);
+CREATE INDEX idx_tutor_event_log_session_type ON tutor_event_log(session_type);
+CREATE INDEX idx_tutor_event_log_phase ON tutor_event_log(phase);
+CREATE INDEX idx_tutor_event_log_event_type ON tutor_event_log(event_type);
+CREATE INDEX idx_tutor_event_log_subject_topic ON tutor_event_log(subject, topic);
+CREATE INDEX idx_tutor_event_log_concept_id ON tutor_event_log(concept_id);
 
 CREATE TRIGGER update_confusion_pairs_updated_at AFTER UPDATE ON confusion_pairs
     FOR EACH ROW

@@ -3,6 +3,7 @@ const router = express.Router();
 const { authenticate, requireAdmin } = require('../middleware/auth');
 const { db } = require('../db');
 const { seedTuningFork } = require('../services/seed-tuning-fork');
+const { getTutorMonitoringSummary } = require('../services/tutor-monitoring');
 
 router.post('/seed/tuning-fork', authenticate, requireAdmin, async (req, res) => {
   try {
@@ -387,6 +388,52 @@ router.get('/override/history', authenticate, requireAdmin, async (req, res) => 
     res.json({ overrides: evalCorrections.rows });
   } catch (error) {
     console.error('Override history error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/tutor-monitoring/summary', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { days = 14 } = req.query;
+    const summary = await getTutorMonitoringSummary({ days });
+
+    const progression = await db.query(
+      `SELECT subject, topic, phase, student_level, mastery_status, score, next_phase, message, created_at
+       FROM tutor_event_log
+       WHERE created_at >= date('now', '-' || $1 || ' days')
+       ORDER BY created_at DESC
+       LIMIT 100`,
+      [Math.max(1, parseInt(days, 10) || 14)]
+    );
+
+    res.json({
+      ...summary,
+      recent_progression: progression.rows
+    });
+  } catch (error) {
+    console.error('Tutor monitoring summary error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/tutor-monitoring/events', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { days = 7, limit = 100 } = req.query;
+    const safeDays = Math.max(1, parseInt(days, 10) || 7);
+    const safeLimit = Math.max(1, Math.min(500, parseInt(limit, 10) || 100));
+
+    const result = await db.query(
+      `SELECT *
+       FROM tutor_event_log
+       WHERE created_at >= date('now', '-' || $1 || ' days')
+       ORDER BY created_at DESC
+       LIMIT $2`,
+      [safeDays, safeLimit]
+    );
+
+    res.json({ events: result.rows, total: result.rows.length });
+  } catch (error) {
+    console.error('Tutor monitoring events error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

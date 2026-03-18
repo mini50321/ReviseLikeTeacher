@@ -12,6 +12,7 @@ export default function AdminAnalyticsPage() {
   const [difficultyData, setDifficultyData] = useState(null);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [studentDetail, setStudentDetail] = useState(null);
+  const [tutorMonitoring, setTutorMonitoring] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('platform');
@@ -24,17 +25,19 @@ export default function AdminAnalyticsPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [statsRes, studentsRes, diffRes, historyRes] = await Promise.all([
+      const [statsRes, studentsRes, diffRes, historyRes, tutorRes] = await Promise.all([
         api.get('/admin/platform-stats'),
         api.get('/admin/students'),
         api.get('/admin/question-difficulty'),
-        api.get('/admin/override/history')
+        api.get('/admin/override/history'),
+        api.get('/admin/tutor-monitoring/summary')
       ]);
 
       setPlatformStats(statsRes.data);
       setStudents(studentsRes.data.students || []);
       setDifficultyData(diffRes.data);
       setOverrideHistory(historyRes.data.overrides || []);
+      setTutorMonitoring(tutorRes.data);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to load analytics');
     } finally {
@@ -83,7 +86,7 @@ export default function AdminAnalyticsPage() {
             <h1 className={styles.title}>Admin Analytics</h1>
 
             <div className={styles.tabs}>
-              {['platform', 'students', 'difficulty', 'overrides'].map(tab => (
+              {['platform', 'students', 'difficulty', 'overrides', 'tutoring'].map(tab => (
                 <button
                   key={tab}
                   className={`${styles.tab} ${activeTab === tab ? styles.activeTab : ''}`}
@@ -276,6 +279,96 @@ export default function AdminAnalyticsPage() {
                           </div>
                         );
                       })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'tutoring' && tutorMonitoring && (
+              <div>
+                <div className={styles.statsGrid}>
+                  <div className={styles.statCard}>
+                    <div className={styles.statLabel}>Tutor Events</div>
+                    <div className={styles.statValue}>{tutorMonitoring.totals?.events || 0}</div>
+                  </div>
+                  <div className={styles.statCard}>
+                    <div className={styles.statLabel}>Concepts Touched</div>
+                    <div className={styles.statValue}>{tutorMonitoring.totals?.concepts_touched || 0}</div>
+                  </div>
+                  <div className={styles.statCard}>
+                    <div className={styles.statLabel}>Tutor Sessions</div>
+                    <div className={styles.statValue}>{tutorMonitoring.totals?.tutor_sessions || 0}</div>
+                  </div>
+                  <div className={styles.statCard}>
+                    <div className={styles.statLabel}>Stuck Concepts</div>
+                    <div className={styles.statValue}>{tutorMonitoring.totals?.stuck_concepts || 0}</div>
+                  </div>
+                </div>
+
+                <div className={styles.card}>
+                  <h3 className={styles.cardTitle}>Events by Type</h3>
+                  <div className={styles.tutorMetaGrid}>
+                    {Object.entries(tutorMonitoring.by_event_type || {}).map(([eventType, count]) => (
+                      <div key={eventType} className={styles.tutorMetaItem}>
+                        <span>{eventType}</span>
+                        <strong>{count}</strong>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className={styles.card}>
+                  <h3 className={styles.cardTitle}>Stuck Concepts</h3>
+                  {(tutorMonitoring.stuck_concepts || []).length === 0 ? (
+                    <div className={styles.emptyText}>No stuck concepts detected in the selected window</div>
+                  ) : (
+                    <div className={styles.tutorTable}>
+                      <div className={styles.tutorTableHeader}>
+                        <span>Subject</span>
+                        <span>Topic</span>
+                        <span>Concept</span>
+                        <span>Events</span>
+                        <span>Avg Score</span>
+                        <span>Socratic Turns</span>
+                        <span>Signals</span>
+                      </div>
+                      {(tutorMonitoring.stuck_concepts || []).map((item, idx) => (
+                        <div key={`${item.concept_id || item.concept_map_id || idx}`} className={styles.tutorTableRow}>
+                          <span>{item.subject || '-'}</span>
+                          <span>{item.topic || '-'}</span>
+                          <span className={styles.studentEmail}>{item.concept_id || item.concept_map_id || 'Unknown'}</span>
+                          <span>{item.event_count}</span>
+                          <span style={{ color: getScoreColor(item.avg_score || 0) }}>{item.avg_score ?? '-'}</span>
+                          <span>{item.socratic_turns}</span>
+                          <span>{item.stuck_signals}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className={styles.card}>
+                  <h3 className={styles.cardTitle}>Recent Progression</h3>
+                  {(tutorMonitoring.recent_progression || []).length === 0 ? (
+                    <div className={styles.emptyText}>No tutoring events recorded yet</div>
+                  ) : (
+                    <div className={styles.timelineList}>
+                      {(tutorMonitoring.recent_progression || []).slice(0, 20).map((item, idx) => (
+                        <div key={`${item.created_at || idx}-${idx}`} className={styles.timelineItem}>
+                          <div className={styles.timelineTop}>
+                            <span className={styles.timelineSubject}>{item.subject || '-'}</span>
+                            <span className={styles.timelineTime}>{new Date(item.created_at).toLocaleString()}</span>
+                          </div>
+                          <div className={styles.timelineBody}>
+                            {item.topic || '-'} · {item.phase || 'unknown'} · {item.event_type || 'unknown'}
+                            {item.student_level ? ` · ${item.student_level}` : ''}
+                            {item.mastery_status ? ` · ${item.mastery_status}` : ''}
+                            {item.next_phase ? ` → ${item.next_phase}` : ''}
+                          </div>
+                          {item.message && <div className={styles.timelineMessage}>{item.message}</div>}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>

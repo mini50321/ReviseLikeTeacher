@@ -7,6 +7,7 @@ const { db } = require('../db');
 router.post('/register', async (req, res) => {
   try {
     const { email, password } = req.body;
+    const allowedAdminEmail = 'admin@gmail.com';
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password required' });
@@ -23,10 +24,11 @@ router.post('/register', async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 10);
     const userId = db.generateUUID();
+    const role = email === allowedAdminEmail ? 'admin' : 'student';
 
     await db.query(
-      'INSERT INTO users (id, email, password_hash) VALUES ($1, $2, $3)',
-      [userId, email, passwordHash]
+      'INSERT INTO users (id, email, password_hash, role) VALUES ($1, $2, $3, $4)',
+      [userId, email, passwordHash, role]
     );
 
     const userResult = await db.query('SELECT id, email, role, created_at FROM users WHERE id = $1', [userId]);
@@ -127,6 +129,7 @@ router.post('/reset-password', async (req, res) => {
 router.post('/register-admin', async (req, res) => {
   try {
     const { email, password } = req.body;
+    const allowedAdminEmail = 'admin@gmail.com';
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password required' });
@@ -134,6 +137,10 @@ router.post('/register-admin', async (req, res) => {
 
     if (password.length < 8) {
       return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+
+    if (email !== allowedAdminEmail) {
+      return res.status(403).json({ error: 'Only admin@gmail.com can be registered as admin' });
     }
 
     const existingUser = await db.query('SELECT id, password_hash FROM users WHERE email = $1', [email]);

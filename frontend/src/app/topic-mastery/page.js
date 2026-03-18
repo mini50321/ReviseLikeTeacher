@@ -8,6 +8,7 @@ import api, { voiceAPI } from '../../lib/api';
 import VoiceRecorder from '../../components/VoiceRecorder';
 import LanguageSelector from '../../components/LanguageSelector';
 import TeacherVoicePlayer from '../../components/TeacherVoicePlayer';
+import { getNextConceptSuggestion } from '../../lib/conceptTutor';
 import { FileText, Zap, CalendarPlus, Stethoscope, CircleCheckBig, TriangleAlert, ShieldAlert } from 'lucide-react';
 import styles from './topic-mastery.module.css';
 
@@ -64,6 +65,8 @@ function TopicMasteryContent() {
   const [addingRevision, setAddingRevision] = useState(false);
   const [revisionAdded, setRevisionAdded] = useState(false);
   const [completionSummary, setCompletionSummary] = useState(null);
+  const [currentConceptId, setCurrentConceptId] = useState(null);
+  const [nextConceptSuggestion, setNextConceptSuggestion] = useState(null);
   const startTimeRef = useRef(Date.now());
   const transcriptionRef = useRef('');
   const transcribeButtonRef = useRef(null);
@@ -122,6 +125,7 @@ function TopicMasteryContent() {
       const response = await api.get(`/topic-mastery/${tlsId}`);
       const data = response.data;
       setSessionData(data.session);
+      setCurrentConceptId(data.diagnostic?.concept_id || data.session?.concept_id || null);
 
       const currentPhase = data.session.current_phase;
       if (currentPhase === 'diagnostic') {
@@ -246,6 +250,19 @@ function TopicMasteryContent() {
     try {
       const response = await api.post(`/topic-mastery/${tlsId}/mastery-check`);
       setMasteryResults(response.data);
+      if (currentConceptId) {
+        try {
+          const suggestion = await getNextConceptSuggestion({
+            conceptId: currentConceptId,
+            studentLevel: response.data?.mastery_result === 'mastered' ? 'strong' : 'average'
+          });
+          setNextConceptSuggestion(suggestion);
+        } catch (e) {
+          setNextConceptSuggestion(null);
+        }
+      } else {
+        setNextConceptSuggestion(null);
+      }
       setPhase('results');
       setTimeout(() => loadPostCompletionData(), 100);
     } catch (err) {
@@ -1157,6 +1174,21 @@ function TopicMasteryContent() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {nextConceptSuggestion && (
+          <div className={styles.card}>
+            <h3 className={styles.sectionTitle}>Next Concept</h3>
+            <p className={styles.summaryText}>
+              Continue automatically to the next concept in the graph after this one.
+            </p>
+            <button
+              className={styles.primaryButton}
+              onClick={() => router.push(`/diagnostic?for_concept_id=${encodeURIComponent(nextConceptSuggestion.id || nextConceptSuggestion.concept_map_id)}`)}
+            >
+              Start Next Concept: {nextConceptSuggestion.name}
+            </button>
           </div>
         )}
 

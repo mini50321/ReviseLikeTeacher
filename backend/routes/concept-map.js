@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { authenticate, requireAdmin } = require('../middleware/auth');
 const { db } = require('../db');
+const multer = require('multer');
+const path = require('path');
+const { PDFParse } = require('pdf-parse');
 const { scoreAnswerAgainstConcept } = require('../services/rubric-scorer');
 const {
   buildMissedPointsQueue,
@@ -21,6 +24,12 @@ const {
   resolveConceptId
 } = require('../services/concept-map-pathway');
 const {
+  getConceptGraph,
+  validateConceptGraph,
+  getNextBestConcept,
+  getFullPathway
+} = require('../services/concept-graph-engine');
+const {
   classifyStudentLevel,
   classifyStudentLevelFromAggregate
 } = require('../services/student-level-classifier');
@@ -39,6 +48,32 @@ const {
   listExamples,
   exportAsJsonl
 } = require('../services/tutoring-training-examples');
+const {
+  importMicroPdfConceptBatch,
+  extractConceptItemsFromPayload
+} = require('../services/micropdf-concept-import');
+const { parseMicroPdfConceptText } = require('../services/micropdf-text-parser');
+const { buildTutorFlowPlan } = require('../services/tutor-flow-orchestrator');
+
+const bulkUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    files: 50,
+    fileSize: 2 * 1024 * 1024
+  }
+});
+
+async function extractPdfTextFromBuffer(buffer) {
+  const parser = new PDFParse({ data: buffer });
+  try {
+    const result = await parser.getText();
+    return result?.text || '';
+  } finally {
+    if (typeof parser.destroy === 'function') {
+      await parser.destroy().catch(() => {});
+    }
+  }
+}
 
 async function setConceptMasteryNextDue(userId, conceptIds, daysFromNow = 2) {
   if (!Array.isArray(conceptIds) || conceptIds.length === 0) return;
@@ -157,6 +192,106 @@ router.get('/pathway', authenticate, async (req, res) => {
     res.json({ pathway });
   } catch (error) {
     console.error('Pathway error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/graph', authenticate, async (req, res) => {
+  try {
+    const { subject, topic } = req.query;
+    if (!subject) {
+      return res.status(400).json({ error: 'subject query param is required' });
+    }
+    const graph = await getConceptGraph({ subject, topic: topic || null });
+    res.json({ graph });
+  } catch (error) {
+    console.error('Concept graph error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/graph/validate', authenticate, async (req, res) => {
+  try {
+    const { subject, topic } = req.query;
+    if (!subject) {
+      return res.status(400).json({ error: 'subject query param is required' });
+    }
+    const validation = await validateConceptGraph({ subject, topic: topic || null });
+    res.json({ validation });
+  } catch (error) {
+    console.error('Concept graph validation error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/graph/next-best', authenticate, async (req, res) => {
+  try {
+    const { current_concept_id, subject, topic, student_level, completed_concept_ids } = req.query;
+    const completedIds = typeof completed_concept_ids === 'string'
+      ? completed_concept_ids.split(',').map(s => s.trim()).filter(Boolean)
+      : [];
+    const nextConcept = await getNextBestConcept({
+      currentConceptId: current_concept_id || null,
+      subject: subject || null,
+      topic: topic || null,
+      studentLevel: student_level || 'average',
+      completedConceptIds: completedIds
+    });
+    res.json({ next_concept: nextConcept });
+  } catch (error) {
+    console.error('Graph next-best concept error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/graph/pathway', authenticate, async (req, res) => {
+  try {
+    const { subject, topic } = req.query;
+    if (!subject) {
+      return res.status(400).json({ error: 'subject query param is required' });
+    }
+    const pathway = await getFullPathway({ subject, topic: topic || null });
+    res.json({ pathway });
+  } catch (error) {
+    console.error('Concept graph pathway error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/tutor-flow/plan', authenticate, async (req, res) => {
+  try {
+    const { concept_id, student_level, answer_text, phase = 'saq', socratic_turns = [], used_mcq_ids = [] } = req.body || {};
+    if (!concept_id) {
+      return res.status(400).json({ error: 'concept_id is required' });
+    }
+    const row = await resolveConceptId(concept_id);
+    if (!row) {
+      return res.status(404).json({ error: 'Concept not found' });
+    }
+    const concept = serializeConcept(row);
+    const level = student_level || 'average';
+    const scoreResult = {
+      pointsHit: [],
+      pointsMissed: Array.isArray(concept.must_know_points)
+        ? concept.must_know_points.map((item, idx) => ({
+            id: item.id || `${concept.id}:point:${idx}`,
+            label: item.label || item.description || String(item),
+            description: item.description || item.label || String(item)
+          }))
+        : []
+    };
+    const plan = buildTutorFlowPlan({
+      concept,
+      studentLevelResult: { level },
+      scoreResult,
+      answerText: answer_text || '',
+      phase,
+      socraticTurns: Array.isArray(socratic_turns) ? socratic_turns : [],
+      usedMcqIds: Array.isArray(used_mcq_ids) ? used_mcq_ids : []
+    });
+    res.json({ tutor_flow: plan });
+  } catch (error) {
+    console.error('Tutor flow plan error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1308,6 +1443,118 @@ router.post('/import-from-draft', authenticate, requireAdmin, async (req, res) =
   } catch (error) {
     console.error('Concept draft import error:', error);
     res.status(500).json({ error: 'Failed to import concepts from draft' });
+  }
+});
+
+router.post('/bulk-import', authenticate, requireAdmin, bulkUpload.array('files', 50), async (req, res) => {
+  try {
+    const files = Array.isArray(req.files) ? req.files : [];
+    if (files.length === 0) {
+      return res.status(400).json({ error: 'At least one concept file is required' });
+    }
+
+    const defaultSubject = (req.body?.subject || '').trim();
+    const defaultTopic = (req.body?.topic || '').trim();
+    const fileResults = [];
+    const allItems = [];
+
+    for (const file of files) {
+      const fileName = file.originalname || 'concept.json';
+      const ext = path.extname(fileName).toLowerCase();
+      const mimeType = (file.mimetype || '').toLowerCase();
+      const isPdf = ext === '.pdf' || mimeType === 'application/pdf';
+      const isJson = ext === '.json' || mimeType === 'application/json' || mimeType === 'text/json';
+
+      let imported;
+      if (isPdf) {
+        if (!file.buffer || file.buffer.length === 0) {
+          fileResults.push({
+            file_name: fileName,
+            status: 'failed',
+            error: 'Empty PDF file'
+          });
+          continue;
+        }
+
+        const extractedText = await extractPdfTextFromBuffer(file.buffer);
+        const parsedConcept = parseMicroPdfConceptText(extractedText || '');
+        if (!parsedConcept || !parsedConcept.draft || !Array.isArray(parsedConcept.draft.concepts) || parsedConcept.draft.concepts.length === 0) {
+          fileResults.push({
+            file_name: fileName,
+            status: 'failed',
+            error: 'PDF did not match the structured micro-PDF concept format'
+          });
+          continue;
+        }
+
+        const draftConcepts = parsedConcept.draft.concepts.map(concept => ({
+          ...concept,
+          subject: defaultSubject || concept.subject,
+          topic: defaultTopic || concept.topic
+        }));
+
+        imported = await importMicroPdfConceptBatch(draftConcepts, {
+          subject: defaultSubject || undefined,
+          topic: defaultTopic || undefined
+        });
+      } else {
+        let payload;
+        const text = file.buffer ? file.buffer.toString('utf8') : '';
+        try {
+          payload = JSON.parse(text);
+        } catch (error) {
+          fileResults.push({
+            file_name: fileName,
+            status: 'failed',
+            error: isJson ? 'Invalid JSON file' : 'Unsupported file type. Upload a JSON concept file or a structured micro-PDF.'
+          });
+          continue;
+        }
+
+        const items = extractConceptItemsFromPayload(payload);
+        if (items.length === 0) {
+          fileResults.push({
+            file_name: fileName,
+            status: 'failed',
+            error: 'No concept data found in file'
+          });
+          continue;
+        }
+
+        imported = await importMicroPdfConceptBatch(items, {
+          subject: defaultSubject || undefined,
+          topic: defaultTopic || undefined
+        });
+      }
+
+      fileResults.push({
+        file_name: fileName,
+        status: imported.failed > 0 && imported.created === 0 && imported.updated === 0 && imported.skipped === 0 ? 'failed' : 'processed',
+        total: imported.total,
+        created: imported.created,
+        updated: imported.updated,
+        skipped: imported.skipped,
+        failed: imported.failed,
+        results: imported.results
+      });
+      allItems.push(...imported.results);
+    }
+
+    const summary = {
+      files: files.length,
+      created: allItems.filter(item => item.status === 'created').length,
+      updated: allItems.filter(item => item.status === 'updated').length,
+      skipped: allItems.filter(item => item.status === 'skipped').length,
+      failed: allItems.filter(item => item.status === 'failed').length
+    };
+
+    res.status(201).json({
+      summary,
+      files: fileResults
+    });
+  } catch (error) {
+    console.error('Bulk concept import error:', error);
+    res.status(500).json({ error: error.message || 'Failed to import concept files' });
   }
 });
 

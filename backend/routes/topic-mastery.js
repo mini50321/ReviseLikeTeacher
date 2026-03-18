@@ -5,6 +5,7 @@ const { db } = require('../db');
 const { evaluateAnswer, generateSaqAnchors, generateMcqItems } = require('../services/ai');
 const { detectMisconception } = require('../services/misconception');
 const { getStudentPerformanceProfile, buildAdaptiveMCQQuery, fetchAdaptiveMCQs, getAdaptiveSAQCount, getAdaptiveMCQLimit, getDifficultyLabel } = require('../services/difficulty-adapter');
+const { logTutorEvent } = require('../services/tutor-monitoring');
 
 const MIN_ANCHOR_COMPETENCY_SCORE = 70;
 
@@ -171,6 +172,23 @@ router.post('/:id/concept-fixing/start', authenticate, async (req, res) => {
 
     const questionsForClient = [serializeQuestionForClient(teachingPlan.anchorQuestions[0])];
 
+    await logTutorEvent({
+      user_id: userId,
+      session_type: 'topic_mastery',
+      session_id: tls.session_id,
+      topic_learning_session_id: id,
+      subject: tls.subject,
+      topic: tls.topic,
+      phase: 'concept_fixing',
+      event_type: 'topic_fix_start',
+      student_level: profile.level,
+      metadata: {
+        total_questions: conceptPlanIds.length,
+        adaptive_saq_count: adaptiveSAQCount,
+        weak_subtopics: weakSubtopics
+      }
+    });
+
     res.json({
       phase: 'concept_fixing',
       questions: questionsForClient,
@@ -265,6 +283,29 @@ router.post('/:id/concept-fixing/answer', authenticate, async (req, res) => {
       ]
     );
 
+    await logTutorEvent({
+      user_id: userId,
+      session_type: 'topic_mastery',
+      session_id: tlsResult.rows[0].session_id,
+      topic_learning_session_id: id,
+      subject: tlsResult.rows[0].subject,
+      topic: tlsResult.rows[0].topic,
+      phase: phaseComplete ? 'mcq_consolidation' : 'concept_fixing',
+      event_type: 'topic_fix_answer',
+      student_level: profile.level,
+      score: evaluation.score,
+      mastery_status: isAnchorMastered ? 'mastered' : 'in_progress',
+      retry_count: nextRetryCount,
+      attempt_id: attemptId,
+      metadata: {
+        question_id,
+        anchor_index: currentAnchorIndex,
+        total_anchors: totalAnchors,
+        is_anchor_mastered: isAnchorMastered,
+        phase_complete: phaseComplete
+      }
+    });
+
     let nextQuestion = null;
     if (!phaseComplete) {
       const nextQuestionId = conceptPlanIds[nextAnchorIndex];
@@ -353,6 +394,23 @@ router.post('/:id/laq/start', authenticate, async (req, res) => {
       [id]
     );
 
+    await logTutorEvent({
+      user_id: userId,
+      session_type: 'topic_mastery',
+      session_id: tls.session_id,
+      topic_learning_session_id: id,
+      subject: tls.subject,
+      topic: tls.topic,
+      phase: 'laq',
+      event_type: 'topic_laq_start',
+      student_level: tls.diagnostic_score !== null
+        ? (tls.diagnostic_score >= 0.75 ? 'strong' : tls.diagnostic_score >= 0.5 ? 'average' : 'weak')
+        : 'average',
+      metadata: {
+        question_count: questions.rows.length
+      }
+    });
+
     if (questions.rows.length === 0) {
       return res.json({
         phase: 'laq',
@@ -424,6 +482,24 @@ router.post('/:id/laq/answer', authenticate, async (req, res) => {
       `UPDATE topic_learning_session SET laq_completed = laq_completed + 1 WHERE id = $1`,
       [id]
     );
+
+    await logTutorEvent({
+      user_id: userId,
+      session_type: 'topic_mastery',
+      session_id: tlsResult.rows[0].session_id,
+      topic_learning_session_id: id,
+      subject: tlsResult.rows[0].subject,
+      topic: tlsResult.rows[0].topic,
+      phase: 'laq',
+      event_type: 'topic_laq_answer',
+      score: evaluation.score,
+      attempt_id: attemptId,
+      metadata: {
+        question_id,
+        answer_method,
+        time_spent_seconds
+      }
+    });
 
     res.json({
       attempt_id: attemptId,
@@ -522,6 +598,23 @@ router.post('/:id/mcq/start', authenticate, async (req, res) => {
        adaptive_level = $3, difficulty_label = $4 WHERE id = $2`,
       [questionRows.length, id, profile.level, difficultyLabel]
     );
+
+    await logTutorEvent({
+      user_id: userId,
+      session_type: 'topic_mastery',
+      session_id: tls.session_id,
+      topic_learning_session_id: id,
+      subject: tls.subject,
+      topic: tls.topic,
+      phase: 'mcq',
+      event_type: 'topic_mcq_start',
+      student_level: profile.level,
+      metadata: {
+        mcq_total: questionRows.length,
+        mcq_limit: mcqLimit,
+        difficulty_label: difficultyLabel
+      }
+    });
 
     const questionsForClient = questionRows.map(q => ({
       id: q.id,
@@ -686,6 +779,26 @@ router.post('/:id/mcq/answer', authenticate, async (req, res) => {
       [newCompleted, newCorrect, id]
     );
 
+    await logTutorEvent({
+      user_id: userId,
+      session_type: 'topic_mastery',
+      session_id: tls.session_id,
+      topic_learning_session_id: id,
+      subject: tls.subject,
+      topic: tls.topic,
+      phase: 'mcq',
+      event_type: 'topic_mcq_answer',
+      score,
+      mastery_status: isCorrect ? 'correct' : 'incorrect',
+      metadata: {
+        question_id,
+        is_correct: isCorrect,
+        completed: newCompleted,
+        total: tls.mcq_total || 0,
+        correct: newCorrect
+      }
+    });
+
     await db.query(
       `INSERT INTO questionmastery (id, user_id, question_id, mastery_level, attempt_count, last_attempt_at)
        VALUES ($1, $2, $3, $4, 1, CURRENT_TIMESTAMP)
@@ -755,7 +868,7 @@ router.post('/:id/mastery-check', authenticate, async (req, res) => {
 
     const saqRawScore = tls.diagnostic_score || 0;
 
-    const competencyScore = (20 * saqRawScore) + (70 * (mcqAccuracy / 100)) + (10 * (coreCoverage / 100));
+    const competencyScore = (30 * saqRawScore) + (50 * (mcqAccuracy / 100)) + (20 * (coreCoverage / 100));
 
     const tuningResult = await db.query(
       `SELECT parameter_name, parameter_value FROM system_tuning_parameters
@@ -765,10 +878,10 @@ router.post('/:id/mastery-check', authenticate, async (req, res) => {
     const tuning = {};
     tuningResult.rows.forEach(r => { tuning[r.parameter_name] = parseFloat(r.parameter_value); });
 
-    const masteryThreshold = tuning.mastery_threshold_mastered || 85;
-    const revisionThreshold = tuning.mastery_threshold_revision || 60;
-    const coreThreshold = tuning.core_coverage_threshold || 90;
-    const competencyThreshold = tuning.competency_achieved_threshold || 80;
+    const masteryThreshold = Math.min(tuning.mastery_threshold_mastered || 80, 80);
+    const revisionThreshold = Math.min(tuning.mastery_threshold_revision || 55, 55);
+    const coreThreshold = Math.min(tuning.core_coverage_threshold || 85, 85);
+    const competencyThreshold = Math.min(tuning.competency_achieved_threshold || 75, 75);
 
     let masteryResult;
     if (mcqAccuracy >= masteryThreshold && coreCoverage >= coreThreshold && competencyScore >= competencyThreshold) {
@@ -789,6 +902,25 @@ router.post('/:id/mastery-check', authenticate, async (req, res) => {
        WHERE id = $5`,
       [mcqAccuracy, coreCoverage, competencyScore, masteryResult, id]
     );
+
+    await logTutorEvent({
+      user_id: userId,
+      session_type: 'topic_mastery',
+      session_id: tls.session_id,
+      topic_learning_session_id: id,
+      subject: tls.subject,
+      topic: tls.topic,
+      phase: 'mastery_check',
+      event_type: 'topic_mastery_check',
+      score: competencyScore,
+      mastery_status: masteryResult,
+      metadata: {
+        mcq_accuracy: mcqAccuracy,
+        core_coverage: coreCoverage,
+        competency_score: competencyScore,
+        can_exit_topic: masteryResult === 'mastered' && competencyScore >= competencyThreshold
+      }
+    });
 
     const masteryStatus = masteryResult === 'mastered' ? 'mastered' : masteryResult;
 
@@ -887,6 +1019,23 @@ router.post('/:id/mastery-check', authenticate, async (req, res) => {
         [nextRevisionDate.toISOString().split('T')[0], revisionDays.length, existingMastery.rows[0].id]
       );
     }
+
+    await logTutorEvent({
+      user_id: userId,
+      session_type: 'topic_mastery',
+      session_id: tls.session_id,
+      topic_learning_session_id: id,
+      subject: tls.subject,
+      topic: tls.topic,
+      phase: masteryResult === 'mastered' ? 'completed' : 'mastery_check',
+      event_type: 'topic_mastery_complete',
+      score: competencyScore,
+      mastery_status: masteryResult,
+      metadata: {
+        can_exit_topic: masteryResult === 'mastered' && competencyScore >= competencyThreshold,
+        revision_days: revisionDays
+      }
+    });
 
     res.json({
       mastery_result: masteryResult,
@@ -1008,6 +1157,23 @@ router.post('/:id/complete', authenticate, async (req, res) => {
     } catch (noteErr) {
       console.error('Auto-generate notes on completion failed:', noteErr.message);
     }
+
+    await logTutorEvent({
+      user_id: userId,
+      session_type: 'topic_mastery',
+      session_id: tls.session_id,
+      topic_learning_session_id: id,
+      subject: tls.subject,
+      topic: tls.topic,
+      phase: 'completed',
+      event_type: 'topic_mastery_session_complete',
+      mastery_status: tls.mastery_result,
+      score: tls.competency_score || null,
+      metadata: {
+        can_exit_topic: canExitTopic,
+        exam_trigger_notes_generated: notesGenerated
+      }
+    });
 
     res.json({
       message: 'Topic learning session completed',

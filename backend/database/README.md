@@ -27,6 +27,7 @@ This project uses **SQLite** as the database. The database is automatically crea
 - `feedback_ratings` - Student feedback on AI responses
 - `extraction_corrections` - Admin corrections for PDF extractions
 - `evaluation_corrections` - Admin corrections for answer evaluations
+- `tutor_event_log` - Tutor flow and concept progression events
 
 ## Indexes
 

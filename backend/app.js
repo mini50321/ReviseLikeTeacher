@@ -141,8 +141,13 @@ app.get('/health/db', async (req, res) => {
 app.post('/api/make-admin', async (req, res) => {
   try {
     const { email } = req.body;
+    const allowedAdminEmail = 'admin@gmail.com';
     if (!email) {
       return res.status(400).json({ error: 'Email required' });
+    }
+
+    if (email !== allowedAdminEmail) {
+      return res.status(403).json({ error: 'Only admin@gmail.com can be an admin' });
     }
     
     const { db } = require('./db');

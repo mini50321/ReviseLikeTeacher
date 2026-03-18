@@ -207,15 +207,35 @@ const runMigrations = () => {
         user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         subject TEXT NOT NULL,
         topic TEXT NOT NULL,
+        concept_id TEXT,
+        concept_plan TEXT,
+        student_level TEXT,
+        mastery_status TEXT,
+        phase TEXT DEFAULT 'saq',
+        socratic_turns TEXT,
+        final_recall_answer TEXT,
+        mcq_plan TEXT,
+        mcq_results TEXT,
+        mastery_decision TEXT,
         saq_questions TEXT,
         saq_answers TEXT,
         saq_scores TEXT,
         raw_score REAL,
-        diagnostic_level TEXT CHECK (diagnostic_level IN ('weak', 'average', 'good', 'strong')),
+        diagnostic_level TEXT,
         misconception_tags TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    addColumnIfMissing('diagnostic_assessment', 'concept_id', 'TEXT');
+    addColumnIfMissing('diagnostic_assessment', 'concept_plan', 'TEXT');
+    addColumnIfMissing('diagnostic_assessment', 'student_level', 'TEXT');
+    addColumnIfMissing('diagnostic_assessment', 'mastery_status', 'TEXT');
+    addColumnIfMissing('diagnostic_assessment', 'phase', "TEXT DEFAULT 'saq'");
+    addColumnIfMissing('diagnostic_assessment', 'socratic_turns', 'TEXT');
+    addColumnIfMissing('diagnostic_assessment', 'final_recall_answer', 'TEXT');
+    addColumnIfMissing('diagnostic_assessment', 'mcq_plan', 'TEXT');
+    addColumnIfMissing('diagnostic_assessment', 'mcq_results', 'TEXT');
+    addColumnIfMissing('diagnostic_assessment', 'mastery_decision', 'TEXT');
     createIndexIfMissing('idx_diagnostic_assessment_user_id', 'CREATE INDEX idx_diagnostic_assessment_user_id ON diagnostic_assessment(user_id)');
     createIndexIfMissing('idx_diagnostic_assessment_subject_topic', 'CREATE INDEX idx_diagnostic_assessment_subject_topic ON diagnostic_assessment(subject, topic)');
 
@@ -267,6 +287,39 @@ const runMigrations = () => {
     `);
     createIndexIfMissing('idx_competency_score_log_user_id', 'CREATE INDEX idx_competency_score_log_user_id ON competency_score_log(user_id)');
     createIndexIfMissing('idx_competency_score_log_subject_topic', 'CREATE INDEX idx_competency_score_log_subject_topic ON competency_score_log(subject, topic)');
+
+    createTableIfMissing('tutor_event_log', `
+      CREATE TABLE tutor_event_log (
+        id TEXT PRIMARY KEY,
+        user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+        session_type TEXT,
+        session_id TEXT,
+        diagnostic_id TEXT REFERENCES diagnostic_assessment(id) ON DELETE SET NULL,
+        topic_learning_session_id TEXT REFERENCES topic_learning_session(id) ON DELETE SET NULL,
+        subject TEXT,
+        topic TEXT,
+        concept_id TEXT REFERENCES topic_concept(id) ON DELETE SET NULL,
+        concept_map_id TEXT REFERENCES topic_concept(id) ON DELETE SET NULL,
+        phase TEXT,
+        event_type TEXT NOT NULL,
+        student_level TEXT,
+        score REAL,
+        mastery_status TEXT,
+        retry_count INTEGER,
+        attempt_id TEXT REFERENCES attempt(id) ON DELETE SET NULL,
+        next_phase TEXT,
+        message TEXT,
+        metadata TEXT DEFAULT '{}',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    createIndexIfMissing('idx_tutor_event_log_user_id', 'CREATE INDEX idx_tutor_event_log_user_id ON tutor_event_log(user_id)');
+    createIndexIfMissing('idx_tutor_event_log_created_at', 'CREATE INDEX idx_tutor_event_log_created_at ON tutor_event_log(created_at)');
+    createIndexIfMissing('idx_tutor_event_log_session_type', 'CREATE INDEX idx_tutor_event_log_session_type ON tutor_event_log(session_type)');
+    createIndexIfMissing('idx_tutor_event_log_phase', 'CREATE INDEX idx_tutor_event_log_phase ON tutor_event_log(phase)');
+    createIndexIfMissing('idx_tutor_event_log_event_type', 'CREATE INDEX idx_tutor_event_log_event_type ON tutor_event_log(event_type)');
+    createIndexIfMissing('idx_tutor_event_log_subject_topic', 'CREATE INDEX idx_tutor_event_log_subject_topic ON tutor_event_log(subject, topic)');
+    createIndexIfMissing('idx_tutor_event_log_concept_id', 'CREATE INDEX idx_tutor_event_log_concept_id ON tutor_event_log(concept_id)');
 
     createTableIfMissing('subject_allocation', `
       CREATE TABLE subject_allocation (
@@ -634,10 +687,10 @@ const runMigrations = () => {
     }
 
     const tuningDefaults = [
-      ['mastery_threshold_mastered', 85.0, 'threshold', 'mastery'],
-      ['mastery_threshold_revision', 60.0, 'threshold', 'mastery'],
-      ['core_coverage_threshold', 90.0, 'threshold', 'mastery'],
-      ['competency_achieved_threshold', 80.0, 'threshold', 'competency'],
+      ['mastery_threshold_mastered', 80.0, 'threshold', 'mastery'],
+      ['mastery_threshold_revision', 55.0, 'threshold', 'mastery'],
+      ['core_coverage_threshold', 85.0, 'threshold', 'mastery'],
+      ['competency_achieved_threshold', 75.0, 'threshold', 'competency'],
       ['revision_interval_mastered_1', 7.0, 'other', 'recall'],
       ['revision_interval_mastered_2', 21.0, 'other', 'recall'],
       ['revision_interval_mastered_3', 45.0, 'other', 'recall'],

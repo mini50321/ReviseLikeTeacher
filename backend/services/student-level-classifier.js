@@ -61,13 +61,14 @@ function classifyStudentLevel(concept, answerText, learnerLevel = 'mid') {
   const compactSimilarity = compactAnswer ? similarityToCompactAnswer(answerNorm, compactAnswer) : 0;
 
   let level = 'average';
-  if (misconceptionCount >= 2 && scorePercent < 50) level = 'very_weak';
-  else if (scorePercent >= 90 && misconceptionCount === 0) {
-    if (words < 15 || (compactSimilarity > 0.85 && words < 30)) level = 'bored';
-    else level = 'excellent';
-  } else if (scorePercent >= 75 && misconceptionCount <= 1) level = 'strong';
-  else if (scorePercent >= 50 && misconceptionCount <= 2) level = 'average';
-  else if (scorePercent >= 30) level = 'weak';
+  if (misconceptionCount >= 2 && scorePercent < 45) level = 'very_weak';
+  else if (scorePercent >= 95 && misconceptionCount === 0) {
+    if (compactSimilarity >= 0.96 && words <= 16) level = 'bored';
+    else if (words >= 18 || compactSimilarity < 0.9) level = 'excellent';
+    else level = 'strong';
+  } else if (scorePercent >= 80 && misconceptionCount <= 1) level = 'strong';
+  else if (scorePercent >= 55 && misconceptionCount <= 2) level = 'average';
+  else if (scorePercent >= 25) level = 'weak';
   else level = 'very_weak';
 
   return {
@@ -103,14 +104,15 @@ function classifyStudentLevelFromAggregate(conceptResults, answerText, concepts)
 
   let level = 'average';
   if (misconceptionCount >= 2 && scorePercent < 50) level = 'very_weak';
-  else if (scorePercent >= 90 && misconceptionCount === 0) {
+  else if (scorePercent >= 95 && misconceptionCount === 0) {
     const compactAnswer = concepts?.[0]?.saqs?.[0]?.compact_answer;
     const compactSimilarity = compactAnswer ? similarityToCompactAnswer(answerNorm, compactAnswer) : 0;
-    if (words < 15 || (compactSimilarity > 0.85 && words < 30)) level = 'bored';
-    else level = 'excellent';
-  } else if (scorePercent >= 75 && misconceptionCount <= 1) level = 'strong';
-  else if (scorePercent >= 50 && misconceptionCount <= 2) level = 'average';
-  else if (scorePercent >= 30) level = 'weak';
+    if (compactSimilarity >= 0.96 && words <= 16) level = 'bored';
+    else if (words >= 18 || compactSimilarity < 0.9) level = 'excellent';
+    else level = 'strong';
+  } else if (scorePercent >= 80 && misconceptionCount <= 1) level = 'strong';
+  else if (scorePercent >= 55 && misconceptionCount <= 2) level = 'average';
+  else if (scorePercent >= 25) level = 'weak';
   else level = 'very_weak';
 
   return {

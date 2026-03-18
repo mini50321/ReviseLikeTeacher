@@ -7,7 +7,17 @@ import Header from '../../components/Header';
 import api, { voiceAPI } from '../../lib/api';
 import VoiceChatInput from '../../components/VoiceChatInput';
 import TeacherVoicePlayer from '../../components/TeacherVoicePlayer';
+import { getNextConceptSuggestion } from '../../lib/conceptTutor';
 import styles from './diagnostic.module.css';
+
+function normalizePromptValue(value) {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') {
+    return value.prompt || value.text || value.label || value.description || '';
+  }
+  return String(value);
+}
 
 function DiagnosticContent() {
   const router = useRouter();
@@ -24,6 +34,8 @@ function DiagnosticContent() {
   const [sessionId, setSessionId] = useState(null);
   const [tlsId, setTlsId] = useState(null);
   const [questions, setQuestions] = useState([]);
+  const [concept, setConcept] = useState(null);
+  const [conceptPlan, setConceptPlan] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answerText, setAnswerText] = useState('');
   const [answerMethod, setAnswerMethod] = useState('text');
@@ -35,7 +47,19 @@ function DiagnosticContent() {
   const [selectedOption, setSelectedOption] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const [nextTeacherPrompt, setNextTeacherPrompt] = useState('');
+  const [missingPoints, setMissingPoints] = useState([]);
+  const [tutorStep, setTutorStep] = useState(null);
   const [answers, setAnswers] = useState([]);
+  const [tutorPhase, setTutorPhase] = useState('saq');
+  const [socraticTurns, setSocraticTurns] = useState([]);
+  const [socraticInput, setSocraticInput] = useState('');
+  const [finalRecallText, setFinalRecallText] = useState('');
+  const [mcqList, setMcqList] = useState([]);
+  const [mcqIndex, setMcqIndex] = useState(0);
+  const [mcqSelected, setMcqSelected] = useState('');
+  const [mcqSummary, setMcqSummary] = useState(null);
+  const [nextConceptSuggestion, setNextConceptSuggestion] = useState(null);
 
   const [results, setResults] = useState(null);
   const startTimeRef = useRef(Date.now());
@@ -59,9 +83,14 @@ function DiagnosticContent() {
         setSessionId(data.session_id);
         setTlsId(data.topic_learning_session_id);
         setQuestions(data.questions);
+        setConcept(data.concept || null);
+        setConceptPlan(data.concept_plan || null);
         setCurrentIndex(0);
         setAnswers([]);
         setFeedback(null);
+        setNextTeacherPrompt('');
+        setMissingPoints([]);
+        setTutorStep(null);
         setAnswerText('');
         setAnswerMethod('text');
         setLanguage('english');
@@ -71,6 +100,7 @@ function DiagnosticContent() {
         setAttemptCount(0);
         setShowSolution(false);
         setLastWasCorrect(false);
+        setNextConceptSuggestion(null);
         setPhase('answering');
         startTimeRef.current = Date.now();
       } catch (err) {
@@ -108,9 +138,14 @@ function DiagnosticContent() {
       setSessionId(data.session_id);
       setTlsId(data.topic_learning_session_id);
       setQuestions(data.questions);
+      setConcept(data.concept || null);
+      setConceptPlan(data.concept_plan || null);
       setCurrentIndex(0);
       setAnswers([]);
       setFeedback(null);
+      setNextTeacherPrompt('');
+      setMissingPoints([]);
+      setTutorStep(null);
       setAnswerText('');
       setAnswerMethod('text');
       setLanguage('english');
@@ -120,6 +155,7 @@ function DiagnosticContent() {
       setAttemptCount(0);
       setShowSolution(false);
       setLastWasCorrect(false);
+      setNextConceptSuggestion(null);
       setPhase('answering');
       startTimeRef.current = Date.now();
     } catch (err) {
@@ -194,16 +230,121 @@ function DiagnosticContent() {
       }
 
       setFeedback(fb);
+      setNextTeacherPrompt(normalizePromptValue(fb.next_teacher_prompt || fb.teacher_response || ''));
+      setMissingPoints(Array.isArray(fb.missing_points) ? fb.missing_points : []);
+      setTutorStep(fb.tutor_step || null);
       setAnswers(prev => [...prev, {
         question_id: question.id,
         answer: answer.trim(),
         score: fb.score,
         feedback: fb.feedback
       }]);
+
+      if (!isMCQ) {
+        try {
+          const tutorResponse = await api.post(`/diagnostic/${diagnosticId}/saq-answer`, {
+            answer_text: answer.trim(),
+            answer_method: answerMethodToSend,
+            language: languageToSend,
+            time_spent_seconds: timeSpent
+          });
+          const tutorData = tutorResponse.data || {};
+          const nextTutorPhase = tutorData.phase || 'saq';
+          setTutorPhase(nextTutorPhase);
+          if (nextTutorPhase === 'socratic' || nextTutorPhase === 'final_recall') {
+            setShowSolution(false);
+          }
+          setSocraticTurns([]);
+          if (tutorData.next_teacher_prompt) {
+            setNextTeacherPrompt(normalizePromptValue(tutorData.next_teacher_prompt));
+          }
+          if (Array.isArray(tutorData.missing_points)) {
+            setMissingPoints(tutorData.missing_points);
+          }
+          if (tutorData.tutor_step) {
+            setTutorStep(tutorData.tutor_step);
+          }
+        } catch (e) {
+        }
+      }
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to submit answer');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const submitSocraticTurn = async () => {
+    const text = socraticInput.trim();
+    if (!text || !diagnosticId) return;
+    try {
+      const response = await api.post(`/diagnostic/${diagnosticId}/socratic-turn`, {
+        student_answer: text
+      });
+      const data = response.data || {};
+      setTutorPhase(data.phase || 'socratic');
+      setSocraticTurns(Array.isArray(data.socratic_turns) ? data.socratic_turns : []);
+      if (Array.isArray(data.missing_points)) {
+        setMissingPoints(data.missing_points);
+      }
+      setNextTeacherPrompt(normalizePromptValue(data.next_teacher_prompt || ''));
+      setSocraticInput('');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to submit Socratic answer');
+    }
+  };
+
+  const submitFinalRecall = async () => {
+    const text = finalRecallText.trim();
+    if (!text || !diagnosticId) return;
+    try {
+      const response = await api.post(`/diagnostic/${diagnosticId}/final-recall`, {
+        answer_text: text
+      });
+      const data = response.data || {};
+      const nextTutorPhase = data.phase || 'mcq';
+      setTutorPhase(nextTutorPhase);
+      if (data.tutor_step) {
+        setTutorStep(data.tutor_step);
+      }
+      if (nextTutorPhase === 'mcq') {
+        try {
+          const mcqResp = await api.get(`/diagnostic/${diagnosticId}/mcqs`);
+          const mcqData = mcqResp.data || {};
+          const plan = mcqData.mcq_plan || data.tutor_step || {};
+          const list = Array.isArray(plan.mcqs) ? plan.mcqs : [];
+          setMcqList(list);
+          setMcqIndex(0);
+          setMcqSelected('');
+          setMcqSummary(null);
+        } catch (e) {
+        }
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to submit final recall answer');
+    }
+  };
+
+  const submitMcqAnswer = async () => {
+    if (!diagnosticId || !mcqList.length) return;
+    const current = mcqList[mcqIndex];
+    if (!current || !mcqSelected) return;
+    try {
+      await api.post(`/diagnostic/${diagnosticId}/mcq-answer`, {
+        mcq_id: current.id || current.mcq_id,
+        selected_option: mcqSelected
+      });
+      const nextIndex = mcqIndex + 1;
+      if (nextIndex < mcqList.length) {
+        setMcqIndex(nextIndex);
+        setMcqSelected('');
+      } else {
+        const completeResp = await api.post(`/diagnostic/${diagnosticId}/complete-block`);
+        setMcqSummary(completeResp.data || null);
+        setTutorPhase('done');
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to submit MCQ answer');
     }
   };
 
@@ -218,6 +359,8 @@ function DiagnosticContent() {
       setTranscriptionError('');
       setSelectedOption('');
       setFeedback(null);
+      setNextTeacherPrompt('');
+      setMissingPoints([]);
        setAttemptCount(0);
        setShowSolution(false);
        setLastWasCorrect(false);
@@ -232,6 +375,19 @@ function DiagnosticContent() {
     try {
       const response = await api.post(`/diagnostic/${diagnosticId}/complete`);
       setResults(response.data);
+      if (response.data?.concept_id) {
+        try {
+          const suggestion = await getNextConceptSuggestion({
+            conceptId: response.data.concept_id,
+            studentLevel: response.data.student_level || 'average'
+          });
+          setNextConceptSuggestion(suggestion);
+        } catch (e) {
+          setNextConceptSuggestion(null);
+        }
+      } else {
+        setNextConceptSuggestion(null);
+      }
       setPhase('results');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to complete diagnostic');
@@ -386,6 +542,18 @@ function DiagnosticContent() {
           {error && <div className={styles.error}>{error}</div>}
 
           <div className={styles.questionCard}>
+            {concept && (
+              <div className={styles.feedbackCard}>
+                <div className={styles.feedbackText}>
+                  {concept.name}
+                </div>
+                {conceptPlan?.checkpoints?.length > 0 && (
+                  <div className={styles.feedbackText}>
+                    Core checkpoints: {conceptPlan.checkpoints.map(item => item.label).join(', ')}
+                  </div>
+                )}
+              </div>
+            )}
             {!showSolution && (
               <>
                 <div className={styles.questionStem}>{question.stem}</div>
@@ -436,10 +604,23 @@ function DiagnosticContent() {
                 {feedback.feedback?.improvements && (
                   <div className={styles.feedbackText}>{feedback.feedback.improvements}</div>
                 )}
+                {feedback.student_level && (
+                  <div className={styles.feedbackText}>
+                    Student level: {feedback.student_level.replace(/_/g, ' ')}
+                  </div>
+                )}
+                {missingPoints.length > 0 && (
+                  <div className={styles.feedbackText}>
+                    Missing points: {missingPoints.map(item => item.label || item.description || item.id).join(', ')}
+                  </div>
+                )}
+                {nextTeacherPrompt && !showSolution && (
+                  <div className={styles.feedbackText}>{nextTeacherPrompt}</div>
+                )}
                 {!showSolution && feedback.teacher_response && (
                   <>
-                    <TeacherVoicePlayer text={feedback.teacher_response} autoPlay={true} label="Listen to hint" />
-                    <div className={styles.feedbackTeacher}>{feedback.teacher_response}</div>
+                    <TeacherVoicePlayer text={normalizePromptValue(feedback.teacher_response)} autoPlay={true} label="Listen to hint" />
+                    <div className={styles.feedbackTeacher}>{normalizePromptValue(feedback.teacher_response)}</div>
                   </>
                 )}
                 {showSolution && (feedback.feedback?.model_explanation || question.ideal_answer) && (
@@ -454,6 +635,150 @@ function DiagnosticContent() {
                     </div>
                   </>
                 )}
+                {tutorPhase === 'mcq' && tutorStep && (
+                  <div className={styles.feedbackTutorBlock}>
+                    <div className={styles.feedbackText}>
+                      Mode: {tutorStep.tutor_mode} ({tutorStep.tutor_reason})
+                    </div>
+                    <div className={styles.feedbackText}>
+                      MCQs planned: {tutorStep.required_mcqs}–{tutorStep.max_mcqs} ({tutorStep.mcq_branch} student)
+                    </div>
+                    {Array.isArray(tutorStep.mcqs) && tutorStep.mcqs.length > 0 && (
+                      <div className={styles.feedbackMcqList}>
+                        <div className={styles.feedbackText}>Verification MCQs for this concept:</div>
+                        {tutorStep.mcqs.map((m, idx) => (
+                          <div key={m.id || idx} className={styles.mcqVerificationCard}>
+                            <div className={styles.mcqVerificationQuestion}>{m.question}</div>
+                            <ul className={styles.mcqVerificationOptions}>
+                              {Object.entries(m.options || {}).map(([optKey, optText]) => (
+                                <li key={optKey}>
+                                  <strong>{optKey}.</strong> {optText}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {tutorPhase === 'socratic' && nextTeacherPrompt && (
+              <div className={styles.socraticBlock}>
+                <div className={styles.socraticTitle}>Socratic tutoring</div>
+                <div className={styles.socraticPrompt}>
+                  {nextTeacherPrompt}
+                </div>
+                {socraticTurns.length > 0 && (
+                  <div className={styles.socraticHistory}>
+                    {socraticTurns.map((t, idx) => (
+                      <div key={idx} className={styles.socraticTurn}>
+                        <span className={styles.socraticLabel}>You:</span> {t.student_answer}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className={styles.socraticInputRow}>
+                  <input
+                    type="text"
+                    className={styles.socraticInput}
+                    value={socraticInput}
+                    onChange={(e) => setSocraticInput(e.target.value)}
+                    placeholder="Type your next step here…"
+                  />
+                  <button
+                    type="button"
+                    className={styles.submitButton}
+                    onClick={submitSocraticTurn}
+                    disabled={!socraticInput.trim()}
+                  >
+                    Send
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {tutorPhase === 'final_recall' && (
+              <div className={styles.socraticBlock}>
+                <div className={styles.socraticTitle}>Final exam-style summary</div>
+                <div className={styles.socraticPrompt}>
+                  Now summarize the full answer in 4–5 exam sentences.
+                </div>
+                <textarea
+                  className={styles.finalRecallInput}
+                  value={finalRecallText}
+                  onChange={(e) => setFinalRecallText(e.target.value)}
+                  placeholder="Write your final compact answer here…"
+                  rows={4}
+                />
+                <div className={styles.socraticInputRow}>
+                  <button
+                    type="button"
+                    className={styles.submitButton}
+                    onClick={submitFinalRecall}
+                    disabled={!finalRecallText.trim()}
+                  >
+                    Submit Final Answer
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {tutorPhase === 'mcq' && mcqList.length > 0 && (
+              <div className={styles.socraticBlock}>
+                <div className={styles.socraticTitle}>MCQ verification</div>
+                <div className={styles.socraticPrompt}>
+                  Question {mcqIndex + 1} of {mcqList.length}
+                </div>
+                {(() => {
+                  const current = mcqList[mcqIndex];
+                  if (!current) return null;
+                  const opts = current.options || {};
+                  return (
+                    <div className={styles.mcqOptions}>
+                      {Object.entries(opts).map(([label, text]) => {
+                        if (!text) return null;
+                        const selected = mcqSelected === label;
+                        return (
+                          <div
+                            key={label}
+                            className={`${styles.mcqOption} ${selected ? styles.mcqOptionSelected : ''}`}
+                            onClick={() => setMcqSelected(label)}
+                          >
+                            <span className={`${styles.mcqLabel} ${selected ? styles.mcqLabelSelected : ''}`}>
+                              {label}
+                            </span>
+                            <span className={styles.mcqText}>{text}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+                <div className={styles.socraticInputRow}>
+                  <button
+                    type="button"
+                    className={styles.submitButton}
+                    onClick={submitMcqAnswer}
+                    disabled={!mcqSelected}
+                  >
+                    Submit MCQ Answer
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {tutorPhase === 'done' && mcqSummary && (
+              <div className={styles.socraticBlock}>
+                <div className={styles.socraticTitle}>Verification summary</div>
+                <div className={styles.socraticPrompt}>
+                  Mastery decision: {mcqSummary.mastery_decision}
+                </div>
+                <div className={styles.socraticPrompt}>
+                  MCQs correct: {mcqSummary.mcq_correct} / {mcqSummary.required_mcqs}
+                </div>
               </div>
             )}
 
@@ -508,6 +833,11 @@ function DiagnosticContent() {
             <div className={styles.resultRecommendation}>
               {results.recommendation}
             </div>
+            {results.concept_plan?.concept_name && (
+              <div className={styles.resultRecommendation}>
+                Concept mastered: {results.concept_plan.concept_name}
+              </div>
+            )}
 
             {results.misconception_tags && results.misconception_tags.length > 0 && (
               <div className={styles.misconceptionList}>
@@ -544,6 +874,14 @@ function DiagnosticContent() {
                   Continue to Mastery Flow
                 </button>
               )}
+              {nextConceptSuggestion && (
+                <button
+                  className={styles.primaryButton}
+                  onClick={() => router.push(`/diagnostic?for_concept_id=${encodeURIComponent(nextConceptSuggestion.id || nextConceptSuggestion.concept_map_id)}`)}
+                >
+                  Continue to Next Concept
+                </button>
+              )}
               <button
                 className={styles.secondaryButton}
                 onClick={() => router.push('/dashboard')}
@@ -561,6 +899,7 @@ function DiagnosticContent() {
                   setFeedback(null);
                   setCurrentIndex(0);
                   setError('');
+                setNextConceptSuggestion(null);
                 }}
               >
                 Diagnose Another Topic

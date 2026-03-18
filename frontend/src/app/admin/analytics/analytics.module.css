@@ -130,6 +130,100 @@
   margin-bottom: 24px;
 }
 
+.tutorMetaGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.tutorMetaItem {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.tutorTable {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.tutorTableHeader,
+.tutorTableRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.4fr 0.7fr 0.7fr 0.8fr 0.8fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.tutorTableHeader {
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.15);
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tutorTableRow {
+  padding: 14px 20px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.timelineList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.timelineItem {
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.timelineTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.timelineSubject {
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.timelineTime {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.timelineBody {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.5;
+}
+
+.timelineMessage {
+  margin-top: 8px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.65);
+}
+
 .activityBars {
   display: flex;
   align-items: flex-end;

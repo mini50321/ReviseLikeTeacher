@@ -1,4 +1,10 @@
 const { db } = require('../db');
+const {
+  getNextBestConcept,
+  getFullPathway,
+  getFirstConceptForSubject,
+  serializeConcept: serializeGraphConcept
+} = require('./concept-graph-engine');
 
 function generateId() {
   return db.generateUUID ? db.generateUUID() : require('crypto').randomUUID();
@@ -90,62 +96,18 @@ async function getFirstConceptInTopic(subject, topic) {
 }
 
 async function getNextConcept(currentConceptId) {
-  const current = await resolveConceptId(currentConceptId);
-  if (!current) return null;
-  const downstreamIds = parseJson(current.downstream_concept_ids, []);
-  for (const id of downstreamIds) {
-    const resolved = await resolveConceptId(id);
-    if (resolved) return serializeConcept(resolved);
-  }
-  const nextInTopic = await getNextInTopic(current);
-  if (nextInTopic) return serializeConcept(nextInTopic);
-  const nextTopic = await getNextTopic(current.subject, current.topic);
-  if (nextTopic) {
-    const first = await getFirstConceptInTopic(current.subject, nextTopic);
-    return first ? serializeConcept(first) : null;
-  }
-  return null;
+  const next = await getNextBestConcept({ currentConceptId });
+  return next ? serializeConcept(next) : null;
 }
 
 async function getFirstConcept(subject, topic) {
-  const firstTopic = topic || (await db.query(
-    `SELECT topic FROM topic_pathway_order WHERE subject = $1 ORDER BY display_order ASC LIMIT 1`,
-    [subject]
-  )).rows?.[0]?.topic;
-  const targetTopic = firstTopic || (await db.query(
-    'SELECT topic FROM topic_gross_prompt WHERE subject = $1 ORDER BY topic ASC LIMIT 1',
-    [subject]
-  )).rows?.[0]?.topic;
-  if (!targetTopic) return null;
-  const c = await getFirstConceptInTopic(subject, targetTopic);
-  return c ? serializeConcept(c) : null;
+  const first = await getFirstConceptForSubject(subject, topic || null);
+  return first ? serializeGraphConcept(first) : null;
 }
 
 async function getPathway(subject) {
-  const topicOrder = await db.query(
-    'SELECT topic FROM topic_pathway_order WHERE subject = $1 ORDER BY display_order ASC, topic ASC',
-    [subject]
-  );
-  let topics = (topicOrder.rows || []).map(r => r.topic);
-  if (topics.length === 0) {
-    const fallback = await db.query(
-      'SELECT DISTINCT topic FROM topic_gross_prompt WHERE subject = $1 ORDER BY topic ASC',
-      [subject]
-    );
-    topics = (fallback.rows || []).map(r => r.topic);
-  }
-  const result = [];
-  for (const t of topics) {
-    const concepts = await db.query(
-      `SELECT * FROM topic_concept WHERE subject = $1 AND topic = $2
-       ORDER BY display_order ASC, concept_key ASC`,
-      [subject, t]
-    );
-    for (const row of (concepts.rows || [])) {
-      result.push(serializeConcept(row));
-    }
-  }
-  return result;
+  const pathway = await getFullPathway({ subject });
+  return pathway.concepts.map(serializeGraphConcept);
 }
 
 async function getConceptWeight(conceptId) {

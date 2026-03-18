@@ -3,6 +3,7 @@ const router = express.Router();
 const { authenticate, requireAdmin } = require('../middleware/auth');
 const { db } = require('../db');
 const { extractQuestionsFromPDF, buildConceptDraftFromText } = require('../services/ai');
+const { parseMicroPdfConceptText } = require('../services/micropdf-text-parser');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs').promises;
@@ -382,6 +383,25 @@ router.post('/:id/concept-draft', authenticate, requireAdmin, async (req, res) =
 
     const maxConceptsNum = Math.min(Math.max(parseInt(max_concepts || '6', 10), 1), 12);
 
+    const parsed = parseMicroPdfConceptText(rawText);
+    if (parsed && parsed.draft) {
+      const draft = parsed.draft;
+      draft.subject = subject || draft.subject;
+      draft.topic = topic || draft.topic;
+      if (Array.isArray(draft.concepts) && draft.concepts[0]) {
+        draft.concepts[0].subject = draft.subject;
+        draft.concepts[0].topic = draft.topic;
+      }
+
+      return res.json({
+        pdf_id: id,
+        subject: draft.subject,
+        topic: draft.topic,
+        draft,
+        source: 'structured_micro_pdf'
+      });
+    }
+
     const draft = await buildConceptDraftFromText({
       subject,
       topic,
@@ -393,7 +413,8 @@ router.post('/:id/concept-draft', authenticate, requireAdmin, async (req, res) =
       pdf_id: id,
       subject,
       topic,
-      draft
+      draft,
+      source: 'ai_fallback'
     });
   } catch (error) {
     console.error('Concept draft build route error:', error);
