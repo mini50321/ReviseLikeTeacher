@@ -63,34 +63,21 @@ router.get('/topics', authenticate, async (req, res) => {
           ${hasSubject ? 'AND subject = $1' : ''}
         GROUP BY subject, topic
       ),
-      gross_topics AS (
-        SELECT DISTINCT subject, topic
-        FROM topic_gross_prompt
-        ${hasSubject ? 'WHERE subject = $1' : ''}
-      ),
       concept_topics AS (
         SELECT DISTINCT subject, topic
         FROM topic_concept
         ${hasSubject ? 'WHERE subject = $1' : ''}
       ),
-      base_topics AS (
-        -- Only show topics that have both: a gross prompt (Concept Map entry)
-        -- and a topic_concept (Diagnostic can actually start).
-        SELECT gt.subject, gt.topic
-        FROM gross_topics gt
-        INNER JOIN concept_topics ct
-          ON ct.subject = gt.subject AND ct.topic = gt.topic
-      )
-      SELECT bt.subject,
-             bt.topic,
+      SELECT ct.subject,
+             ct.topic,
              COALESCE(qt.question_count, 0)   AS question_count,
              COALESCE(qt.core_count, 0)       AS core_count,
              COALESCE(qt.frequent_count, 0)   AS frequent_count,
              COALESCE(qt.saq_count, 0)        AS saq_count
-      FROM base_topics bt
+      FROM concept_topics ct
       LEFT JOIN question_topics qt
-        ON qt.subject = bt.subject AND qt.topic = bt.topic
-      ORDER BY bt.subject, bt.topic
+        ON qt.subject = ct.subject AND qt.topic = ct.topic
+      ORDER BY ct.subject, ct.topic
     `;
 
     const result = await db.query(query, params);
