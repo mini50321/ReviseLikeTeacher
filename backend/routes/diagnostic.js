@@ -47,9 +47,8 @@ router.get('/topics', authenticate, async (req, res) => {
     const { subject } = req.query;
 
     const params = [];
-    if (subject) {
-      params.push(subject);
-    }
+    const hasSubject = subject !== undefined && subject !== null && String(subject).trim() !== '';
+    if (hasSubject) params.push(subject);
 
     const query = `
       WITH question_topics AS (
@@ -61,30 +60,37 @@ router.get('/topics', authenticate, async (req, res) => {
         FROM question
         WHERE status = 'active'
           AND type IN ('saq', 'mcq', 'case_based', 'true_false', 'assertion_reason')
-          ${subject ? 'AND subject = $1' : ''}
+          ${hasSubject ? 'AND subject = $1' : ''}
         GROUP BY subject, topic
+      ),
+      gross_topics AS (
+        SELECT DISTINCT subject, topic
+        FROM topic_gross_prompt
+        ${hasSubject ? 'WHERE subject = $1' : ''}
       ),
       concept_topics AS (
         SELECT DISTINCT subject, topic
         FROM topic_concept
-        ${subject ? 'WHERE subject = $1' : ''}
-        UNION
-        SELECT DISTINCT subject, topic
-        FROM question
-        WHERE status = 'active'
-          AND type IN ('saq', 'mcq', 'case_based', 'true_false', 'assertion_reason')
-          ${subject ? 'AND subject = $1' : ''}
+        ${hasSubject ? 'WHERE subject = $1' : ''}
+      ),
+      base_topics AS (
+        -- Only show topics that have both: a gross prompt (Concept Map entry)
+        -- and a topic_concept (Diagnostic can actually start).
+        SELECT gt.subject, gt.topic
+        FROM gross_topics gt
+        INNER JOIN concept_topics ct
+          ON ct.subject = gt.subject AND ct.topic = gt.topic
       )
-      SELECT ct.subject,
-             ct.topic,
+      SELECT bt.subject,
+             bt.topic,
              COALESCE(qt.question_count, 0)   AS question_count,
              COALESCE(qt.core_count, 0)       AS core_count,
              COALESCE(qt.frequent_count, 0)   AS frequent_count,
              COALESCE(qt.saq_count, 0)        AS saq_count
-      FROM concept_topics ct
+      FROM base_topics bt
       LEFT JOIN question_topics qt
-        ON qt.subject = ct.subject AND qt.topic = ct.topic
-      ORDER BY ct.subject, ct.topic
+        ON qt.subject = bt.subject AND qt.topic = bt.topic
+      ORDER BY bt.subject, bt.topic
     `;
 
     const result = await db.query(query, params);
