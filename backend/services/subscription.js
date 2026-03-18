@@ -157,7 +157,7 @@ async function checkDailyLimit(userId, limitType) {
   } else if (limitType === 'daily_diagnostic_limit') {
     const result = await db.query(
       `SELECT COUNT(*) as cnt FROM diagnostic_assessment
-       WHERE user_id = $1 AND date(started_at) = $2`,
+       WHERE user_id = $1 AND date(created_at) = $2`,
       [userId, today]
     );
     used = parseInt(result.rows[0]?.cnt || 0);

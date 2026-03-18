@@ -46,23 +46,46 @@ router.get('/topics', authenticate, async (req, res) => {
   try {
     const { subject } = req.query;
 
-    let query = `
-      SELECT subject, topic, COUNT(*) as question_count,
-             SUM(CASE WHEN yield_category = 'core' THEN 1 ELSE 0 END) as core_count,
-             SUM(CASE WHEN yield_category = 'frequent' THEN 1 ELSE 0 END) as frequent_count,
-             SUM(CASE WHEN type = 'saq' THEN 1 ELSE 0 END) as saq_count
-      FROM question
-      WHERE status = 'active'
-        AND type IN ('saq', 'mcq', 'case_based', 'true_false', 'assertion_reason')`;
     const params = [];
-    let paramCount = 1;
-
     if (subject) {
-      query += ` AND subject = $${paramCount++}`;
       params.push(subject);
     }
 
-    query += ' GROUP BY subject, topic ORDER BY subject, topic';
+    const query = `
+      WITH question_topics AS (
+        SELECT subject, topic,
+               COUNT(*) as question_count,
+               SUM(CASE WHEN yield_category = 'core' THEN 1 ELSE 0 END) as core_count,
+               SUM(CASE WHEN yield_category = 'frequent' THEN 1 ELSE 0 END) as frequent_count,
+               SUM(CASE WHEN type = 'saq' THEN 1 ELSE 0 END) as saq_count
+        FROM question
+        WHERE status = 'active'
+          AND type IN ('saq', 'mcq', 'case_based', 'true_false', 'assertion_reason')
+          ${subject ? 'AND subject = $1' : ''}
+        GROUP BY subject, topic
+      ),
+      concept_topics AS (
+        SELECT DISTINCT subject, topic
+        FROM topic_concept
+        ${subject ? 'WHERE subject = $1' : ''}
+        UNION
+        SELECT DISTINCT subject, topic
+        FROM question
+        WHERE status = 'active'
+          AND type IN ('saq', 'mcq', 'case_based', 'true_false', 'assertion_reason')
+          ${subject ? 'AND subject = $1' : ''}
+      )
+      SELECT ct.subject,
+             ct.topic,
+             COALESCE(qt.question_count, 0)   AS question_count,
+             COALESCE(qt.core_count, 0)       AS core_count,
+             COALESCE(qt.frequent_count, 0)   AS frequent_count,
+             COALESCE(qt.saq_count, 0)        AS saq_count
+      FROM concept_topics ct
+      LEFT JOIN question_topics qt
+        ON qt.subject = ct.subject AND qt.topic = ct.topic
+      ORDER BY ct.subject, ct.topic
+    `;
 
     const result = await db.query(query, params);
 
@@ -633,7 +656,6 @@ router.post('/:id/saq-answer', authenticate, async (req, res) => {
       next_phase: nextPhase,
       retry_count: 0,
       metadata: {
-        question_id,
         word_count: wordCount,
         missing_points: (scoreResult.pointsMissed || []).length,
         tutor_step: tutorFlow?.tutor_step || null
@@ -1116,6 +1138,10 @@ router.post('/:id/complete', authenticate, async (req, res) => {
       [rawScore, diagnosticLevel, studentLevel, levelToMasteryStatus(studentLevel), JSON.stringify(misconceptionTags), id]
     );
 
+    const masteryStatus = diagnosticLevel === 'weak' ? 'relearn_core' :
+                          diagnosticLevel === 'average' ? 'in_progress' :
+                          diagnosticLevel === 'good' ? 'in_progress' : 'in_progress';
+
     await logTutorEvent({
       user_id: userId,
       session_type: 'diagnostic',
@@ -1140,10 +1166,6 @@ router.post('/:id/complete', authenticate, async (req, res) => {
       'SELECT * FROM topicmastery WHERE user_id = $1 AND topic = $2 AND subject = $3',
       [userId, diagnostic.topic, diagnostic.subject]
     );
-
-    const masteryStatus = diagnosticLevel === 'weak' ? 'relearn_core' :
-                          diagnosticLevel === 'average' ? 'in_progress' :
-                          diagnosticLevel === 'good' ? 'in_progress' : 'in_progress';
 
     const completeNextRev = new Date();
     completeNextRev.setDate(completeNextRev.getDate() + 3);
