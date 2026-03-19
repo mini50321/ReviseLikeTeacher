@@ -10,7 +10,8 @@ function detectMisconceptions(answerNorm, traps) {
     if (!text || typeof text !== 'string') continue;
     const words = text.toLowerCase().replace(/\s+/g, ' ').split(' ').filter(w => w.length > 2);
     const matchCount = words.filter(w => answerNorm.includes(w)).length;
-    if (matchCount >= Math.min(2, Math.ceil(words.length / 2))) found.push(text);
+    const threshold = Math.max(3, Math.ceil(words.length * 0.7));
+    if (matchCount >= threshold) found.push(text);
   }
   return found;
 }
@@ -26,7 +27,8 @@ function detectSaqMisconceptions(answerNorm, saqs) {
       if (!text || typeof text !== 'string') continue;
       const words = text.toLowerCase().replace(/\s+/g, ' ').split(' ').filter(w => w.length > 2);
       const matchCount = words.filter(w => answerNorm.includes(w)).length;
-      if (matchCount >= Math.min(2, Math.ceil(words.length / 2))) found.push(text);
+      const threshold = Math.max(3, Math.ceil(words.length * 0.7));
+      if (matchCount >= threshold) found.push(text);
     }
   }
   return found;
@@ -55,21 +57,33 @@ function classifyStudentLevel(concept, answerText, learnerLevel = 'mid') {
   const misconceptionFromSaqs = detectSaqMisconceptions(answerNorm, saqs);
   const allMisconceptions = [...new Set([...misconceptionFromTraps, ...misconceptionFromSaqs])];
   const misconceptionCount = allMisconceptions.length;
-  const scorePercent = scoreResult.scorePercent;
-  const words = wordCount(answerText);
   const compactAnswer = saqs[0]?.compact_answer || null;
   const compactSimilarity = compactAnswer ? similarityToCompactAnswer(answerNorm, compactAnswer) : 0;
 
+  const scorePercent = (typeof scoreResult.scorePercent === 'number')
+    ? scoreResult.scorePercent
+    : Math.round(compactSimilarity * 100);
+  const words = wordCount(answerText);
+
   let level = 'average';
-  if (misconceptionCount >= 2 && scorePercent < 45) level = 'very_weak';
-  else if (scorePercent >= 95 && misconceptionCount === 0) {
+
+  if (misconceptionCount >= 3 && scorePercent < 40) {
+    level = 'very_weak';
+  } else if (scorePercent >= 95 && misconceptionCount === 0) {
     if (compactSimilarity >= 0.96 && words <= 16) level = 'bored';
     else if (words >= 18 || compactSimilarity < 0.9) level = 'excellent';
     else level = 'strong';
-  } else if (scorePercent >= 80 && misconceptionCount <= 1) level = 'strong';
-  else if (scorePercent >= 55 && misconceptionCount <= 2) level = 'average';
-  else if (scorePercent >= 25) level = 'weak';
-  else level = 'very_weak';
+  } else if (scorePercent >= 90) {
+    level = 'excellent';
+  } else if (scorePercent >= 75) {
+    level = 'strong';
+  } else if (scorePercent >= 50) {
+    level = 'average';
+  } else if (scorePercent >= 30) {
+    level = 'weak';
+  } else {
+    level = 'very_weak';
+  }
 
   return {
     level,

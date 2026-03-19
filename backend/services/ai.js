@@ -115,12 +115,13 @@ async function evaluateAnswer({ question, studentAnswer, currentMastery, userId 
     console.log('Using fallback evaluation (AI service unavailable)');
 
     const fallbackScore = calculateFallbackScore(studentAnswer, question);
+    const { strengths, improvements } = buildFallbackFeedback(question, studentAnswer);
 
     return {
       score: fallbackScore,
       feedback: {
-        strengths: "Thank you for your answer.",
-        improvements: "Keep practicing to improve.",
+        strengths,
+        improvements,
         model_explanation: question.ideal_answer || "Review the topic for a complete answer."
       },
       teacher_response: "You made a sincere attempt. Your main gap is concept precision. Rebuild the core idea first, then link it to the stem. What is the one clue that should guide your answer next time?",
@@ -139,6 +140,72 @@ function calculateFallbackScore(answer, question) {
   if (answerLength < idealLength * 0.3) return 40;
   if (answerLength < idealLength * 0.6) return 60;
   return 70;
+}
+
+function normalizeForMatch(text) {
+  return String(text || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getKeyPointText(item) {
+  if (item == null) return '';
+  if (typeof item === 'string') return item;
+  if (typeof item !== 'object') return String(item);
+  return item.description || item.label || item.text || item.prompt || item.name || '';
+}
+
+function pickTopUnique(list, max = 3) {
+  const seen = new Set();
+  const out = [];
+  for (const t of list) {
+    const v = String(t || '').trim();
+    if (!v) continue;
+    const key = v.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(v);
+    if (out.length >= max) break;
+  }
+  return out;
+}
+
+function buildFallbackFeedback(question, studentAnswer) {
+  const keyPoints = Array.isArray(question.key_points)
+    ? question.key_points
+    : (typeof question.key_points === 'string'
+      ? (() => { try { const p = JSON.parse(question.key_points); return Array.isArray(p) ? p : []; } catch { return []; } })()
+      : []);
+
+  const answerNorm = normalizeForMatch(studentAnswer);
+  const answerWords = answerNorm.split(' ').filter(w => w.length > 2);
+  const scored = keyPoints.map((kp) => {
+    const kpText = normalizeForMatch(getKeyPointText(kp));
+    if (!kpText) return { raw: getKeyPointText(kp), match: 0 };
+    const kpWords = kpText.split(' ').filter(w => w.length > 2);
+    const match = kpWords.filter(w => answerNorm.includes(w) || answerWords.includes(w)).length;
+    return { raw: getKeyPointText(kp), match };
+  });
+
+  const sorted = scored
+    .filter(s => s.raw)
+    .sort((a, b) => b.match - a.match);
+
+  const hitCandidates = sorted.filter(s => s.match > 0).map(s => s.raw);
+  const missCandidates = sorted.filter(s => s.match === 0).map(s => s.raw);
+  const ideal = String(question.ideal_answer || '').trim();
+
+  const strengths = hitCandidates.length
+    ? `You covered: ${pickTopUnique(hitCandidates, 3).join(', ')}.`
+    : 'You captured the overall idea, but key steps are missing.';
+
+  const improvements = missCandidates.length
+    ? `Focus on: ${pickTopUnique(missCandidates, 3).join(', ')}.`
+    : (ideal ? `Review the correct sequence: ${ideal}` : 'Add the missing key steps in the correct order.');
+
+  return { strengths, improvements };
 }
 
 async function transcribeVoice(audioBuffer, language, filename = 'audio.webm') {

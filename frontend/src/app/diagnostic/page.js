@@ -263,6 +263,9 @@ function DiagnosticContent() {
           if (tutorData.tutor_step) {
             setTutorStep(tutorData.tutor_step);
           }
+          if (nextTutorPhase === 'mcq') {
+            await loadMcqs(tutorData.tutor_step);
+          }
         } catch (e) {
         }
       }
@@ -307,20 +310,26 @@ function DiagnosticContent() {
         setTutorStep(data.tutor_step);
       }
       if (nextTutorPhase === 'mcq') {
-        try {
-          const mcqResp = await api.get(`/diagnostic/${diagnosticId}/mcqs`);
-          const mcqData = mcqResp.data || {};
-          const plan = mcqData.mcq_plan || data.tutor_step || {};
-          const list = Array.isArray(plan.mcqs) ? plan.mcqs : [];
-          setMcqList(list);
-          setMcqIndex(0);
-          setMcqSelected('');
-          setMcqSummary(null);
-        } catch (e) {
-        }
+        await loadMcqs(data.tutor_step);
       }
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to submit final recall answer');
+    }
+  };
+
+  const loadMcqs = async (fallbackPlan) => {
+    if (!diagnosticId) return;
+    try {
+      const mcqResp = await api.get(`/diagnostic/${diagnosticId}/mcqs`);
+      const mcqData = mcqResp.data || {};
+      const plan = mcqData.mcq_plan || fallbackPlan || {};
+      const list = Array.isArray(plan.mcqs) ? plan.mcqs : [];
+      setMcqList(list);
+      setMcqIndex(0);
+      setMcqSelected('');
+      setMcqSummary(null);
+    } catch (e) {
+      setError('Failed to load MCQs');
     }
   };
 
@@ -497,7 +506,13 @@ function DiagnosticContent() {
 
   if (phase === 'answering') {
     const question = questions[currentIndex];
-    if (!question) return null;
+    if (!question) {
+      return (
+        <div className={styles.card}>
+          <div className={styles.error}>No SAQ question available for this topic.</div>
+        </div>
+      );
+    }
 
     let parsedOptions = null;
     if (question.options) {
@@ -784,6 +799,13 @@ function DiagnosticContent() {
                     disabled={submitting || !selectedOption}
                   >
                     {submitting ? 'Evaluating...' : 'Submit Answer'}
+                  </button>
+                ) : tutorPhase === 'mcq' && mcqList.length === 0 ? (
+                  <button
+                    className={styles.submitButton}
+                    onClick={() => loadMcqs(tutorStep)}
+                  >
+                    Start MCQ Check
                   </button>
                 ) : null
               ) : (

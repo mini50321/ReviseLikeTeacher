@@ -24,6 +24,7 @@ function serializeTopicConcept(row) {
     concept_key: row.concept_key,
     name: row.name,
     display_order: row.display_order || 0,
+    mcqs: safeParseJson(row.mcqs, []),
     must_know_points: safeParseJson(row.must_know_points, []),
     deep_points: safeParseJson(row.deep_points, []),
     traps: safeParseJson(row.traps, []),

@@ -527,9 +527,13 @@ router.post('/:id/answer', authenticate, async (req, res) => {
       );
     }
 
-    const finalScore = typeof scoreResult.scorePercent === 'number'
+    let finalScore = typeof scoreResult.scorePercent === 'number'
       ? scoreResult.scorePercent
       : evaluation.score;
+
+    if (studentLevelResult.level === 'average' && finalScore < 50) {
+      finalScore = 50;
+    }
 
     res.json({
       attempt_id: attemptId,
