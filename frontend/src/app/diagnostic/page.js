@@ -656,10 +656,7 @@ function DiagnosticContent() {
             {tutorPhase === 'socratic' && nextTeacherPrompt && (
               <div className={styles.socraticBlock}>
                 <div className={styles.socraticTitle}>Socratic tutoring</div>
-                <div className={styles.socraticPrompt}>
-                  {nextTeacherPrompt}
-                </div>
-                {socraticTurns.length > 0 && (
+                {(socraticTurns.length > 0 || nextTeacherPrompt) && (
                   <div className={styles.socraticHistory}>
                     {socraticTurns.map((t, idx) => (
                       <div key={idx} className={styles.socraticTurn}>
@@ -673,6 +670,13 @@ function DiagnosticContent() {
                         </div>
                       </div>
                     ))}
+                    {nextTeacherPrompt && (
+                      <div className={styles.socraticTurn}>
+                        <div className={styles.socraticTurnLine}>
+                          <span className={styles.socraticLabel}>Tutor:</span> {nextTeacherPrompt}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
                 <div className={styles.socraticChatInput}>
@@ -690,25 +694,27 @@ function DiagnosticContent() {
             {tutorPhase === 'final_recall' && (
               <div className={styles.socraticBlock}>
                 <div className={styles.socraticTitle}>Final exam-style summary</div>
-                <div className={styles.socraticPrompt}>
-                  Now summarize the full answer in 4–5 exam sentences.
-                </div>
-                <textarea
-                  className={styles.finalRecallInput}
-                  value={finalRecallText}
-                  onChange={(e) => setFinalRecallText(e.target.value)}
-                  placeholder="Write your final compact answer here…"
-                  rows={4}
-                />
-                <div className={styles.socraticInputRow}>
-                  <button
-                    type="button"
-                    className={styles.submitButton}
-                    onClick={submitFinalRecall}
-                    disabled={!finalRecallText.trim()}
-                  >
-                    Submit Final Answer
-                  </button>
+                <div className={styles.finalRecallCard}>
+                  <div className={styles.finalRecallPrompt}>
+                    Now summarize the full answer in 4–5 exam sentences.
+                  </div>
+                  <textarea
+                    className={styles.finalRecallInput}
+                    value={finalRecallText}
+                    onChange={(e) => setFinalRecallText(e.target.value)}
+                    placeholder="Write your final compact answer here…"
+                    rows={5}
+                  />
+                  <div className={styles.finalRecallActions}>
+                    <button
+                      type="button"
+                      className={styles.submitButton}
+                      onClick={submitFinalRecall}
+                      disabled={!finalRecallText.trim()}
+                    >
+                      Submit Final Answer
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
