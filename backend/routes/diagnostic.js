@@ -50,8 +50,34 @@ router.get('/topics', authenticate, async (req, res) => {
     const hasSubject = subject !== undefined && subject !== null && String(subject).trim() !== '';
     if (hasSubject) params.push(subject);
 
-    const query = `
-      WITH question_topics AS (
+    const [topicResult, masteryResult] = await Promise.all([
+      db.query(
+        `
+        SELECT DISTINCT subject, topic
+        FROM topic_concept
+        ${hasSubject ? 'WHERE subject = $1' : ''}
+        ORDER BY subject ASC, topic ASC
+        `,
+        params
+      ),
+      db.query(
+        'SELECT topic, subject, mastery_status, diagnostic_level, mastery_level FROM topicmastery WHERE user_id = $1',
+        [req.user.userId]
+      )
+    ]);
+
+    // Build mastery lookup so the UI can show mastery badges.
+    const masteryMap = {};
+    masteryResult.rows.forEach(m => {
+      masteryMap[`${m.subject}|${m.topic}`] = m;
+    });
+
+    // Counts are optional; if something about question-table schema differs on Render,
+    // we still want topics to load from `topic_concept`.
+    let questionCountMap = {};
+    try {
+      const q = await db.query(
+        `
         SELECT subject, topic,
                COUNT(*) as question_count,
                SUM(CASE WHEN yield_category = 'core' THEN 1 ELSE 0 END) as core_count,
@@ -62,47 +88,30 @@ router.get('/topics', authenticate, async (req, res) => {
           AND type IN ('saq', 'mcq', 'case_based', 'true_false', 'assertion_reason')
           ${hasSubject ? 'AND subject = $1' : ''}
         GROUP BY subject, topic
-      ),
-      concept_topics AS (
-        SELECT DISTINCT subject, topic
-        FROM topic_concept
-        ${hasSubject ? 'WHERE subject = $1' : ''}
-      ),
-      SELECT ct.subject,
-             ct.topic,
-             COALESCE(qt.question_count, 0)   AS question_count,
-             COALESCE(qt.core_count, 0)       AS core_count,
-             COALESCE(qt.frequent_count, 0)   AS frequent_count,
-             COALESCE(qt.saq_count, 0)        AS saq_count
-      FROM concept_topics ct
-      LEFT JOIN question_topics qt
-        ON qt.subject = ct.subject AND qt.topic = ct.topic
-      ORDER BY ct.subject, ct.topic
-    `;
+        `,
+        params
+      );
 
-    const result = await db.query(query, params);
+      questionCountMap = q.rows.reduce((acc, row) => {
+        acc[`${row.subject}|${row.topic}`] = row;
+        return acc;
+      }, {});
+    } catch (e) {
+      console.error('Get diagnostic question counts error (non-fatal):', e);
+      questionCountMap = {};
+    }
 
-    const userId = req.user.userId;
-    const masteryResult = await db.query(
-      'SELECT topic, subject, mastery_status, diagnostic_level, mastery_level FROM topicmastery WHERE user_id = $1',
-      [userId]
-    );
-
-    const masteryMap = {};
-    masteryResult.rows.forEach(m => {
-      masteryMap[`${m.subject}|${m.topic}`] = m;
-    });
-
-    const topics = result.rows.map(row => {
+    const topics = (topicResult.rows || []).map(row => {
       const key = `${row.subject}|${row.topic}`;
       const mastery = masteryMap[key];
+      const counts = questionCountMap[key] || {};
       return {
         subject: row.subject,
         topic: row.topic,
-        question_count: parseInt(row.question_count),
-        core_count: parseInt(row.core_count || 0),
-        frequent_count: parseInt(row.frequent_count || 0),
-        saq_count: parseInt(row.saq_count || 0),
+        question_count: parseInt(counts.question_count || 0),
+        core_count: parseInt(counts.core_count || 0),
+        frequent_count: parseInt(counts.frequent_count || 0),
+        saq_count: parseInt(counts.saq_count || 0),
         mastery_status: mastery?.mastery_status || 'not_started',
         diagnostic_level: mastery?.diagnostic_level || null,
         mastery_level: mastery?.mastery_level || 0
@@ -110,7 +119,6 @@ router.get('/topics', authenticate, async (req, res) => {
     });
 
     const subjects = [...new Set(topics.map(t => t.subject))].sort();
-
     res.json({ topics, subjects });
   } catch (error) {
     console.error('Get diagnostic topics error:', error);
