@@ -1,4 +1,5 @@
 const { getLeadingPromptForTier } = require('./concept-map-session');
+const { normalizeMcqRecord } = require('./mcq-normalize');
 
 const DEFAULT_CONFIG = {
   mcq_preference_excellent: 0.8,
@@ -40,18 +41,19 @@ function pickMcqForPoint(concept, pointLabel, usedMcqIds = []) {
 }
 
 function formatMcqForClient(mcq, index = 0) {
-  if (!mcq || !mcq.question) return null;
-  const opts = mcq.options || {};
-  const keys = ['A', 'B', 'C', 'D'].filter(k => opts[k] != null);
-  const options = keys.map(k => `${k}. ${opts[k]}`).join('\n');
+  const n = normalizeMcqRecord(mcq, index);
+  if (!n) return null;
+  const opts = n.options || {};
+  const keys = ['A', 'B', 'C', 'D'].filter((k) => opts[k] != null);
+  const options = keys.map((k) => `${k}. ${opts[k]}`).join('\n');
   return {
     type: 'mcq',
-    question: mcq.question,
+    question: n.question,
     options: opts,
     options_text: options,
-    correct_answer: mcq.correct_answer,
-    socratic_prompts: mcq.socratic_prompts,
-    id: mcq.id || `mcq_${index}`
+    correct_answer: n.correct_answer,
+    socratic_prompts: n.socratic_prompts,
+    id: n.id || `mcq_${index}`
   };
 }
 

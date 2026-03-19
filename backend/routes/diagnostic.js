@@ -17,6 +17,91 @@ const {
   levelToMasteryStatus,
   buildTutorPlan
 } = require('../services/diagnostic-tutor-rules');
+const { buildTutorStep } = require('../services/diagnostic-tutor-engine');
+const { planMcqsAreUsable, questionRowToNormalizedMcq } = require('../services/mcq-normalize');
+const { formatMcqForClient } = require('../services/socratic-mcq-selector');
+
+async function fetchMcqsFromQuestionBank(subject, topic, conceptId, limit = 6) {
+  try {
+    if (conceptId) {
+      const prioritized = await db.query(
+        `SELECT * FROM question
+         WHERE subject = $1 AND topic = $2 AND status = 'active' AND type = 'mcq'
+         ORDER BY CASE WHEN concept_id = $3 THEN 0 ELSE 1 END, RANDOM()
+         LIMIT $4`,
+        [subject, topic, conceptId, limit]
+      );
+      if (prioritized.rows.length > 0) return prioritized.rows;
+    }
+    const any = await db.query(
+      `SELECT * FROM question
+       WHERE subject = $1 AND topic = $2 AND status = 'active' AND type = 'mcq'
+       ORDER BY RANDOM()
+       LIMIT $3`,
+      [subject, topic, limit]
+    );
+    return any.rows || [];
+  } catch (e) {
+    console.error('fetchMcqsFromQuestionBank:', e);
+    return [];
+  }
+}
+
+async function repairDiagnosticMcqPlan(diagnostic) {
+  const plan = diagnostic.mcq_plan ? safeParseJson(diagnostic.mcq_plan, null) : null;
+  if (String(diagnostic.phase || '').toLowerCase() !== 'mcq') return plan;
+  if (plan && planMcqsAreUsable(plan.mcqs)) return plan;
+
+  const concept = diagnostic.concept_id
+    ? await loadConceptForDiagnostic(diagnostic.subject, diagnostic.topic, diagnostic.concept_id)
+    : await loadConceptForDiagnostic(diagnostic.subject, diagnostic.topic, null);
+
+  const level = diagnostic.student_level || 'average';
+  const tutorStep = concept
+    ? buildTutorStep({
+        concept,
+        studentLevelResult: { level },
+        scoreResult: { pointsHit: [], pointsMissed: [] },
+        answerText: '',
+        usedMcqIds: []
+      })
+    : null;
+
+  let mcqs = Array.isArray(tutorStep?.mcqs) ? tutorStep.mcqs : [];
+  let merged = {
+    ...(plan && typeof plan === 'object' ? plan : {}),
+    ...(tutorStep || {}),
+    mcqs
+  };
+
+  if (!planMcqsAreUsable(merged.mcqs)) {
+    const want = Math.max(Number(merged.required_mcqs) || 3, 4);
+    const bankRows = await fetchMcqsFromQuestionBank(
+      diagnostic.subject,
+      diagnostic.topic,
+      diagnostic.concept_id || null,
+      want
+    );
+    const bankMcqs = [];
+    bankRows.forEach((row, i) => {
+      const n = questionRowToNormalizedMcq(row, i);
+      if (!n) return;
+      const c = formatMcqForClient(n, i);
+      if (c) bankMcqs.push(c);
+    });
+    if (bankMcqs.length > 0) {
+      merged = {
+        ...merged,
+        mcqs: bankMcqs,
+        required_mcqs: Math.min(want, bankMcqs.length),
+        max_mcqs: bankMcqs.length,
+        tutor_reason: 'question_bank_fallback'
+      };
+    }
+  }
+
+  return planMcqsAreUsable(merged.mcqs) ? merged : plan;
+}
 
 async function loadConceptForDiagnostic(subject, topic, preferredConceptId = null) {
   let query = `
@@ -915,7 +1000,16 @@ router.get('/:id/mcqs', authenticate, async (req, res) => {
     }
 
     const diagnostic = diagResult.rows[0];
-    const plan = diagnostic.mcq_plan ? safeParseJson(diagnostic.mcq_plan, null) : null;
+    let plan = diagnostic.mcq_plan ? safeParseJson(diagnostic.mcq_plan, null) : null;
+    const repaired = await repairDiagnosticMcqPlan(diagnostic);
+    if (repaired && planMcqsAreUsable(repaired.mcqs)) {
+      const before = JSON.stringify(plan);
+      const after = JSON.stringify(repaired);
+      if (before !== after) {
+        await db.query('UPDATE diagnostic_assessment SET mcq_plan = $1 WHERE id = $2', [after, id]);
+      }
+      plan = repaired;
+    }
 
     res.json({
       diagnostic_id: id,

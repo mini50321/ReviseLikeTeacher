@@ -638,33 +638,7 @@ function DiagnosticContent() {
                     </div>
                   </>
                 )}
-                {tutorPhase === 'mcq' && tutorStep && (
-                  <div className={styles.feedbackTutorBlock}>
-                    <div className={styles.feedbackText}>
-                      Mode: {tutorStep.tutor_mode} ({tutorStep.tutor_reason})
-                    </div>
-                    <div className={styles.feedbackText}>
-                      MCQs planned: {tutorStep.required_mcqs}–{tutorStep.max_mcqs} ({tutorStep.mcq_branch} student)
-                    </div>
-                    {Array.isArray(tutorStep.mcqs) && tutorStep.mcqs.length > 0 && (
-                      <div className={styles.feedbackMcqList}>
-                        <div className={styles.feedbackText}>Verification MCQs for this concept:</div>
-                        {tutorStep.mcqs.map((m, idx) => (
-                          <div key={m.id || idx} className={styles.mcqVerificationCard}>
-                            <div className={styles.mcqVerificationQuestion}>{m.question}</div>
-                            <ul className={styles.mcqVerificationOptions}>
-                              {Object.entries(m.options || {}).map(([optKey, optText]) => (
-                                <li key={optKey}>
-                                  <strong>{optKey}.</strong> {optText}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
+                {null}
               </div>
             )}
 
@@ -743,26 +717,60 @@ function DiagnosticContent() {
                 {(() => {
                   const current = mcqList[mcqIndex];
                   if (!current) return null;
-                  const opts = current.options || {};
+                  const optsFromObject = current.options && typeof current.options === 'object' ? current.options : {};
+                  const hasObjectOpts = Object.keys(optsFromObject).some(k => optsFromObject[k]);
+                  const optionsText =
+                    current.options_text ||
+                    current.optionsText ||
+                    current.options_text_value ||
+                    '';
+
+                  const parsedOpts = {};
+                  if (!hasObjectOpts && typeof optionsText === 'string' && optionsText.trim()) {
+                    optionsText
+                      .split('\n')
+                      .map(l => String(l || '').trim())
+                      .filter(Boolean)
+                      .forEach((line) => {
+                        const m = line.match(/^([A-D])[\.\)\:\-]\s*(.*)$/i) || line.match(/^([A-D])\s+(.*)$/i);
+                        if (!m) return;
+                        const key = m[1].toUpperCase();
+                        const val = (m[2] || '').trim();
+                        if (val) parsedOpts[key] = val;
+                      });
+                  }
+
+                  const opts = hasObjectOpts ? optsFromObject : parsedOpts;
+                  const hasAnyOptions = Object.keys(opts || {}).some(k => opts[k]);
+
                   return (
-                    <div className={styles.mcqOptions}>
-                      {Object.entries(opts).map(([label, text]) => {
-                        if (!text) return null;
-                        const selected = mcqSelected === label;
-                        return (
-                          <div
-                            key={label}
-                            className={`${styles.mcqOption} ${selected ? styles.mcqOptionSelected : ''}`}
-                            onClick={() => setMcqSelected(label)}
-                          >
-                            <span className={`${styles.mcqLabel} ${selected ? styles.mcqLabelSelected : ''}`}>
-                              {label}
-                            </span>
-                            <span className={styles.mcqText}>{text}</span>
+                    <>
+                      {current.question && (
+                        <div className={styles.mcqQuestionText}>{current.question}</div>
+                      )}
+                      <div className={styles.mcqOptions}>
+                        {hasAnyOptions ? Object.entries(opts).map(([label, text]) => {
+                          if (!text) return null;
+                          const selected = mcqSelected === label;
+                          return (
+                            <div
+                              key={label}
+                              className={`${styles.mcqOption} ${selected ? styles.mcqOptionSelected : ''}`}
+                              onClick={() => setMcqSelected(label)}
+                            >
+                              <span className={`${styles.mcqLabel} ${selected ? styles.mcqLabelSelected : ''}`}>
+                                {label}
+                              </span>
+                              <span className={styles.mcqText}>{text}</span>
+                            </div>
+                          );
+                        }) : (
+                          <div className={styles.feedbackText}>
+                            MCQ options not received. Please try again.
                           </div>
-                        );
-                      })}
-                    </div>
+                        )}
+                      </div>
+                    </>
                   );
                 })()}
                 <div className={styles.socraticInputRow}>
@@ -791,7 +799,14 @@ function DiagnosticContent() {
             )}
 
             <div className={styles.actions}>
-              {!showSolution ? (
+              {tutorPhase === 'done' ? (
+                <button
+                  className={styles.submitButton}
+                  onClick={nextQuestion}
+                >
+                  {currentIndex < questions.length - 1 ? 'Next Question' : 'See Results'}
+                </button>
+              ) : !showSolution ? (
                 isMCQ ? (
                   <button
                     className={styles.submitButton}

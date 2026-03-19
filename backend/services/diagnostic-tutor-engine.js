@@ -1,4 +1,5 @@
 const { selectNextPrompt, getTunableConfig } = require('./socratic-mcq-selector');
+const { normalizeMcqsList } = require('./mcq-normalize');
 
 function getMcqLoadForLevel(level) {
   switch (level) {
@@ -41,7 +42,7 @@ function buildMcqPlan(concept, studentLevel, usedMcqIds = []) {
   const used = Array.isArray(usedMcqIds) ? [...usedMcqIds] : [];
   const conceptWrapper = {
     ...concept,
-    mcqs: Array.isArray(concept.mcqs) ? concept.mcqs : []
+    mcqs: normalizeMcqsList(Array.isArray(concept.mcqs) ? concept.mcqs : [])
   };
   const currentPoint = null;
   let safety = mcqLoad.max + 3;
