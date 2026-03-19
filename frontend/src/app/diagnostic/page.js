@@ -53,7 +53,6 @@ function DiagnosticContent() {
   const [answers, setAnswers] = useState([]);
   const [tutorPhase, setTutorPhase] = useState('saq');
   const [socraticTurns, setSocraticTurns] = useState([]);
-  const [socraticInput, setSocraticInput] = useState('');
   const [finalRecallText, setFinalRecallText] = useState('');
   const [mcqList, setMcqList] = useState([]);
   const [mcqIndex, setMcqIndex] = useState(0);
@@ -274,8 +273,8 @@ function DiagnosticContent() {
     }
   };
 
-  const submitSocraticTurn = async () => {
-    const text = socraticInput.trim();
+  const submitSocraticTurn = async (textInput) => {
+    const text = (textInput || '').trim();
     if (!text || !diagnosticId) return;
     try {
       const response = await api.post(`/diagnostic/${diagnosticId}/socratic-turn`, {
@@ -289,7 +288,6 @@ function DiagnosticContent() {
         setMissingPoints(data.missing_points);
       }
       setNextTeacherPrompt(normalizePromptValue(data.next_teacher_prompt || ''));
-      setSocraticInput('');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to submit Socratic answer');
     }
@@ -574,8 +572,6 @@ function DiagnosticContent() {
                 ) : (
                   <div className={styles.answerArea}>
                     <VoiceChatInput
-                      language={language}
-                      onLanguageChange={setLanguage}
                       placeholder="Type or speak your answer…"
                       onTranscript={(t) => submitAnswer(t)}
                       onError={(e) => setTranscriptionError(e)}
@@ -601,20 +597,19 @@ function DiagnosticContent() {
                   )}
                 </div>
                 <div className={styles.feedbackGrid}>
+                  {feedback.feedback?.strengths && (
+                    <div className={styles.feedbackRow}>
+                      <div className={styles.feedbackLabel}>What you did well</div>
+                      <div className={styles.feedbackValue}>{feedback.feedback.strengths}</div>
+                    </div>
+                  )}
                   {feedback.feedback?.improvements && (
                     <div className={styles.feedbackRow}>
-                      <div className={styles.feedbackLabel}>To improve</div>
+                      <div className={styles.feedbackLabel}>What needs work</div>
                       <div className={styles.feedbackValue}>{feedback.feedback.improvements}</div>
                     </div>
                   )}
-                  {missingPoints.length > 0 && (
-                    <div className={styles.feedbackRow}>
-                      <div className={styles.feedbackLabel}>Missing points</div>
-                      <div className={styles.feedbackValue}>
-                        {missingPoints.map(item => item.label || item.description || item.id).join(', ')}
-                      </div>
-                    </div>
-                  )}
+                  {missingPoints.length > 0 && null}
                 </div>
                 {showSolution && tutorPhase === 'done' && (feedback.feedback?.model_explanation || question.ideal_answer) && (
                   <>
@@ -680,22 +675,14 @@ function DiagnosticContent() {
                     ))}
                   </div>
                 )}
-                <div className={styles.socraticInputRow}>
-                  <input
-                    type="text"
-                    className={styles.socraticInput}
-                    value={socraticInput}
-                    onChange={(e) => setSocraticInput(e.target.value)}
-                    placeholder="Type your next step here…"
+                <div className={styles.socraticChatInput}>
+                  <VoiceChatInput
+                    placeholder="Type or speak your next step…"
+                    onTranscript={(t) => submitSocraticTurn(t)}
+                    onError={(e) => setTranscriptionError(e)}
+                    disabled={submitting}
+                    submitLabel="Send"
                   />
-                  <button
-                    type="button"
-                    className={styles.submitButton}
-                    onClick={submitSocraticTurn}
-                    disabled={!socraticInput.trim()}
-                  >
-                    Send
-                  </button>
                 </div>
               </div>
             )}
