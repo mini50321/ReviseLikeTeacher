@@ -544,15 +544,9 @@ function DiagnosticContent() {
 
           <div className={styles.questionCard}>
             {concept && (
-              <div className={styles.feedbackCard}>
-                <div className={styles.feedbackText}>
-                  {concept.name}
-                </div>
-                {conceptPlan?.checkpoints?.length > 0 && (
-                  <div className={styles.feedbackText}>
-                    Core checkpoints: {conceptPlan.checkpoints.map(item => item.label).join(', ')}
-                  </div>
-                )}
+              <div className={styles.conceptCard}>
+                <div className={styles.conceptBadge}>Concept</div>
+                <div className={styles.conceptTitle}>{concept.name}</div>
               </div>
             )}
             {!showSolution && (
@@ -596,34 +590,32 @@ function DiagnosticContent() {
 
             {feedback && (
               <div className={styles.feedbackCard}>
-                <div className={`${styles.feedbackScore} ${getScoreClass(feedback.score)}`}>
-                  {feedback.score}/100
+                <div className={styles.feedbackHeader}>
+                  <div className={`${styles.feedbackScore} ${getScoreClass(feedback.score)}`}>
+                    {feedback.score}/100
+                  </div>
+                  {feedback.student_level && (
+                    <div className={styles.feedbackPill}>
+                      {feedback.student_level.replace(/_/g, ' ')}
+                    </div>
+                  )}
                 </div>
-                {feedback.feedback?.strengths && (
-                  <div className={styles.feedbackText}>{feedback.feedback.strengths}</div>
-                )}
-                {feedback.feedback?.improvements && (
-                  <div className={styles.feedbackText}>{feedback.feedback.improvements}</div>
-                )}
-                {feedback.student_level && (
-                  <div className={styles.feedbackText}>
-                    Student level: {feedback.student_level.replace(/_/g, ' ')}
-                  </div>
-                )}
-                {missingPoints.length > 0 && (
-                  <div className={styles.feedbackText}>
-                    Missing points: {missingPoints.map(item => item.label || item.description || item.id).join(', ')}
-                  </div>
-                )}
-                {nextTeacherPrompt && !showSolution && (
-                  <div className={styles.feedbackText}>{nextTeacherPrompt}</div>
-                )}
-                {!showSolution && feedback.teacher_response && (
-                  <>
-                    <TeacherVoicePlayer text={normalizePromptValue(feedback.teacher_response)} autoPlay={true} label="Listen to hint" />
-                    <div className={styles.feedbackTeacher}>{normalizePromptValue(feedback.teacher_response)}</div>
-                  </>
-                )}
+                <div className={styles.feedbackGrid}>
+                  {feedback.feedback?.improvements && (
+                    <div className={styles.feedbackRow}>
+                      <div className={styles.feedbackLabel}>To improve</div>
+                      <div className={styles.feedbackValue}>{feedback.feedback.improvements}</div>
+                    </div>
+                  )}
+                  {missingPoints.length > 0 && (
+                    <div className={styles.feedbackRow}>
+                      <div className={styles.feedbackLabel}>Missing points</div>
+                      <div className={styles.feedbackValue}>
+                        {missingPoints.map(item => item.label || item.description || item.id).join(', ')}
+                      </div>
+                    </div>
+                  )}
+                </div>
                 {showSolution && tutorPhase === 'done' && (feedback.feedback?.model_explanation || question.ideal_answer) && (
                   <>
                     <TeacherVoicePlayer

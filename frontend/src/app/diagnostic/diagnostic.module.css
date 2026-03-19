@@ -148,6 +148,13 @@
 
 .questionCard {
   animation: fadeInUp 0.5s ease backwards;
+  padding: 20px 22px 24px;
+  border-radius: 22px;
+  background: radial-gradient(circle at top left, rgba(148, 163, 184, 0.26), transparent 55%),
+    radial-gradient(circle at bottom right, rgba(56, 189, 248, 0.2), transparent 55%),
+    rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  box-shadow: 0 22px 55px rgba(15, 23, 42, 0.8);
 }
 
 .phaseIndicator {
@@ -189,15 +196,19 @@
 }
 
 .questionStem {
-  font-size: 20px;
-  font-weight: 600;
+  font-size: 22px;
+  font-weight: 700;
   color: rgba(255, 255, 255, 0.95);
   line-height: 1.6;
-  margin-bottom: 24px;
+  margin-bottom: 18px;
 }
 
 .answerArea {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(51, 65, 85, 0.9);
 }
 
 .answerModeToggle {
@@ -396,12 +407,24 @@
 }
 
 .feedbackCard {
-  margin-top: 20px;
-  padding: 20px;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.06);
+  margin-top: 12px;
+  padding: 18px 18px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(248, 113, 113, 0.6);
+  background:
+    radial-gradient(circle at top left, rgba(248, 113, 113, 0.22), transparent 55%),
+    radial-gradient(circle at bottom right, rgba(251, 191, 36, 0.16), transparent 55%),
+    rgba(15, 23, 42, 0.9);
   animation: fadeInUp 0.4s ease;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.85);
+}
+
+.feedbackHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
 .feedbackScore {
@@ -420,6 +443,45 @@
 
 .feedbackScoreBad {
   color: #ef5350;
+}
+
+.feedbackPill {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(248, 250, 252, 0.6);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(248, 250, 252, 0.9);
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.feedbackGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.feedbackRow {
+  display: grid;
+  grid-template-columns: minmax(110px, 140px) minmax(0, 1fr);
+  column-gap: 16px;
+  row-gap: 4px;
+}
+
+.feedbackLabel {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: rgba(254, 242, 242, 0.7);
+}
+
+.feedbackValue {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.6;
 }
 
 .feedbackText {
@@ -753,10 +815,36 @@
   }
 }
 
-@media (max-width: 768px) {
-  .title { font-size: 28px; }
-  .topicGrid { grid-template-columns: 1fr; }
-  .resultActions { flex-direction: column; }
-  .card { padding: 24px; }
+.conceptCard {
+  margin-bottom: 20px;
+  padding: 14px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background:
+    radial-gradient(circle at top left, rgba(129, 140, 248, 0.28), transparent 60%),
+    radial-gradient(circle at bottom right, rgba(56, 189, 248, 0.24), transparent 60%),
+    rgba(15, 23, 42, 0.9);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.conceptBadge {
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(129, 140, 248, 0.22);
+  border: 1px solid rgba(165, 180, 252, 0.7);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: #e0e7ff;
+}
+
+.conceptTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: rgba(248, 250, 252, 0.98);
 }
 
