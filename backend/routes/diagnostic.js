@@ -802,12 +802,10 @@ router.post('/:id/socratic-turn', authenticate, async (req, res) => {
     };
 
     const allAnswersText = updatedTurns.map(t => t.student_answer).join(' ').trim();
-    const isYes = /^(yes|yeah|yep|correct|right)$/i.test(String(student_answer || '').trim());
-    const isNo = /^(no|nope|incorrect|wrong|not yet)$/i.test(String(student_answer || '').trim());
+    const normalizedStudentAnswer = String(student_answer || '').trim();
+    const isYes = /^(yes|yeah|yep|correct|right)[\.\,\!\?\:]*$/i.test(normalizedStudentAnswer);
+    const isNo = /^(no|nope|incorrect|wrong|not yet)[\.\,\!\?\:]*$/i.test(normalizedStudentAnswer);
 
-    // When the student replies with yes/no, we still need to advance the flow.
-    // The scoring is keyword-based, so "Yes" alone matches nothing.
-    // If the tutor question contains "... matches: <target>?", we append <target> when the student says "yes".
     const extractMatchesTarget = (prompt) => {
       const p = String(prompt || '').trim();
       const m = p.match(/matches:\s*([\s\S]+?)\?$/i) || p.match(/matches:\s*([\s\S]+)$/i);
@@ -851,9 +849,22 @@ router.post('/:id/socratic-turn', authenticate, async (req, res) => {
       : null;
 
     let adjustedNextTeacherPrompt = nextTeacherPrompt;
-    // Hard requirement: never ask the same Socratic question twice.
-    // If the generated prompt matches the previous tutor prompt, replace it with a leading variant.
-    if (adjustedNextTeacherPrompt && promptText && String(adjustedNextTeacherPrompt).trim() === String(promptText).trim()) {
+
+    const extractMatchesTargetFromPrompt = (prompt) => {
+      const p = String(prompt || '').trim();
+      // supports: "... matches: <target>?" or "... matches: <target>"
+      const m = p.match(/matches:\s*([\s\S]+?)\?$/i) || p.match(/matches:\s*([\s\S]+)$/i);
+      if (!m) return '';
+      return (m[1] || '').replace(/\?+$/g, '').trim();
+    };
+
+    // Never ask the exact same Socratic "matches: <target>" again.
+    // This prevents repetitions when the student misses by spelling/keyword matching.
+    const prevTarget = extractMatchesTargetFromPrompt(promptText);
+    const nextTarget = extractMatchesTargetFromPrompt(adjustedNextTeacherPrompt);
+    const isRepeatTarget = Boolean(adjustedNextTeacherPrompt && prevTarget && nextTarget && prevTarget === nextTarget);
+
+    if (isRepeatTarget) {
       const effectiveMissing = (remainingPoints && remainingPoints[0] && remainingPoints[0].description)
         ? String(remainingPoints[0].description)
         : (
@@ -863,13 +874,31 @@ router.post('/:id/socratic-turn', authenticate, async (req, res) => {
         );
 
       if (isNo && effectiveMissing) {
-        adjustedNextTeacherPrompt = `Let’s correct course. The clue is: "${effectiveMissing}". What structure/event matches this? (Answer with the structure name)`;
+        adjustedNextTeacherPrompt = `Not quite. The key clue is: "${effectiveMissing}". Which structure/event matches? (Answer with the structure name)`;
       } else if (effectiveMissing) {
-        adjustedNextTeacherPrompt = `Leading hint: "${effectiveMissing}". Which structure/event is that? (Answer with the structure name)`;
+        // Generic leading-hint variant so we don't repeat the same question.
+        // Even if the student answered something close (or misspelled), we guide them again.
+        adjustedNextTeacherPrompt = `Hint: "${effectiveMissing}". What structure/event is responsible for that? (Answer with the structure name)`;
       } else {
-        adjustedNextTeacherPrompt = `Try again with a step-by-step answer: what structure comes next in the hearing pathway?`;
+        adjustedNextTeacherPrompt = `Let’s narrow it down: which structure/event matches the step in the hearing pathway? (Answer with the structure name)`;
       }
     }
+
+    const effectiveMissing = (remainingPoints && remainingPoints[0] && remainingPoints[0].description)
+      ? String(remainingPoints[0].description)
+      : (
+        concept?.must_know_points?.[0]?.description
+          || concept?.must_know_points?.[0]?.label
+          || ''
+      );
+    const hitCount = Array.isArray(scoreResult.pointsHit) ? scoreResult.pointsHit.length : 0;
+    const tutorResponse = remainingPoints.length === 0
+      ? 'Good work. That matches the key idea—let’s move forward.'
+      : (isNo
+          ? `Not quite. The key missing idea is: ${effectiveMissing}.`
+          : (hitCount > 0
+              ? `Good progress. The key missing idea is: ${effectiveMissing}.`
+              : `I’m not quite seeing it yet. The key missing idea is: ${effectiveMissing}.`));
 
     await db.query(
       'UPDATE diagnostic_assessment SET socratic_turns = $1, phase = $2, student_level = $3, mastery_status = $4 WHERE id = $5',
@@ -906,6 +935,7 @@ router.post('/:id/socratic-turn', authenticate, async (req, res) => {
       next_teacher_prompt: nextPhase === 'final_recall'
         ? (tutorFlow?.final_recall_prompt || 'Now summarize the full answer in 4-5 exam sentences.')
         : adjustedNextTeacherPrompt,
+      tutor_response: tutorResponse,
       tutor_flow: tutorFlow
     });
   } catch (error) {

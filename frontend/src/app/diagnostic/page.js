@@ -7,6 +7,7 @@ import Header from '../../components/Header';
 import api, { voiceAPI } from '../../lib/api';
 import VoiceChatInput from '../../components/VoiceChatInput';
 import TeacherVoicePlayer from '../../components/TeacherVoicePlayer';
+import TutorInterpretationCard from '../../components/TutorInterpretationCard';
 import { getNextConceptSuggestion } from '../../lib/conceptTutor';
 import styles from './diagnostic.module.css';
 
@@ -59,6 +60,9 @@ function DiagnosticContent() {
   const [mcqSelected, setMcqSelected] = useState('');
   const [mcqSummary, setMcqSummary] = useState(null);
   const [nextConceptSuggestion, setNextConceptSuggestion] = useState(null);
+
+  const [socraticTutorResponse, setSocraticTutorResponse] = useState('');
+  const [socraticAudioText, setSocraticAudioText] = useState('');
 
   const [results, setResults] = useState(null);
   const startTimeRef = useRef(Date.now());
@@ -254,8 +258,12 @@ function DiagnosticContent() {
             setShowSolution(false);
           }
           setSocraticTurns([]);
+          setSocraticTutorResponse('');
+          setSocraticAudioText('');
           if (tutorData.next_teacher_prompt) {
             setNextTeacherPrompt(normalizePromptValue(tutorData.next_teacher_prompt));
+            setSocraticTutorResponse('');
+            setSocraticAudioText(normalizePromptValue(tutorData.next_teacher_prompt));
           }
           if (Array.isArray(tutorData.missing_points)) {
             setMissingPoints(tutorData.missing_points);
@@ -291,6 +299,10 @@ function DiagnosticContent() {
         setMissingPoints(data.missing_points);
       }
       setNextTeacherPrompt(normalizePromptValue(data.next_teacher_prompt || ''));
+      const tutorResp = normalizePromptValue(data.tutor_response || data.next_teacher_prompt || '');
+      setSocraticTutorResponse(tutorResp);
+      const combined = [tutorResp, data.next_teacher_prompt].map((v) => (v ? String(v).trim() : '')).filter(Boolean).join(' ');
+      setSocraticAudioText(combined);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to submit Socratic answer');
     }
@@ -666,6 +678,13 @@ function DiagnosticContent() {
                         </div>
                       </div>
                     ))}
+                    {socraticTutorResponse && (
+                      <TutorInterpretationCard
+                        text={socraticTutorResponse}
+                        speakText={socraticAudioText || socraticTutorResponse}
+                        autoPlay={true}
+                      />
+                    )}
                     {nextTeacherPrompt && (
                       <div className={styles.socraticTurn}>
                         <div className={styles.socraticTurnLine}>
@@ -675,6 +694,7 @@ function DiagnosticContent() {
                     )}
                   </div>
                 )}
+
                 <div className={styles.socraticChatInput}>
                   <VoiceChatInput
                     placeholder="Type or speak your next step…"
