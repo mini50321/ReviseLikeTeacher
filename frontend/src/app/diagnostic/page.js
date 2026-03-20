@@ -670,16 +670,18 @@ function DiagnosticContent() {
                     })}
                   </div>
                 ) : (
-                  <div className={styles.answerArea}>
-                    <VoiceChatInput
-                      placeholder="Type or speak your answer…"
-                      onTranscript={(t) => submitAnswer(t)}
-                      onError={(e) => setTranscriptionError(e)}
-                      disabled={isLocked || submitting}
-                      submitLabel="Submit Answer"
-                    />
-                    {transcriptionError && <div className={styles.error}>{transcriptionError}</div>}
-                  </div>
+                  !feedback && (
+                    <div className={styles.answerArea}>
+                      <VoiceChatInput
+                        placeholder="Type or speak your answer…"
+                        onTranscript={(t) => submitAnswer(t)}
+                        onError={(e) => setTranscriptionError(e)}
+                        disabled={isLocked || submitting}
+                        submitLabel="Submit Answer"
+                      />
+                      {transcriptionError && <div className={styles.error}>{transcriptionError}</div>}
+                    </div>
+                  )
                 )}
               </>
             )}
