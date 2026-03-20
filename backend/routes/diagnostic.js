@@ -9,7 +9,7 @@ const { startConceptMapSessionFromDiagnostic } = require('../services/diagnostic
 const { getNextConcept, getFirstConcept } = require('../services/concept-map-pathway');
 const { classifyStudentLevel } = require('../services/student-level-classifier');
 const { scoreAnswerAgainstConcept } = require('../services/rubric-scorer');
-const { buildTutorFlowPlan } = require('../services/tutor-flow-orchestrator');
+const { buildTutorFlowPlan, buildFinalRecallPrompt } = require('../services/tutor-flow-orchestrator');
 const { logTutorEvent } = require('../services/tutor-monitoring');
 const {
   safeParseJson,
@@ -805,7 +805,7 @@ router.post('/:id/answer', authenticate, async (req, res) => {
         phase: 'saq',
         diagnosticMeta: { diagnostic_id: id, subject: diagnostic.subject, topic: diagnostic.topic }
       });
-      if (out.prompt) nextTeacherPromptAnswer = out.prompt;
+      nextTeacherPromptAnswer = out.prompt;
     }
 
     res.json({
@@ -951,7 +951,7 @@ router.post('/:id/saq-answer', authenticate, async (req, res) => {
         phase: 'saq',
         diagnosticMeta: { diagnostic_id: id, subject: diagnostic.subject, topic: diagnostic.topic }
       });
-      if (out.prompt) nextTeacherPromptSaq = out.prompt;
+      nextTeacherPromptSaq = out.prompt;
     }
 
     res.json({
@@ -1003,7 +1003,10 @@ router.post('/:id/socratic-turn', authenticate, async (req, res) => {
       saqs: []
     };
 
-    const allAnswersText = updatedTurns.map(t => t.student_answer).join(' ').trim();
+    const allAnswersText = updatedTurns
+      .map((t) => [t.student_answer, t.tutor_reveal].filter(Boolean).join(' '))
+      .join(' ')
+      .trim();
     const normalizedStudentAnswer = String(student_answer || '').trim();
     const isYes = /^(yes|yeah|yep|correct|right)[\.\,\!\?\:]*$/i.test(normalizedStudentAnswer);
     const isNo = /^(no|nope|incorrect|wrong|not yet)[\.\,\!\?\:]*$/i.test(normalizedStudentAnswer);
@@ -1069,7 +1072,16 @@ router.post('/:id/socratic-turn', authenticate, async (req, res) => {
       scoreResult.pointsMissed = scoreResult.pointsMissed.slice(1);
 
       const lastIdx = updatedTurns.length - 1;
-      if (lastIdx >= 0) updatedTurns[lastIdx].student_answer = dontKnowRevealStructure;
+      if (lastIdx >= 0) {
+        const revealText = [dontKnowRevealStructure, dontKnowRevealDescription].filter(Boolean).join(' — ')
+          || dontKnowRevealStructure;
+        if (revealText) {
+          updatedTurns[lastIdx] = {
+            ...updatedTurns[lastIdx],
+            tutor_reveal: revealText
+          };
+        }
+      }
 
       const numerator = Array.isArray(scoreResult.pointsHit) ? scoreResult.pointsHit.length : 0;
       const denom = typeof scoreResult.pointsExpected === 'number' && scoreResult.pointsExpected > 0
@@ -1082,12 +1094,18 @@ router.post('/:id/socratic-turn', authenticate, async (req, res) => {
       }
     }
 
+    let combinedAnswerText = allAnswersText;
+    if (dontKnowRevealPoint) {
+      const extra = [dontKnowRevealStructure, dontKnowRevealDescription].filter(Boolean).join(' ');
+      combinedAnswerText = `${allAnswersText} ${extra}`.trim();
+    }
+
     const tutorFlow = concept
       ? buildTutorFlowPlan({
           concept,
           studentLevelResult,
           scoreResult,
-          answerText: allAnswersText,
+          answerText: combinedAnswerText,
           phase: 'socratic',
           socraticTurns: updatedTurns,
           usedMcqIds: []
@@ -1111,8 +1129,10 @@ router.post('/:id/socratic-turn', authenticate, async (req, res) => {
         phase: 'socratic',
         diagnosticMeta: { diagnostic_id: id, subject: diagnostic.subject, topic: diagnostic.topic }
       });
-      if (out.prompt) adjustedNextTeacherPrompt = out.prompt;
+      adjustedNextTeacherPrompt = out.prompt;
     }
+
+    const skipHardcodedSocraticFixes = nextPhase === 'socratic' && concept;
 
     const extractMatchesTargetFromPrompt = (prompt) => {
       const p = String(prompt || '').trim();
@@ -1147,7 +1167,7 @@ router.post('/:id/socratic-turn', authenticate, async (req, res) => {
       return `${verb} ${rest}`.trim();
     };
 
-    if (isRepeatTarget || isRepeatPrompt) {
+    if (!skipHardcodedSocraticFixes && (isRepeatTarget || isRepeatPrompt)) {
       const effectiveMissing = (remainingPoints && remainingPoints[0] && remainingPoints[0].description)
         ? String(remainingPoints[0].description)
         : (
@@ -1199,7 +1219,7 @@ router.post('/:id/socratic-turn', authenticate, async (req, res) => {
           || ''
       );
 
-    if (isDontKnow && nextPhase === 'socratic' && remainingPoints.length > 0 && effectiveMissing) {
+    if (!skipHardcodedSocraticFixes && isDontKnow && nextPhase === 'socratic' && remainingPoints.length > 0 && effectiveMissing) {
       const actionClause = extractActionClause(effectiveMissing);
       const label = remainingPoints?.[0]?.label ? String(remainingPoints[0].label) : '';
       const lower = label.toLowerCase();
@@ -1227,7 +1247,7 @@ router.post('/:id/socratic-turn', authenticate, async (req, res) => {
 
     const hitCount = Array.isArray(scoreResult.pointsHit) ? scoreResult.pointsHit.length : 0;
     const tutorResponse = remainingPoints.length === 0
-      ? 'Good work. That matches the key idea—let’s move forward.'
+      ? 'Good work—you’ve covered the key ideas. When you’re ready, use “Continue to final exam-style summary” below.'
       : (dontKnowRevealStructure
           ? `No problem. The correct structure is: ${dontKnowRevealStructure}. Let’s move on to the next step.`
           : (isDontKnow
@@ -1280,6 +1300,52 @@ router.post('/:id/socratic-turn', authenticate, async (req, res) => {
     });
   } catch (error) {
     console.error('Diagnostic Socratic turn error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/:id/socratic-proceed-to-summary', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { id } = req.params;
+    const diagResult = await db.query(
+      'SELECT * FROM diagnostic_assessment WHERE id = $1 AND user_id = $2',
+      [id, userId]
+    );
+    if (diagResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Diagnostic assessment not found' });
+    }
+    const diagnostic = diagResult.rows[0];
+    const phase = String(diagnostic.phase || '').toLowerCase();
+    if (phase !== 'socratic') {
+      return res.status(400).json({ error: 'Socratic discussion is not active' });
+    }
+    const nextPrompt = buildFinalRecallPrompt();
+    await db.query(
+      'UPDATE diagnostic_assessment SET phase = $1, mastery_status = $2 WHERE id = $3 AND user_id = $4',
+      ['final_recall', 'in_progress', id, userId]
+    );
+    await logTutorEvent({
+      user_id: userId,
+      session_type: 'diagnostic',
+      diagnostic_id: id,
+      subject: diagnostic.subject,
+      topic: diagnostic.topic,
+      concept_id: diagnostic.concept_id || null,
+      phase: 'final_recall',
+      event_type: 'diagnostic_socratic_proceed_to_summary',
+      student_level: diagnostic.student_level || null,
+      mastery_status: 'in_progress',
+      metadata: { from_phase: 'socratic' }
+    });
+    res.json({
+      diagnostic_id: id,
+      phase: 'final_recall',
+      next_teacher_prompt: nextPrompt,
+      final_recall_prompt: nextPrompt
+    });
+  } catch (error) {
+    console.error('Diagnostic Socratic proceed to summary error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

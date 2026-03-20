@@ -33,7 +33,7 @@ test('after SAQ, non-high levels enter Socratic when gaps exist', () => {
   );
 });
 
-test('Socratic ends when no missed points or turn cap', () => {
+test('Socratic phase stays until manual finish', () => {
   assert.equal(
     getNextPhase({
       phase: 'socratic',
@@ -41,10 +41,10 @@ test('Socratic ends when no missed points or turn cap', () => {
       scoreResult: { pointsMissed: [] },
       socraticTurns: []
     }),
-    'final_recall'
+    'socratic'
   );
   const max = getMaxSocraticTurns('average');
-  const turns = Array.from({ length: max }, () => ({}));
+  const turns = Array.from({ length: max + 2 }, () => ({}));
   assert.equal(
     getNextPhase({
       phase: 'socratic',
@@ -52,8 +52,12 @@ test('Socratic ends when no missed points or turn cap', () => {
       scoreResult: { pointsMissed: [{ description: 'still' }] },
       socraticTurns: turns
     }),
-    'final_recall'
+    'socratic'
   );
+});
+
+test('getSocraticExitReason has no automatic exit', () => {
+  assert.equal(getSocraticExitReason(), null);
 });
 
 test('lifecycle snapshot exposes policy version', () => {

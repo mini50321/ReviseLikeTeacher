@@ -1,6 +1,6 @@
 .main {
   min-height: calc(100vh - 80px);
-  padding: 40px 24px;
+  padding: 40px 14px;
   background: transparent;
 }
 
@@ -31,7 +31,7 @@
   backdrop-filter: blur(30px);
   -webkit-backdrop-filter: blur(30px);
   border-radius: 24px;
-  padding: 28px 28px 26px;
+  padding: 24px 12px 22px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.3);
   margin-bottom: 24px;
@@ -153,7 +153,7 @@
 
 .questionCard {
   animation: fadeInUp 0.5s ease backwards;
-  padding: 20px 22px 24px;
+  padding: 14px 12px 18px;
   border-radius: 22px;
   background: radial-gradient(circle at top left, rgba(148, 163, 184, 0.26), transparent 55%),
     radial-gradient(circle at bottom right, rgba(56, 189, 248, 0.2), transparent 55%),
@@ -209,8 +209,8 @@
 }
 
 .answerArea {
-  margin-bottom: 24px;
-  padding: 12px 14px;
+  margin-bottom: 20px;
+  padding: 10px 10px;
   border-radius: 18px;
   background: rgba(15, 23, 42, 0.9);
   border: 1px solid rgba(51, 65, 85, 0.9);
@@ -810,6 +810,28 @@
   color: rgba(241, 245, 249, 0.95);
 }
 
+.socraticTutorReveal {
+  align-self: flex-start;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(30, 64, 175, 0.55);
+  border: 1px solid rgba(129, 140, 248, 0.5);
+  color: rgba(241, 245, 249, 0.98);
+}
+
+.socraticRevealLabel {
+  font-weight: 600;
+  color: rgba(191, 219, 254, 0.95);
+  min-width: 64px;
+  flex-shrink: 0;
+}
+
+.socraticRevealText {
+  flex: 1;
+  min-width: 0;
+}
+
 .socraticInputRow {
   margin-top: 6px;
   display: flex;
@@ -819,6 +841,41 @@
   border-radius: 999px;
   background: rgba(15, 23, 42, 0.9);
   border: 1px solid rgba(148, 163, 184, 0.6);
+}
+
+.socraticManualHint {
+  font-size: 13px;
+  line-height: 1.45;
+  color: rgba(226, 232, 240, 0.75);
+  margin: 0 0 12px;
+}
+
+.socraticProceedRow {
+  margin-top: 14px;
+  display: flex;
+  justify-content: center;
+}
+
+.socraticProceedButton {
+  padding: 12px 20px;
+  border-radius: 14px;
+  border: 1px solid rgba(129, 140, 248, 0.7);
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 64, 175, 0.85));
+  color: rgba(248, 250, 252, 0.98);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.15s ease;
+}
+
+.socraticProceedButton:hover:not(:disabled) {
+  opacity: 0.95;
+  transform: translateY(-1px);
+}
+
+.socraticProceedButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .socraticChatInput {
@@ -894,7 +951,7 @@
 
 @media (max-width: 768px) {
   .main {
-    padding: 24px 12px;
+    padding: 24px 10px;
   }
   .container {
     max-width: 100%;
@@ -902,7 +959,7 @@
   .title { font-size: 28px; }
   .topicGrid { grid-template-columns: 1fr; }
   .resultActions { flex-direction: column; }
-  .card { padding: 18px 12px; }
+  .card { padding: 18px 10px; }
   .feedbackCard {
     padding: 16px 16px 14px;
     border-radius: 16px;
@@ -940,8 +997,8 @@
 }
 
 .conceptCard {
-  margin-bottom: 20px;
-  padding: 14px 18px;
+  margin-bottom: 16px;
+  padding: 12px 12px;
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.22);
   background:

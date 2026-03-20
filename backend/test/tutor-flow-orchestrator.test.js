@@ -24,7 +24,7 @@ test('getInitialPhase starts high performers at mcq', () => {
 test('getNextPhase advances through tutoring stages', () => {
   assert.equal(getNextPhase({ phase: 'saq', level: 'strong', scoreResult: { pointsMissed: [] } }), 'mcq');
   assert.equal(getNextPhase({ phase: 'socratic', level: 'weak', scoreResult: { pointsMissed: [{}] }, socraticTurns: [] }), 'socratic');
-  assert.equal(getNextPhase({ phase: 'socratic', level: 'weak', scoreResult: { pointsMissed: [{}] }, socraticTurns: [{}, {}, {}, {}] }), 'final_recall');
+  assert.equal(getNextPhase({ phase: 'socratic', level: 'weak', scoreResult: { pointsMissed: [{}] }, socraticTurns: [{}, {}, {}, {}] }), 'socratic');
   assert.equal(getNextPhase({ phase: 'final_recall', level: 'average', scoreResult: { pointsMissed: [{}] } }), 'mcq');
 });
 

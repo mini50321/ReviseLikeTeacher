@@ -64,6 +64,7 @@ function DiagnosticContent() {
 
   const [socraticTutorResponse, setSocraticTutorResponse] = useState('');
   const [socraticAudioText, setSocraticAudioText] = useState('');
+  const [socraticProceeding, setSocraticProceeding] = useState(false);
 
   const [results, setResults] = useState(null);
   const startTimeRef = useRef(Date.now());
@@ -352,6 +353,24 @@ function DiagnosticContent() {
       setSocraticAudioText(combined);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to submit Socratic answer');
+    }
+  };
+
+  const proceedToFinalSummary = async () => {
+    if (!diagnosticId) return;
+    setSocraticProceeding(true);
+    setError('');
+    try {
+      const response = await api.post(`/diagnostic/${diagnosticId}/socratic-proceed-to-summary`);
+      const data = response.data || {};
+      setTutorPhase('final_recall');
+      setNextTeacherPrompt(normalizePromptValue(data.next_teacher_prompt || ''));
+      setSocraticTutorResponse('');
+      setSocraticAudioText('');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Could not continue to summary');
+    } finally {
+      setSocraticProceeding(false);
     }
   };
 
@@ -708,9 +727,12 @@ function DiagnosticContent() {
               </div>
             )}
 
-            {tutorPhase === 'socratic' && nextTeacherPrompt && (
+            {tutorPhase === 'socratic' && (
               <div className={styles.socraticBlock}>
                 <div className={styles.socraticTitle}>Socratic tutoring</div>
+                <p className={styles.socraticManualHint}>
+                  Answer below as long as you need. When you’re ready, use the button to open the written summary—this step does not advance on its own.
+                </p>
                 {(socraticTurns.length > 0 || nextTeacherPrompt) && (
                   <div className={styles.socraticHistory}>
                     {socraticTurns.map((t, idx) => (
@@ -720,9 +742,17 @@ function DiagnosticContent() {
                             {t.teacher_prompt}
                           </div>
                         )}
-                        <div className={styles.socraticTurnLine}>
-                          {t.student_answer}
-                        </div>
+                        {t.student_answer != null && String(t.student_answer).trim() !== '' && (
+                          <div className={styles.socraticTurnLine}>
+                            {t.student_answer}
+                          </div>
+                        )}
+                        {t.tutor_reveal && (
+                          <div className={`${styles.socraticTurnLine} ${styles.socraticTutorReveal}`}>
+                            <span className={styles.socraticRevealLabel}>Key point</span>
+                            <span className={styles.socraticRevealText}>{t.tutor_reveal}</span>
+                          </div>
+                        )}
                       </div>
                     ))}
                     {nextTeacherPrompt && (
@@ -752,9 +782,19 @@ function DiagnosticContent() {
                     placeholder="Type or speak your next step…"
                     onTranscript={(t) => submitSocraticTurn(t)}
                     onError={(e) => setTranscriptionError(e)}
-                    disabled={submitting}
+                    disabled={submitting || socraticProceeding}
                     submitLabel="Send"
                   />
+                </div>
+                <div className={styles.socraticProceedRow}>
+                  <button
+                    type="button"
+                    className={styles.socraticProceedButton}
+                    onClick={proceedToFinalSummary}
+                    disabled={socraticProceeding || submitting}
+                  >
+                    {socraticProceeding ? 'Opening summary…' : 'Continue to final exam-style summary'}
+                  </button>
                 </div>
               </div>
             )}

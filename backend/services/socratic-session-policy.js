@@ -40,25 +40,15 @@ function getInitialPhase(level, scoreResult = {}) {
   return getInitialPhaseAfterSaq(level, scoreResult).phase;
 }
 
-function getSocraticExitReason({ scoreResult = {}, socraticTurns = [], level }) {
-  const missed = Array.isArray(scoreResult.pointsMissed) ? scoreResult.pointsMissed : [];
-  const max = getMaxSocraticTurns(level);
-  const used = Array.isArray(socraticTurns) ? socraticTurns.length : 0;
-  if (missed.length === 0) return 'rubric_complete';
-  if (used >= max) return 'turn_cap';
+function getSocraticExitReason() {
   return null;
 }
 
 function getNextPhase({ phase, level, scoreResult = {}, socraticTurns = [] }) {
-  const maxSocraticTurns = getMaxSocraticTurns(level);
-  const missed = Array.isArray(scoreResult.pointsMissed) ? scoreResult.pointsMissed : [];
   if (phase === 'saq') {
     return getInitialPhaseAfterSaq(level, scoreResult).phase;
   }
   if (phase === 'socratic') {
-    if (missed.length === 0 || socraticTurns.length >= maxSocraticTurns) {
-      return 'final_recall';
-    }
     return 'socratic';
   }
   if (phase === 'final_recall') {
@@ -77,9 +67,6 @@ function getSocraticLifecycleSnapshot({
   const maxTurns = getMaxSocraticTurns(level);
   const turnsUsed = Array.isArray(socraticTurns) ? socraticTurns.length : 0;
   const missed = Array.isArray(scoreResult.pointsMissed) ? scoreResult.pointsMissed : [];
-  const exitReason = phase === 'socratic'
-    ? getSocraticExitReason({ scoreResult, socraticTurns, level })
-    : null;
   const nextPhase = getNextPhase({ phase, level, scoreResult, socraticTurns });
   const afterSaq = getInitialPhaseAfterSaq(level, scoreResult);
   return {
@@ -89,9 +76,12 @@ function getSocraticLifecycleSnapshot({
     phase,
     max_socratic_turns: maxTurns,
     socratic_turns_used: turnsUsed,
-    socratic_turns_remaining: Math.max(0, maxTurns - turnsUsed),
+    socratic_turns_remaining: null,
     missing_point_count: missed.length,
-    socratic_exit_reason: exitReason,
+    socratic_exit_reason: null,
+    socratic_all_points_covered: phase === 'socratic' && missed.length === 0,
+    socratic_soft_turn_limit_reached: phase === 'socratic' && turnsUsed >= maxTurns,
+    socratic_proceed_to_summary_manual: true,
     next_phase: nextPhase,
     starts_socratic_after_saq: Boolean(hasConcept && afterSaq.phase === 'socratic'),
     in_socratic_phase: Boolean(hasConcept && phase === 'socratic')
@@ -107,8 +97,7 @@ function exportPolicyDefinition() {
       requires_concept: true
     },
     end_socratic_when: [
-      'no rubric points remain missed',
-      'student has used max Socratic turns for their level'
+      'student chooses Continue to final exam-style summary (manual only)'
     ],
     after_socratic_block: 'final_recall then mcq',
     max_turns_by_level: { ...MAX_SOCRATIC_TURNS_BY_LEVEL }

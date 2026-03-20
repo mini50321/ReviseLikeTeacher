@@ -121,7 +121,10 @@ function normalizeConversation(socraticTurns) {
     out.push({
       index: out.length,
       teacher_prompt: clip(t.teacher_prompt != null ? String(t.teacher_prompt) : '', MAX_STRING),
-      student_answer: clip(t.student_answer != null ? String(t.student_answer) : '', MAX_STRING)
+      student_answer: clip(t.student_answer != null ? String(t.student_answer) : '', MAX_STRING),
+      tutor_reveal: t.tutor_reveal != null && String(t.tutor_reveal).trim()
+        ? clip(String(t.tutor_reveal), MAX_STRING)
+        : null
     });
   }
   return out;
