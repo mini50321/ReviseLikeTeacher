@@ -78,9 +78,11 @@ function buildTutorPrompt(concept, level, scoreResult, answerText) {
   }
 
   if (level === 'very_weak') {
-    return currentMisstep
-      ? `You’re close to the pathway idea. Starting from ${currentMisstep}, what structure comes next in the pathway?`
-      : `Start with the first obvious step: what structure comes next in ${concept.name}?`;
+    // Treat very_weak like weak to keep the tutoring sequence aligned
+    // with missing rubric items (missing #1 -> missing #2 -> ...).
+    return nextMissing
+      ? `Let’s go one step at a time. Which structure or event matches: ${nextMissing}?`
+      : `What comes next after ${firstStep}?`;
   }
 
   return firstLeading || `What comes immediately after ${firstStep}?`;

@@ -423,6 +423,13 @@ function DiagnosticContent() {
     }
   };
 
+  const formatMisconceptionType = (type) => {
+    if (!type) return '';
+    if (type === 'concept_missing') return 'Core concept not yet mastered';
+    if (type === 'application_failure') return 'Needs stronger application';
+    return String(type).replace(/_/g, ' ');
+  };
+
   if (loading && phase === 'select') {
     return (
       <div className={styles.loading}>
@@ -875,7 +882,7 @@ function DiagnosticContent() {
                 {results.misconception_tags.map((m, i) => (
                   <div key={i} className={styles.misconceptionItem}>
                     <span className={styles.misconceptionDot} />
-                    <span>{m.subtopic} — {m.type.replace(/_/g, ' ')} (Score: {m.score})</span>
+                        <span>{m.subtopic} — {formatMisconceptionType(m.type)} (Score: {m.score})</span>
                   </div>
                 ))}
               </div>

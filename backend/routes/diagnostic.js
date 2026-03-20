@@ -807,38 +807,12 @@ router.post('/:id/socratic-turn', authenticate, async (req, res) => {
     let studentLevelResult;
     let scoreResult;
 
-    if (wordCount < 6) {
-      const rubric = Array.isArray(conceptForScoring.grading_rubric) ? conceptForScoring.grading_rubric : [];
-      const pointsMissed = rubric.map(item => ({
-        id: item.id || item.label,
-        label: item.label || item.id || '',
-        description: item.description || ''
-      }));
-      scoreResult = {
-        scorePercent: 0,
-        pointsHit: [],
-        pointsMissed,
-        pointsExpected: pointsMissed.length,
-        pointsTotal: pointsMissed.length
-      };
-      studentLevelResult = {
-        level: 'very_weak',
-        score_percent: 0,
-        misconception_count: 0,
-        misconceptions: [],
-        points_hit: 0,
-        points_missed: pointsMissed.length,
-        points_total: pointsMissed.length,
-        word_count: wordCount
-      };
-    } else {
-      studentLevelResult = classifyStudentLevel(conceptForScoring, allAnswersText);
-      scoreResult = scoreAnswerAgainstConcept(
-        conceptForScoring,
-        allAnswersText,
-        studentLevelResult.level === 'excellent' || studentLevelResult.level === 'strong' ? 'top' : 'mid'
-      );
-    }
+    studentLevelResult = classifyStudentLevel(conceptForScoring, allAnswersText);
+    scoreResult = scoreAnswerAgainstConcept(
+      conceptForScoring,
+      allAnswersText,
+      studentLevelResult.level === 'excellent' || studentLevelResult.level === 'strong' ? 'top' : 'mid'
+    );
 
     const tutorFlow = concept
       ? buildTutorFlowPlan({
@@ -1400,15 +1374,15 @@ function getRecommendation(level, buckets) {
   const bucketLabel = buckets.join(', ');
   switch (level) {
     case 'weak':
-      return `Your foundation needs strengthening. Focus on ${bucketLabel} concepts with targeted explanations and practice.`;
+      return `You’re still building a solid foundation. Focus on ${bucketLabel} concepts with targeted explanations and guided practice.`;
     case 'average':
-      return `You have a fair understanding. Let's solidify ${bucketLabel} areas with focused SAQs and concept-fixing exercises.`;
+      return `You have a fair understanding. Next, strengthen ${bucketLabel} areas with focused SAQs and concept-fixing exercises.`;
     case 'good':
-      return `Good grasp of the fundamentals! We'll refine ${bucketLabel} zones and move to clinical application.`;
+      return `Good grasp of the fundamentals. We’ll refine ${bucketLabel} areas and move toward more clinical application.`;
     case 'strong':
-      return `Excellent foundation! We'll challenge you with ${bucketLabel} areas including harder clinical MCQs and trap questions.`;
+      return `Excellent foundation. We’ll challenge you with ${bucketLabel} areas, including harder clinical MCQs and trap questions.`;
     default:
-      return `Let's begin working on ${bucketLabel} areas to build mastery.`;
+      return `Let’s begin working on ${bucketLabel} areas to build mastery.`;
   }
 }
 
