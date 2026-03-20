@@ -1,10 +1,13 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { voiceAPI } from '../lib/api';
 import styles from './VoiceChatInput.module.css';
 
 const SpeechRecognition = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
+
+/** Max height before the textarea scrolls instead of growing (px). */
+const TEXTAREA_MAX_HEIGHT_PX = 220;
 
 const LANGUAGES = [
   { code: 'english', label: 'English' },
@@ -72,6 +75,19 @@ export default function VoiceChatInput({
   }, [stopRecognition, stopMediaRecorder]);
 
   const transcriptRef = useRef('');
+  const textareaRef = useRef(null);
+
+  const syncTextareaHeight = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    const next = Math.min(el.scrollHeight, TEXTAREA_MAX_HEIGHT_PX);
+    el.style.height = `${next}px`;
+  }, []);
+
+  useLayoutEffect(() => {
+    syncTextareaHeight();
+  }, [text, interimText, syncTextareaHeight]);
 
   const startWebSpeech = useCallback(async () => {
     if (!canUseWebSpeech || !SpeechRecognition) return;
@@ -239,15 +255,11 @@ export default function VoiceChatInput({
           +
         </button>
         <textarea
+          ref={textareaRef}
           rows={1}
           className={styles.input}
           value={text || interimText}
-          onChange={(e) => {
-            const el = e.target;
-            el.style.height = 'auto';
-            el.style.height = `${el.scrollHeight}px`;
-            setText(e.target.value);
-          }}
+          onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();

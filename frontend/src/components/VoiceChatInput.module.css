@@ -11,7 +11,7 @@
 
 .bar {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 10px;
   padding: 12px 16px;
   background: rgba(255, 255, 255, 0.08);
@@ -55,7 +55,9 @@
   border: none;
   outline: none;
   resize: none;
-  overflow: hidden;
+  max-height: 220px;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .input::placeholder {
