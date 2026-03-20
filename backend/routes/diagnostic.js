@@ -4,6 +4,7 @@ const { authenticate } = require('../middleware/auth');
 const { requireDailyLimit } = require('../middleware/subscription');
 const { db } = require('../db');
 const { evaluateAnswer } = require('../services/ai');
+const { resolveSocraticTeacherPrompt } = require('../services/diagnostic-socratic-ai');
 const { startConceptMapSessionFromDiagnostic } = require('../services/diagnostic-to-tutoring');
 const { getNextConcept, getFirstConcept } = require('../services/concept-map-pathway');
 const { classifyStudentLevel } = require('../services/student-level-classifier');
@@ -254,19 +255,18 @@ router.post('/start', authenticate, requireDailyLimit('daily_diagnostic_limit'),
     if (concept) {
       const microQuestions = Array.isArray(concept.micro_questions) ? concept.micro_questions : [];
       const fallbackQuestions = Array.isArray(concept.leading_questions) ? concept.leading_questions : [];
+      const firstMicro = microQuestions[0] || null;
       const stem = normalizePromptText(
-        microQuestions[0]?.question
-        || microQuestions[0]?.stem
-        || fallbackQuestions[0]
-        || null
-      );
+        typeof firstMicro === 'string'
+          ? firstMicro
+          : (firstMicro?.question || firstMicro?.stem || null)
+      ) || fallbackQuestions[0] || null;
       if (stem) {
         const questionId = db.generateUUID();
         const idealAnswer = normalizePromptText(
-          microQuestions[0]?.compact_answer
-          || concept.saqs?.[0]?.compact_answer
-          || concept.concept_explanation
-          || ''
+          typeof firstMicro === 'string'
+            ? (concept.concept_explanation || '')
+            : (firstMicro?.compact_answer || concept.concept_explanation || '')
         );
         const keyPoints = Array.isArray(concept.core_points)
           ? concept.core_points
@@ -411,6 +411,180 @@ router.post('/start', authenticate, requireDailyLimit('daily_diagnostic_limit'),
     });
   } catch (error) {
     console.error('Start diagnostic error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/start-from-micropdf', authenticate, requireDailyLimit('daily_diagnostic_limit'), async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const body = req.body || {};
+    const conceptId = body.concept_id || body.conceptId || body.for_concept_id || body.preferred_concept_id || null;
+    if (!conceptId) return res.status(400).json({ error: 'concept_id is required' });
+
+    const conceptResult = await db.query('SELECT * FROM topic_concept WHERE id = $1', [conceptId]);
+    if (!conceptResult.rows.length) return res.status(404).json({ error: 'Concept not found' });
+
+    const concept = serializeTopicConcept(conceptResult.rows[0]);
+    if (!concept) return res.status(404).json({ error: 'Concept not found' });
+
+    const conceptPlan = buildTutorPlan(concept);
+    const conceptPlanLength = Array.isArray(conceptPlan?.checkpoints) ? conceptPlan.checkpoints.length : 0;
+
+    let saqQuestions = [];
+    const microQuestions = Array.isArray(concept.micro_questions) ? concept.micro_questions : [];
+    const firstMicro = microQuestions[0] || null;
+
+    const firstStem = typeof firstMicro === 'string'
+      ? firstMicro
+      : normalizePromptText(firstMicro?.question || firstMicro?.stem || null);
+
+    const firstIdealAnswer = typeof firstMicro === 'string'
+      ? (concept.concept_explanation || null)
+      : normalizePromptText(firstMicro?.compact_answer || concept.concept_explanation || '');
+
+    const keyPoints = Array.isArray(concept.core_points)
+      ? concept.core_points
+      : (Array.isArray(concept.must_know_points) ? concept.must_know_points : []);
+
+    const questionTags = Array.isArray(concept.downstream_concept_ids) ? concept.downstream_concept_ids : [];
+
+    if (firstStem) {
+      const questionId = db.generateUUID();
+      const idealAnswer = normalizePromptText(firstIdealAnswer || '');
+      await db.query(
+        `INSERT INTO question
+         (id, stem, type, subject, topic, subtopic, difficulty, importance, yield_category,
+          cognitive_focus, ideal_answer, key_points, concept_tags, status, created_by, concept_id)
+         VALUES ($1, $2, 'saq', $3, $4, $5, 'medium', 'medium', 'core',
+                 'conceptual', $6, $7, $8, 'active', $9, $10)`,
+        [
+          questionId,
+          firstStem,
+          concept.subject,
+          concept.topic,
+          concept.name || null,
+          idealAnswer || null,
+          JSON.stringify(keyPoints),
+          JSON.stringify(questionTags),
+          userId,
+          concept.id
+        ]
+      );
+
+      saqQuestions = [{
+        id: questionId,
+        stem: firstStem,
+        type: 'saq',
+        subject: concept.subject,
+        topic: concept.topic,
+        subtopic: concept.name,
+        difficulty: 'medium',
+        yield_category: 'core',
+        options: null,
+        concept_id: concept.id
+      }];
+    }
+
+    if (saqQuestions.length === 0) {
+      const fromQuestionTable = await db.query(
+        `SELECT * FROM question
+         WHERE subject = $1 AND topic = $2 AND status = 'active'
+           AND type = 'saq'
+         ORDER BY CASE yield_category WHEN 'core' THEN 1 WHEN 'frequent' THEN 2 ELSE 3 END,
+                  RANDOM()
+         LIMIT 1`,
+        [concept.subject, concept.topic]
+      );
+      saqQuestions = fromQuestionTable.rows;
+    }
+
+    if (saqQuestions.length === 0) {
+      return res.status(404).json({ error: 'No questions available for this concept/topic. Ask an admin to add questions first.' });
+    }
+
+    const diagnosticId = db.generateUUID();
+    const questionIds = saqQuestions.map(q => q.id);
+    const tutorState = {
+      concept_id: concept?.id || null,
+      concept_plan: conceptPlan,
+      student_level: null,
+      mastery_status: 'in_progress'
+    };
+
+    await db.query(
+      `INSERT INTO diagnostic_assessment
+       (id, user_id, subject, topic, concept_id, concept_plan, saq_questions)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [diagnosticId, userId, concept.subject, concept.topic, tutorState.concept_id, JSON.stringify(conceptPlan), JSON.stringify(questionIds)]
+    );
+
+    const sessionId = db.generateUUID();
+    await db.query(
+      `INSERT INTO session (id, user_id, session_type, configuration, status)
+       VALUES ($1, $2, 'practice', $3, 'in_progress')`,
+      [sessionId, userId, JSON.stringify({ type: 'diagnostic', subject: concept.subject, topic: concept.topic, diagnostic_id: diagnosticId })]
+    );
+
+    const tlsId = db.generateUUID();
+    const profileResult = await db.query(
+      'SELECT goal_tier FROM userprofile WHERE user_id = $1',
+      [userId]
+    );
+    const goalTier = profileResult.rows[0]?.goal_tier || 'good_rank';
+
+    await db.query(
+      `INSERT INTO topic_learning_session
+       (id, user_id, session_id, subject, topic, current_phase, goal_tier, diagnostic_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [tlsId, userId, sessionId, concept.subject, concept.topic, 'diagnostic', goalTier, diagnosticId]
+    );
+
+    await logTutorEvent({
+      user_id: userId,
+      session_type: 'diagnostic',
+      session_id: sessionId,
+      diagnostic_id: diagnosticId,
+      topic_learning_session_id: tlsId,
+      subject: concept.subject,
+      topic: concept.topic,
+      concept_id: tutorState.concept_id,
+      phase: 'saq',
+      event_type: 'diagnostic_start_from_micropdf',
+      message: 'Diagnostic session started from Micro-PDF concept',
+      metadata: {
+        question_count: questionIds.length,
+        concept_plan_length: conceptPlanLength,
+        goal_tier: goalTier
+      }
+    });
+
+    const questionsForClient = saqQuestions.map(q => ({
+      id: q.id,
+      stem: q.stem,
+      type: q.type,
+      subject: q.subject,
+      topic: q.topic,
+      subtopic: q.subtopic,
+      difficulty: q.difficulty,
+      yield_category: q.yield_category,
+      options: q.options,
+      concept_id: q.concept_id || concept?.id || null
+    }));
+
+    res.status(201).json({
+      diagnostic_id: diagnosticId,
+      session_id: sessionId,
+      topic_learning_session_id: tlsId,
+      subject: concept.subject,
+      topic: concept.topic,
+      concept: concept || null,
+      concept_plan: conceptPlan,
+      questions: questionsForClient,
+      total_questions: questionsForClient.length
+    });
+  } catch (error) {
+    console.error('Start diagnostic from Micro-PDF error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -620,6 +794,20 @@ router.post('/:id/answer', authenticate, async (req, res) => {
       finalScore = 50;
     }
 
+    let nextTeacherPromptAnswer = tutorFlow?.next_teacher_prompt || null;
+    if (tutorFlow && tutorFlow.phase === 'socratic' && questionConcept) {
+      const out = await resolveSocraticTeacherPrompt({
+        templatePrompt: tutorFlow?.next_teacher_prompt || null,
+        concept: questionConcept,
+        studentLevel: studentLevelResult.level,
+        scoreResult,
+        socraticTurns: [],
+        phase: 'saq',
+        diagnosticMeta: { diagnostic_id: id, subject: diagnostic.subject, topic: diagnostic.topic }
+      });
+      if (out.prompt) nextTeacherPromptAnswer = out.prompt;
+    }
+
     res.json({
       attempt_id: attemptId,
       score: finalScore,
@@ -628,9 +816,9 @@ router.post('/:id/answer', authenticate, async (req, res) => {
       mastery_status: 'in_progress',
       concept_id: questionConcept?.id || diagnostic.concept_id || null,
       concept_name: questionConcept?.name || null,
-      next_teacher_prompt: tutorFlow?.next_teacher_prompt || null,
+      next_teacher_prompt: nextTeacherPromptAnswer,
       missing_points: scoreResult.pointsMissed || [],
-      teacher_response: evaluation.teacher_response || tutorFlow?.next_teacher_prompt || null,
+      teacher_response: evaluation.teacher_response || nextTeacherPromptAnswer || null,
       tutor_step: tutorFlow?.tutor_step || null,
       tutor_flow: tutorFlow
     });
@@ -752,12 +940,26 @@ router.post('/:id/saq-answer', authenticate, async (req, res) => {
       }
     });
 
+    let nextTeacherPromptSaq = tutorFlow?.next_teacher_prompt || null;
+    if (nextPhase === 'socratic' && concept) {
+      const out = await resolveSocraticTeacherPrompt({
+        templatePrompt: tutorFlow?.next_teacher_prompt || null,
+        concept,
+        studentLevel: studentLevelResult.level,
+        scoreResult,
+        socraticTurns: [],
+        phase: 'saq',
+        diagnosticMeta: { diagnostic_id: id, subject: diagnostic.subject, topic: diagnostic.topic }
+      });
+      if (out.prompt) nextTeacherPromptSaq = out.prompt;
+    }
+
     res.json({
       diagnostic_id: id,
       phase: nextPhase,
       score: finalScore,
       student_level: studentLevelResult.level,
-      next_teacher_prompt: tutorFlow?.next_teacher_prompt || null,
+      next_teacher_prompt: nextTeacherPromptSaq,
       missing_points: scoreResult.pointsMissed || [],
       tutor_step: tutorFlow?.tutor_step || null,
       tutor_flow: tutorFlow
@@ -805,6 +1007,17 @@ router.post('/:id/socratic-turn', authenticate, async (req, res) => {
     const normalizedStudentAnswer = String(student_answer || '').trim();
     const isYes = /^(yes|yeah|yep|correct|right)[\.\,\!\?\:]*$/i.test(normalizedStudentAnswer);
     const isNo = /^(no|nope|incorrect|wrong|not yet)[\.\,\!\?\:]*$/i.test(normalizedStudentAnswer);
+    const dontKnowRegex = /^(i\s*don['’]?t\s*know|dont\s*know|do\s*not\s*know|idk|no\s*idea)\s*[\.\,\!\?\:]*$/i;
+    const isDontKnow = dontKnowRegex.test(normalizedStudentAnswer);
+    let dontKnowStreak = 0;
+    for (let i = updatedTurns.length - 1; i >= 0; i--) {
+      const a = updatedTurns[i]?.student_answer;
+      if (dontKnowRegex.test(String(a || '').trim())) dontKnowStreak++;
+      else break;
+    }
+    let dontKnowRevealPoint = null;
+    let dontKnowRevealStructure = '';
+    let dontKnowRevealDescription = '';
 
     const extractMatchesTarget = (prompt) => {
       const p = String(prompt || '').trim();
@@ -831,6 +1044,44 @@ router.post('/:id/socratic-turn', authenticate, async (req, res) => {
       studentLevelResult.level === 'excellent' || studentLevelResult.level === 'strong' ? 'top' : 'mid'
     );
 
+    if (isYes && Array.isArray(scoreResult.pointsMissed) && scoreResult.pointsMissed.length > 0) {
+      const firstMissed = scoreResult.pointsMissed[0];
+      scoreResult.pointsHit = Array.isArray(scoreResult.pointsHit) ? [...scoreResult.pointsHit, firstMissed] : [firstMissed];
+      scoreResult.pointsMissed = scoreResult.pointsMissed.slice(1);
+
+      const numerator = Array.isArray(scoreResult.pointsHit) ? scoreResult.pointsHit.length : 0;
+      const denom = typeof scoreResult.pointsExpected === 'number' && scoreResult.pointsExpected > 0
+        ? scoreResult.pointsExpected
+        : (typeof scoreResult.pointsTotal === 'number' ? scoreResult.pointsTotal : 0);
+      if (denom > 0) {
+        const rawScore = numerator / denom;
+        scoreResult.score = Math.min(1, Math.round(rawScore * 100) / 100);
+        scoreResult.scorePercent = Math.min(100, Math.round(rawScore * 100));
+      }
+    }
+
+    if (isDontKnow && dontKnowStreak >= 3 && Array.isArray(scoreResult.pointsMissed) && scoreResult.pointsMissed.length > 0) {
+      dontKnowRevealPoint = scoreResult.pointsMissed[0];
+      dontKnowRevealStructure = dontKnowRevealPoint?.label || dontKnowRevealPoint?.id || '';
+      dontKnowRevealDescription = dontKnowRevealPoint?.description || '';
+
+      scoreResult.pointsHit = Array.isArray(scoreResult.pointsHit) ? [...scoreResult.pointsHit, dontKnowRevealPoint] : [dontKnowRevealPoint];
+      scoreResult.pointsMissed = scoreResult.pointsMissed.slice(1);
+
+      const lastIdx = updatedTurns.length - 1;
+      if (lastIdx >= 0) updatedTurns[lastIdx].student_answer = dontKnowRevealStructure;
+
+      const numerator = Array.isArray(scoreResult.pointsHit) ? scoreResult.pointsHit.length : 0;
+      const denom = typeof scoreResult.pointsExpected === 'number' && scoreResult.pointsExpected > 0
+        ? scoreResult.pointsExpected
+        : (typeof scoreResult.pointsTotal === 'number' ? scoreResult.pointsTotal : 0);
+      if (denom > 0) {
+        const rawScore = numerator / denom;
+        scoreResult.score = Math.min(1, Math.round(rawScore * 100) / 100);
+        scoreResult.scorePercent = Math.min(100, Math.round(rawScore * 100));
+      }
+    }
+
     const tutorFlow = concept
       ? buildTutorFlowPlan({
           concept,
@@ -850,6 +1101,19 @@ router.post('/:id/socratic-turn', authenticate, async (req, res) => {
 
     let adjustedNextTeacherPrompt = nextTeacherPrompt;
 
+    if (nextPhase === 'socratic' && concept) {
+      const out = await resolveSocraticTeacherPrompt({
+        templatePrompt: nextTeacherPrompt,
+        concept,
+        studentLevel: studentLevelResult.level,
+        scoreResult,
+        socraticTurns: updatedTurns,
+        phase: 'socratic',
+        diagnosticMeta: { diagnostic_id: id, subject: diagnostic.subject, topic: diagnostic.topic }
+      });
+      if (out.prompt) adjustedNextTeacherPrompt = out.prompt;
+    }
+
     const extractMatchesTargetFromPrompt = (prompt) => {
       const p = String(prompt || '').trim();
       // supports: "... matches: <target>?" or "... matches: <target>"
@@ -864,7 +1128,26 @@ router.post('/:id/socratic-turn', authenticate, async (req, res) => {
     const nextTarget = extractMatchesTargetFromPrompt(adjustedNextTeacherPrompt);
     const isRepeatTarget = Boolean(adjustedNextTeacherPrompt && prevTarget && nextTarget && prevTarget === nextTarget);
 
-    if (isRepeatTarget) {
+    const priorTeacherPrompts = updatedTurns
+      .map((t) => String(t?.teacher_prompt || '').trim())
+      .filter(Boolean);
+    const normalizedNextPrompt = String(adjustedNextTeacherPrompt || '').trim();
+    const isRepeatPrompt = Boolean(
+      normalizedNextPrompt &&
+      (priorTeacherPrompts.includes(normalizedNextPrompt) ||
+        (promptText && normalizedNextPrompt === String(promptText).trim()))
+    );
+
+    const extractActionClause = (corePoint) => {
+      const s = String(corePoint || '').trim().replace(/\s+/g, ' ');
+      const m = s.match(/^(.*?)\s+(collects|converts|amplifies|transmits|vibrates|stimulates)\s+(.+?)(?:\s*\.\s*)?$/i);
+      if (!m) return s;
+      const verb = m[2].toLowerCase();
+      const rest = (m[3] || '').trim().replace(/\s*\.\s*$/, '');
+      return `${verb} ${rest}`.trim();
+    };
+
+    if (isRepeatTarget || isRepeatPrompt) {
       const effectiveMissing = (remainingPoints && remainingPoints[0] && remainingPoints[0].description)
         ? String(remainingPoints[0].description)
         : (
@@ -873,12 +1156,36 @@ router.post('/:id/socratic-turn', authenticate, async (req, res) => {
             || ''
         );
 
+      const actionClause = extractActionClause(effectiveMissing);
+      const extractStructureLabel = (corePoint) => {
+        const s = String(corePoint || '').trim().replace(/\s+/g, ' ');
+        const m = s.match(/^(.*?)\s+(collects|converts|amplifies|transmits|vibrates|stimulates)\s+/i);
+        return m ? String(m[1] || '').trim() : '';
+      };
+
+      const getLeadingCluePhrase = (corePoint) => {
+        const label = extractStructureLabel(corePoint).toLowerCase();
+        if (!label) return '';
+        if (label.includes('external ear')) return 'captures incoming sound waves and sends them toward the next step (the eardrum)';
+        if (label.includes('tympanic membrane')) return 'separates the external ear from the middle ear and converts sound waves into mechanical vibration';
+        if (label.includes('ossicular')) return 'amplifies the mechanical vibration';
+        if (label.includes('cochlea')) return 'converts vibration into neural impulses';
+        if (label.includes('cochlear nerve') || label.includes('auditory nerve')) return 'carries neural impulses to the auditory cortex';
+        return '';
+      };
+
+      const leadingClue = getLeadingCluePhrase(effectiveMissing);
+
       if (isNo && effectiveMissing) {
-        adjustedNextTeacherPrompt = `Not quite. The key clue is: "${effectiveMissing}". Which structure/event matches? (Answer with the structure name)`;
-      } else if (effectiveMissing) {
-        // Generic leading-hint variant so we don't repeat the same question.
-        // Even if the student answered something close (or misspelled), we guide them again.
-        adjustedNextTeacherPrompt = `Hint: "${effectiveMissing}". What structure/event is responsible for that? (Answer with the structure name)`;
+        if (leadingClue) {
+          adjustedNextTeacherPrompt = `Not quite. Think of the function: ${leadingClue}. Which structure is it? (Answer with the structure name)`;
+        } else if (actionClause) {
+          adjustedNextTeacherPrompt = `Not quite. Which structure ${actionClause}? (Answer with the structure name)`;
+        }
+      } else if (leadingClue) {
+        adjustedNextTeacherPrompt = `Hint: Think of the function: ${leadingClue}. Which structure is it? (Answer with the structure name)`;
+      } else if (effectiveMissing && actionClause) {
+        adjustedNextTeacherPrompt = `Hint: Which structure ${actionClause}? (Answer with the structure name)`;
       } else {
         adjustedNextTeacherPrompt = `Let’s narrow it down: which structure/event matches the step in the hearing pathway? (Answer with the structure name)`;
       }
@@ -891,14 +1198,47 @@ router.post('/:id/socratic-turn', authenticate, async (req, res) => {
           || concept?.must_know_points?.[0]?.label
           || ''
       );
+
+    if (isDontKnow && nextPhase === 'socratic' && remainingPoints.length > 0 && effectiveMissing) {
+      const actionClause = extractActionClause(effectiveMissing);
+      const label = remainingPoints?.[0]?.label ? String(remainingPoints[0].label) : '';
+      const lower = label.toLowerCase();
+      let leadingClue = '';
+      if (lower.includes('external ear')) leadingClue = 'captures incoming sound waves and sends them toward the next step (the eardrum)';
+      else if (lower.includes('tympanic membrane')) leadingClue = 'separates the external ear from the middle ear and converts sound waves into mechanical vibration';
+      else if (lower.includes('ossicular')) leadingClue = 'amplifies the mechanical vibration';
+      else if (lower.includes('cochlea')) leadingClue = 'converts vibration into neural impulses';
+      else if (lower.includes('cochlear nerve') || lower.includes('auditory nerve')) leadingClue = 'carries neural impulses to the auditory cortex';
+
+      if (dontKnowStreak === 1) {
+        if (leadingClue) {
+          adjustedNextTeacherPrompt = `Hint: Think of the function: ${leadingClue}. Which structure is it? (Answer with the structure name)`;
+        } else if (actionClause) {
+          adjustedNextTeacherPrompt = `Hint: Which structure ${actionClause}? (Answer with the structure name)`;
+        }
+      } else if (dontKnowStreak === 2) {
+        if (leadingClue) {
+          adjustedNextTeacherPrompt = `Second clue: ${leadingClue}. Which structure is responsible for that? (Answer with the structure name)`;
+        } else if (actionClause) {
+          adjustedNextTeacherPrompt = `Second clue: Think of the step that ${actionClause}. Which structure is it? (Answer with the structure name)`;
+        }
+      }
+    }
+
     const hitCount = Array.isArray(scoreResult.pointsHit) ? scoreResult.pointsHit.length : 0;
     const tutorResponse = remainingPoints.length === 0
       ? 'Good work. That matches the key idea—let’s move forward.'
-      : (isNo
-          ? `Not quite. The key missing idea is: ${effectiveMissing}.`
-          : (hitCount > 0
-              ? `Good progress. The key missing idea is: ${effectiveMissing}.`
-              : `I’m not quite seeing it yet. The key missing idea is: ${effectiveMissing}.`));
+      : (dontKnowRevealStructure
+          ? `No problem. The correct structure is: ${dontKnowRevealStructure}. Let’s move on to the next step.`
+          : (isDontKnow
+              ? (dontKnowStreak === 2
+                  ? `Still not sure. Here is the next guiding clue: ${effectiveMissing}.`
+                  : `No worries. Here is a guiding clue for your next answer: ${effectiveMissing}.`)
+              : (isNo
+                  ? `Not quite. The key missing idea is: ${effectiveMissing}.`
+                  : (hitCount > 0
+                      ? `Good progress. The key missing idea is: ${effectiveMissing}.`
+                      : `I’m not quite seeing it yet. The key missing idea is: ${effectiveMissing}.`))));
 
     await db.query(
       'UPDATE diagnostic_assessment SET socratic_turns = $1, phase = $2, student_level = $3, mastery_status = $4 WHERE id = $5',

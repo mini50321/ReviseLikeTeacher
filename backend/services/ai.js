@@ -1,8 +1,11 @@
 const axios = require('axios');
 const { getExamplesForSubjectTopic } = require('./tutoring-training-examples');
+const { buildSocraticChatMessages } = require('./socratic-ai-prompt');
+const { parseSocraticAiResponse } = require('./socratic-ai-response');
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
 const EVAL_TIMEOUT_MS = Number(process.env.EVAL_TIMEOUT_MS || 5000);
+const SOCRATIC_NEXT_TURN_TIMEOUT_MS = Number(process.env.SOCRATIC_NEXT_TURN_TIMEOUT_MS || 45000);
 const voiceCoachCache = new Map();
 const VOICE_COACH_CACHE_TTL_MS = Number(process.env.VOICE_COACH_CACHE_TTL_MS || 120000);
 const VOICE_COACH_CACHE_MAX_ITEMS = Number(process.env.VOICE_COACH_CACHE_MAX_ITEMS || 300);
@@ -516,6 +519,44 @@ async function coachVoiceTurn({ transcript, subject, topic, questionStem, studen
   }
 }
 
+async function socraticNextTurn({ messages, temperature, maxTokens, model }) {
+  await ensureAIServiceReady();
+  if (!Array.isArray(messages) || messages.length === 0) {
+    throw new Error('messages array is required');
+  }
+  const result = await retryRequest(async () => {
+    const response = await axios.post(`${AI_SERVICE_URL}/socratic-next-turn`, {
+      messages,
+      temperature: temperature ?? 0.35,
+      max_tokens: maxTokens ?? 800,
+      model: model || undefined
+    }, {
+      timeout: SOCRATIC_NEXT_TURN_TIMEOUT_MS
+    });
+    const data = response.data;
+    if (!data || typeof data.next_teacher_prompt !== 'string' || !data.next_teacher_prompt.trim()) {
+      throw new Error('Invalid socratic-next-turn response');
+    }
+    return data;
+  }, { maxRetries: 2, initialDelay: 1500, label: 'Socratic next turn' });
+  return result;
+}
+
+async function generateSocraticNextTurnPrompt(payloadLike, options = {}) {
+  const messages = buildSocraticChatMessages(payloadLike);
+  const data = await socraticNextTurn({
+    messages,
+    temperature: options.temperature,
+    maxTokens: options.maxTokens,
+    model: options.model
+  });
+  const parsed = parseSocraticAiResponse(data);
+  if (!parsed.ok) {
+    throw new Error(parsed.error || 'socratic_parse_failed');
+  }
+  return parsed.response;
+}
+
 async function buildConceptDraftFromText({ subject, topic, text, maxConcepts = 6 }) {
   if (!subject || !topic || !text || !text.trim()) {
     throw new Error('subject, topic, and text are required for concept draft');
@@ -574,6 +615,8 @@ module.exports = {
   generateMcqItems,
   evaluateQuickCheck,
   coachVoiceTurn,
-   buildConceptDraftFromText,
+  socraticNextTurn,
+  generateSocraticNextTurnPrompt,
+  buildConceptDraftFromText,
   startKeepAlive
 };

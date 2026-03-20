@@ -24,6 +24,7 @@ function DiagnosticContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const autoConceptId = searchParams?.get('for_concept_id');
+  const autoPdfId = searchParams?.get('for_pdf_id');
   const [phase, setPhase] = useState('select');
   const [subjects, setSubjects] = useState([]);
   const [topics, setTopics] = useState([]);
@@ -114,6 +115,52 @@ function DiagnosticContent() {
     };
     startFromConcept();
   }, [autoConceptId]);
+
+  useEffect(() => {
+    if (!autoPdfId || autoConceptId) return;
+    const startFromPdf = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const prepResponse = await api.post(`/micropdf-tutor/${autoPdfId}/prepare`, {});
+        const prepData = prepResponse.data || {};
+        const conceptId = prepData.selected_concept_id;
+        if (!conceptId) throw new Error('Micro-PDF did not return a concept_id');
+
+        const response = await api.post('/diagnostic/start-from-micropdf', { concept_id: conceptId });
+        const data = response.data;
+        setDiagnosticId(data.diagnostic_id);
+        setSessionId(data.session_id);
+        setTlsId(data.topic_learning_session_id);
+        setQuestions(data.questions);
+        setConcept(data.concept || null);
+        setConceptPlan(data.concept_plan || null);
+        setCurrentIndex(0);
+        setAnswers([]);
+        setFeedback(null);
+        setNextTeacherPrompt('');
+        setMissingPoints([]);
+        setTutorStep(null);
+        setAnswerText('');
+        setAnswerMethod('text');
+        setLanguage('english');
+        setAudioBlob(null);
+        setTranscription('');
+        setTranscriptionError('');
+        setAttemptCount(0);
+        setShowSolution(false);
+        setLastWasCorrect(false);
+        setNextConceptSuggestion(null);
+        setPhase('answering');
+        startTimeRef.current = Date.now();
+      } catch (err) {
+        setError(err.response?.data?.error || err.message || 'Failed to start from Micro-PDF');
+      } finally {
+        setLoading(false);
+      }
+    };
+    startFromPdf();
+  }, [autoPdfId, autoConceptId]);
 
   const fetchTopics = async () => {
     try {
@@ -670,25 +717,30 @@ function DiagnosticContent() {
                       <div key={idx} className={styles.socraticTurn}>
                         {t.teacher_prompt && (
                           <div className={styles.socraticTurnLine}>
-                            <span className={styles.socraticLabel}>Tutor:</span> {t.teacher_prompt}
+                            {t.teacher_prompt}
                           </div>
                         )}
                         <div className={styles.socraticTurnLine}>
-                          <span className={styles.socraticLabel}>You:</span> {t.student_answer}
+                          {t.student_answer}
                         </div>
                       </div>
                     ))}
-                    {socraticTutorResponse && (
-                      <TutorInterpretationCard
-                        text={socraticTutorResponse}
-                        speakText={socraticAudioText || socraticTutorResponse}
-                        autoPlay={true}
-                      />
-                    )}
                     {nextTeacherPrompt && (
                       <div className={styles.socraticTurn}>
-                        <div className={styles.socraticTurnLine}>
-                          <span className={styles.socraticLabel}>Tutor:</span> {nextTeacherPrompt}
+                        <div className={`${styles.socraticTurnLine} ${styles.socraticTutorLine}`}>
+                          <div className={styles.socraticTutorContent}>
+                            <span className={styles.socraticTutorPrompt}>{nextTeacherPrompt}</span>
+                            {(socraticTutorResponse || nextTeacherPrompt) && (
+                              <TutorInterpretationCard
+                                text={socraticTutorResponse || nextTeacherPrompt}
+                                speakText={socraticAudioText || socraticTutorResponse || nextTeacherPrompt}
+                                autoPlay={false}
+                                showText={false}
+                                showActions={true}
+                                variant="actionsOnly"
+                              />
+                            )}
+                          </div>
                         </div>
                       </div>
                     )}

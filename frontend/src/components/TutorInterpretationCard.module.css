@@ -1,11 +1,23 @@
 .card {
+  width: fit-content;
+  max-width: 100%;
+  align-self: flex-start;
+  background: rgba(30, 64, 175, 0.7);
+  border: 1px solid rgba(129, 140, 248, 0.6);
+  border-radius: 14px;
+  padding: 10px 14px 12px;
+  box-shadow: none;
+}
+
+.actionsOnlyCard {
+  background: transparent;
+  border: none;
+  padding: 0;
+  box-shadow: none;
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
   width: 100%;
-  max-width: 720px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(129, 140, 248, 0.35);
-  border-radius: 16px;
-  padding: 14px 16px 12px;
-  box-shadow: 0 14px 35px rgba(15, 23, 42, 0.45);
 }
 
 .text {
@@ -18,10 +30,21 @@
 
 .actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   align-items: center;
   gap: 10px;
   margin-top: 10px;
+  width: 100%;
+}
+
+.actionsLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.actionsNoMargin {
+  margin-top: 0;
 }
 
 .iconBtn {
@@ -56,6 +79,7 @@
   background: transparent;
   border-radius: 10px;
   color: rgba(209, 213, 219, 0.9);
+  margin-left: auto;
 }
 
 .playBtn:hover {

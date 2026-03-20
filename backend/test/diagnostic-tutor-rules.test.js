@@ -28,7 +28,7 @@ test('builds a focused tutor prompt from concept gaps', () => {
     must_know_points: [{ label: 'Oval window', description: 'Stapes transmits vibration to the oval window.' }]
   };
   const prompt = buildTutorPrompt(concept, 'average', { pointsMissed: [{ description: 'Stapes transmits vibration to the oval window.' }] }, 'stapes');
-  assert.match(prompt, /missing step/i);
+  assert.match(prompt, /you're close|which structure/i);
   assert.match(prompt, /oval window/i);
 });
 
@@ -41,7 +41,21 @@ test('builds simpler prompts for weaker students', () => {
   const weakPrompt = buildTutorPrompt(concept, 'weak', { pointsMissed: [] }, '');
   const veryWeakPrompt = buildTutorPrompt(concept, 'very_weak', { pointsMissed: [] }, 'sound goes to brain');
   assert.match(weakPrompt, /one step at a time/i);
-  assert.match(veryWeakPrompt, /what structure comes next/i);
+  assert.match(veryWeakPrompt, /rebuild it step-by-step|which structure/i);
+});
+
+test('continuing Socratic uses transition wording instead of repeating rebuild intro', () => {
+  const concept = {
+    name: 'Physiology of Hearing Pathway',
+    leading_questions: ['What happens after the tympanic membrane vibrates?'],
+    must_know_points: [{ label: 'Tympanic membrane', description: 'Tympanic membrane converts sound waves into mechanical vibration.' }]
+  };
+  const sr = { pointsMissed: [{ description: 'Tympanic membrane converts sound waves into mechanical vibration.' }] };
+  const first = buildTutorPrompt(concept, 'very_weak', sr, '', { socraticTurnCount: 0 });
+  const next = buildTutorPrompt(concept, 'very_weak', sr, '', { socraticTurnCount: 1 });
+  assert.match(first, /rebuild it step-by-step/i);
+  assert.match(next, /next step:/i);
+  assert.ok(!/rebuild it step-by-step/i.test(next));
 });
 
 test('builds a concept plan from micro-pdf metadata', () => {

@@ -184,6 +184,35 @@ async def quick_check(request: dict):
         print(f"Quick-check error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Quick-check failed: {str(e)}")
 
+@app.post("/socratic-next-turn")
+async def socratic_next_turn_route(request: dict):
+    try:
+        from services.socratic_turn import run_socratic_next_turn
+        messages = request.get("messages")
+        if not messages or not isinstance(messages, list):
+            raise HTTPException(status_code=400, detail="messages must be a non-empty array")
+
+        temperature = float(request.get("temperature", 0.35))
+        max_tokens = int(request.get("max_tokens", 800))
+        model = request.get("model")
+
+        result = await run_socratic_next_turn(
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            model=model,
+        )
+        return JSONResponse(content=result)
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        import traceback
+        print(f"Socratic next turn error: {str(e)}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Socratic next turn failed: {str(e)}")
+
 @app.post("/tts")
 async def text_to_speech(request: dict):
     try:

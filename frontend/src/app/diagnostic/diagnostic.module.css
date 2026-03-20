@@ -768,6 +768,22 @@
   line-height: 1.5;
 }
 
+.socraticTutorPrompt {
+  flex: 1;
+}
+
+.socraticTutorLine {
+  align-items: flex-start;
+}
+
+.socraticTutorContent {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  flex: 1;
+}
+
 .socraticLabel {
   font-weight: 600;
   color: rgba(191, 219, 254, 0.95);

@@ -52,7 +52,8 @@ function levelToMasteryStatus(level) {
   return 'needs_reinforcement';
 }
 
-function buildTutorPrompt(concept, level, scoreResult, answerText) {
+function buildTutorPrompt(concept, level, scoreResult, answerText, opts = {}) {
+  const socraticTurnCount = typeof opts.socraticTurnCount === 'number' ? opts.socraticTurnCount : 0;
   const leading = Array.isArray(concept.leading_questions) ? concept.leading_questions : [];
   const checkpoints = Array.isArray(concept.must_know_points) ? concept.must_know_points : [];
   const nextMissing = scoreResult?.pointsMissed?.[0]?.description || checkpoints[0]?.description || checkpoints[0]?.label || '';
@@ -60,29 +61,54 @@ function buildTutorPrompt(concept, level, scoreResult, answerText) {
   const firstLeading = normalizePromptText(leading[0]);
   const firstStep = checkpoints[0]?.label || checkpoints[0]?.description || firstLeading || concept.name;
 
+  const extractActionClause = (corePoint) => {
+    const s = String(corePoint || '').trim().replace(/\s+/g, ' ');
+    const m = s.match(/^(.*?)\s+(collects|converts|amplifies|transmits|vibrates|stimulates)\s+(.+?)(?:\s*\.\s*)?$/i);
+    if (!m) return s;
+    const verb = m[2].toLowerCase();
+    const rest = (m[3] || '').trim().replace(/\s*\.\s*$/, '');
+    return `${verb} ${rest}`.trim();
+  };
+
+  // SAQ → first Socratic prompt uses socraticTurns.length === 0; any later call has ≥1 turn.
+  const continuing = socraticTurnCount > 0;
+
   if (level === 'excellent' || level === 'strong') {
     return firstLeading
       || `Good. What subtle detail in ${concept.name} still needs verification?`;
   }
 
   if (level === 'average') {
-    return nextMissing
-      ? `You have the main idea. Now add this missing step: ${nextMissing}. Say it in one short sentence.`
-      : `What comes immediately after ${firstStep}?`;
+    if (nextMissing) {
+      const actionClause = extractActionClause(nextMissing);
+      if (continuing) {
+        return `Next: Which structure ${actionClause}? (Answer with the structure name)`;
+      }
+      return `You're close. Which structure ${actionClause}? (Answer with the structure name)`;
+    }
+    return `What comes immediately after ${firstStep}?`;
   }
 
   if (level === 'weak') {
-    return nextMissing
-      ? `Let’s go one step at a time. Which structure or event matches: ${nextMissing}?`
-      : `What comes next after ${firstStep}?`;
+    if (nextMissing) {
+      const actionClause = extractActionClause(nextMissing);
+      if (continuing) {
+        return `Next: Which structure ${actionClause}? (Answer with the structure name)`;
+      }
+      return `Let's go one step at a time. Which structure ${actionClause}? (Answer with the structure name)`;
+    }
+    return `What comes next after ${firstStep}?`;
   }
 
   if (level === 'very_weak') {
-    // Treat very_weak like weak to keep the tutoring sequence aligned
-    // with missing rubric items (missing #1 -> missing #2 -> ...).
-    return nextMissing
-      ? `Let’s go one step at a time. Which structure or event matches: ${nextMissing}?`
-      : `What comes next after ${firstStep}?`;
+    if (nextMissing) {
+      const actionClause = extractActionClause(nextMissing);
+      if (continuing) {
+        return `Next step: Which structure ${actionClause}? (Answer with the structure name)`;
+      }
+      return `Let's rebuild it step-by-step. Which structure ${actionClause}? (Answer with the structure name)`;
+    }
+    return `What comes next after ${firstStep}?`;
   }
 
   return firstLeading || `What comes immediately after ${firstStep}?`;
