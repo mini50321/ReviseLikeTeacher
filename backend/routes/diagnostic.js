@@ -802,15 +802,34 @@ router.post('/:id/socratic-turn', authenticate, async (req, res) => {
     };
 
     const allAnswersText = updatedTurns.map(t => t.student_answer).join(' ').trim();
-    const wordCount = allAnswersText.split(/\s+/).filter(Boolean).length;
+    const isYes = /^(yes|yeah|yep|correct|right)$/i.test(String(student_answer || '').trim());
+    const isNo = /^(no|nope|incorrect|wrong|not yet)$/i.test(String(student_answer || '').trim());
+
+    // When the student replies with yes/no, we still need to advance the flow.
+    // The scoring is keyword-based, so "Yes" alone matches nothing.
+    // If the tutor question contains "... matches: <target>?", we append <target> when the student says "yes".
+    const extractMatchesTarget = (prompt) => {
+      const p = String(prompt || '').trim();
+      const m = p.match(/matches:\s*([\s\S]+?)\?$/i) || p.match(/matches:\s*([\s\S]+)$/i);
+      if (!m) return '';
+      return (m[1] || '').replace(/\?+$/g, '').trim();
+    };
+
+    let scoringAnswersText = allAnswersText;
+    if (isYes) {
+      const target = extractMatchesTarget(promptText || teacher_prompt);
+      if (target) scoringAnswersText = `${allAnswersText} ${target}`.trim();
+    }
+
+    const wordCount = scoringAnswersText.split(/\s+/).filter(Boolean).length;
 
     let studentLevelResult;
     let scoreResult;
 
-    studentLevelResult = classifyStudentLevel(conceptForScoring, allAnswersText);
+    studentLevelResult = classifyStudentLevel(conceptForScoring, scoringAnswersText);
     scoreResult = scoreAnswerAgainstConcept(
       conceptForScoring,
-      allAnswersText,
+      scoringAnswersText,
       studentLevelResult.level === 'excellent' || studentLevelResult.level === 'strong' ? 'top' : 'mid'
     );
 
@@ -830,6 +849,27 @@ router.post('/:id/socratic-turn', authenticate, async (req, res) => {
     const nextTeacherPrompt = nextPhase === 'socratic' && concept
       ? tutorFlow.next_teacher_prompt
       : null;
+
+    let adjustedNextTeacherPrompt = nextTeacherPrompt;
+    // Hard requirement: never ask the same Socratic question twice.
+    // If the generated prompt matches the previous tutor prompt, replace it with a leading variant.
+    if (adjustedNextTeacherPrompt && promptText && String(adjustedNextTeacherPrompt).trim() === String(promptText).trim()) {
+      const effectiveMissing = (remainingPoints && remainingPoints[0] && remainingPoints[0].description)
+        ? String(remainingPoints[0].description)
+        : (
+          concept?.must_know_points?.[0]?.description
+            || concept?.must_know_points?.[0]?.label
+            || ''
+        );
+
+      if (isNo && effectiveMissing) {
+        adjustedNextTeacherPrompt = `Let’s correct course. The clue is: "${effectiveMissing}". What structure/event matches this? (Answer with the structure name)`;
+      } else if (effectiveMissing) {
+        adjustedNextTeacherPrompt = `Leading hint: "${effectiveMissing}". Which structure/event is that? (Answer with the structure name)`;
+      } else {
+        adjustedNextTeacherPrompt = `Try again with a step-by-step answer: what structure comes next in the hearing pathway?`;
+      }
+    }
 
     await db.query(
       'UPDATE diagnostic_assessment SET socratic_turns = $1, phase = $2, student_level = $3, mastery_status = $4 WHERE id = $5',
@@ -865,7 +905,7 @@ router.post('/:id/socratic-turn', authenticate, async (req, res) => {
       socratic_turns: updatedTurns,
       next_teacher_prompt: nextPhase === 'final_recall'
         ? (tutorFlow?.final_recall_prompt || 'Now summarize the full answer in 4-5 exam sentences.')
-        : nextTeacherPrompt,
+        : adjustedNextTeacherPrompt,
       tutor_flow: tutorFlow
     });
   } catch (error) {
